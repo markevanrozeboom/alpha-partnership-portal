@@ -42,18 +42,24 @@ class AudienceType(str, Enum):
 
 class PipelineStatus(str, Enum):
     PENDING = "pending"
-    RESEARCHING = "researching"
-    AWAITING_GATE_1 = "awaiting_gate_1"
+    RESEARCHING_COUNTRY = "researching_country"
+    REVIEW_COUNTRY_REPORT = "review_country_report"
+    RESEARCHING_EDUCATION = "researching_education"
+    REVIEW_EDUCATION_REPORT = "review_education_report"
     STRATEGIZING = "strategizing"
-    AWAITING_GATE_2 = "awaiting_gate_2"
-    GENERATING = "generating"
-    AWAITING_GATE_3 = "awaiting_gate_3"
+    REVIEW_STRATEGY = "review_strategy"
+    PRESENTING_ASSUMPTIONS = "presenting_assumptions"
+    REVIEW_ASSUMPTIONS = "review_assumptions"
+    BUILDING_MODEL = "building_model"
+    REVIEW_MODEL = "review_model"
+    GENERATING_DOCUMENTS = "generating_documents"
+    REVIEW_DOCUMENTS = "review_documents"
     COMPLETED = "completed"
     ERROR = "error"
 
 
 # ---------------------------------------------------------------------------
-# Country Profile (Country Research Agent output)
+# Country Profile (structured data)
 # ---------------------------------------------------------------------------
 
 class TargetInfo(BaseModel):
@@ -163,7 +169,7 @@ class CountryProfile(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Education Analysis (Education Research Agent output)
+# Education Analysis (structured data)
 # ---------------------------------------------------------------------------
 
 class SystemDiagnosis(BaseModel):
@@ -194,7 +200,7 @@ class EducationAnalysis(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Strategy (Strategy Agent output)
+# Strategy (structured data)
 # ---------------------------------------------------------------------------
 
 class PartnershipStructure(BaseModel):
@@ -245,7 +251,30 @@ class Strategy(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Financial Model (Financial Modelling Agent output)
+# Financial Assumptions (user-configurable)
+# ---------------------------------------------------------------------------
+
+class FinancialAssumption(BaseModel):
+    """A single configurable assumption with slider metadata."""
+    key: str
+    label: str
+    value: float
+    min_val: float
+    max_val: float
+    step: float
+    unit: str = ""            # "$", "%", "x", "students", "years"
+    category: str = "general" # pricing, scale, costs, fees, returns
+    description: str = ""
+    locked: bool = False      # True = non-negotiable (fee floors etc.)
+
+
+class FinancialAssumptions(BaseModel):
+    """All assumptions for the financial model, grouped by category."""
+    assumptions: list[FinancialAssumption] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Financial Model (output)
 # ---------------------------------------------------------------------------
 
 class YearProjection(BaseModel):
@@ -258,6 +287,8 @@ class YearProjection(BaseModel):
     opex: float = 0
     ebitda: float = 0
     net_income: float = 0
+    free_cash_flow: float = 0
+    cumulative_cash: float = 0
 
 
 class UnitEconomics(BaseModel):
@@ -298,7 +329,6 @@ class FinancialModel(BaseModel):
     capital_deployment: list[CapitalDeployment] = Field(default_factory=list)
     returns_analysis: ReturnsAnalysis = Field(default_factory=ReturnsAnalysis)
     sensitivity: list[SensitivityScenario] = Field(default_factory=list)
-
     # Scaling formula inputs
     ppp_factor: float = 1.0
     demand_factor: float = 1.0
@@ -313,29 +343,36 @@ class FinancialModel(BaseModel):
 # HITL Decision Gate models
 # ---------------------------------------------------------------------------
 
-class Gate1Decision(BaseModel):
-    """User decision after research phase."""
-    entry_mode: EntryMode = EntryMode.HYBRID
-    notes: Optional[str] = None
-
-
-class Gate2Decision(BaseModel):
-    """User decision after strategy phase."""
-    confirmed_student_count: Optional[int] = None
-    confirmed_pricing: Optional[float] = None
-    confirmed_school_types: Optional[list[str]] = None
-    audience: AudienceType = AudienceType.INVESTOR
-    notes: Optional[str] = None
-
-
-class Gate3Decision(BaseModel):
-    """User decision after output generation."""
+class ReportFeedback(BaseModel):
+    """User feedback on a research/strategy report."""
     approved: bool = False
+    feedback: Optional[str] = None  # specific feedback / revision requests
+    entry_mode: Optional[EntryMode] = None  # only for country report gate
+
+
+class AssumptionsFeedback(BaseModel):
+    """User-adjusted assumptions from the interactive editor."""
+    approved: bool = False
+    adjustments: dict[str, float] = Field(default_factory=dict)  # key → new value
+    notes: Optional[str] = None
+
+
+class ModelFeedback(BaseModel):
+    """User review of financial model — lock or adjust."""
+    locked: bool = False
+    adjustments: dict[str, float] = Field(default_factory=dict)
+    notes: Optional[str] = None
+
+
+class DocumentFeedback(BaseModel):
+    """Final review of generated documents."""
+    approved: bool = False
+    audience: AudienceType = AudienceType.INVESTOR
     revision_notes: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
-# Pipeline State (shared context store for LangGraph)
+# Pipeline State
 # ---------------------------------------------------------------------------
 
 class PipelineState(BaseModel):
@@ -344,21 +381,33 @@ class PipelineState(BaseModel):
     target_input: str = ""
     status: PipelineStatus = PipelineStatus.PENDING
 
-    # Agent outputs
+    # Agent outputs — structured data
     country_profile: CountryProfile = Field(default_factory=CountryProfile)
     education_analysis: EducationAnalysis = Field(default_factory=EducationAnalysis)
     strategy: Strategy = Field(default_factory=Strategy)
+    financial_assumptions: FinancialAssumptions = Field(default_factory=FinancialAssumptions)
     financial_model: FinancialModel = Field(default_factory=FinancialModel)
 
+    # Agent outputs — narrative reports (markdown)
+    country_report: str = ""
+    education_report: str = ""
+    strategy_report: str = ""
+
     # HITL decisions
-    gate1_decision: Optional[Gate1Decision] = None
-    gate2_decision: Optional[Gate2Decision] = None
-    gate3_decision: Optional[Gate3Decision] = None
+    country_report_feedback: Optional[ReportFeedback] = None
+    education_report_feedback: Optional[ReportFeedback] = None
+    strategy_feedback: Optional[ReportFeedback] = None
+    assumptions_feedback: Optional[AssumptionsFeedback] = None
+    model_feedback: Optional[ModelFeedback] = None
+    document_feedback: Optional[DocumentFeedback] = None
 
     # Output file paths
     pptx_path: Optional[str] = None
     docx_path: Optional[str] = None
     xlsx_path: Optional[str] = None
+    country_report_docx_path: Optional[str] = None
+    education_report_docx_path: Optional[str] = None
+    strategy_report_docx_path: Optional[str] = None
 
     # Error tracking
     error_message: Optional[str] = None
@@ -371,7 +420,6 @@ class PipelineState(BaseModel):
 
 class CreateRunRequest(BaseModel):
     target: str = Field(..., description="Country name or US state name")
-    audience: Optional[AudienceType] = AudienceType.INVESTOR
 
 
 class RunStatusResponse(BaseModel):
@@ -381,11 +429,30 @@ class RunStatusResponse(BaseModel):
     tier: Optional[int] = None
     target_type: Optional[str] = None
     agent_logs: list[str] = Field(default_factory=list)
+
+    # Structured data
     country_profile: Optional[CountryProfile] = None
     education_analysis: Optional[EducationAnalysis] = None
     strategy: Optional[Strategy] = None
+    financial_assumptions: Optional[FinancialAssumptions] = None
     financial_model: Optional[FinancialModel] = None
+
+    # Narrative reports (markdown)
+    country_report: Optional[str] = None
+    education_report: Optional[str] = None
+    strategy_report: Optional[str] = None
+
+    # File paths
     pptx_path: Optional[str] = None
     docx_path: Optional[str] = None
     xlsx_path: Optional[str] = None
+    country_report_docx_path: Optional[str] = None
+    education_report_docx_path: Optional[str] = None
+    strategy_report_docx_path: Optional[str] = None
+
     error_message: Optional[str] = None
+
+
+class RecalculateRequest(BaseModel):
+    """Request to recalculate financial model with adjusted assumptions."""
+    adjustments: dict[str, float] = Field(default_factory=dict)

@@ -1,174 +1,254 @@
 /**
- * API client for the Alpha Country/State Pipeline backend.
+ * API client for the Alpha Country/State Business Plan backend.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // ---------------------------------------------------------------------------
-// Types (mirrors backend schemas)
+// Types
 // ---------------------------------------------------------------------------
+
+export interface FinancialAssumption {
+  key: string;
+  label: string;
+  value: number;
+  min_val: number;
+  max_val: number;
+  step: number;
+  unit: string;
+  category: string;
+  description: string;
+  locked: boolean;
+}
+
+export interface YearProjection {
+  year: number;
+  students: number;
+  schools: number;
+  revenue: number;
+  cogs: number;
+  gross_margin: number;
+  opex: number;
+  ebitda: number;
+  net_income: number;
+  free_cash_flow: number;
+  cumulative_cash: number;
+}
+
+export interface UnitEconomics {
+  school_type: string;
+  per_student_revenue: number;
+  per_student_cost: number;
+  contribution_margin: number;
+  margin_pct: number;
+}
+
+export interface ReturnsAnalysis {
+  irr: number | null;
+  moic: number | null;
+  enterprise_value_at_exit: number | null;
+  payback_period_years: number | null;
+  ebitda_multiple: number | null;
+}
+
+export interface SensitivityScenario {
+  variable: string;
+  base_case: number;
+  downside: number;
+  upside: number;
+}
+
+export interface FinancialModel {
+  pnl_projection: YearProjection[];
+  unit_economics: UnitEconomics[];
+  returns_analysis: ReturnsAnalysis;
+  sensitivity: SensitivityScenario[];
+  ppp_factor: number;
+  management_fee_pct: number;
+  timeback_license_pct: number;
+  upfront_ip_fee: number;
+  total_management_fee_revenue: number;
+  total_timeback_license_revenue: number;
+}
 
 export type PipelineStatus =
   | "pending"
-  | "researching"
-  | "awaiting_gate_1"
+  | "researching_country"
+  | "review_country_report"
+  | "researching_education"
+  | "review_education_report"
   | "strategizing"
-  | "awaiting_gate_2"
-  | "generating"
-  | "awaiting_gate_3"
+  | "review_strategy"
+  | "presenting_assumptions"
+  | "review_assumptions"
+  | "building_model"
+  | "review_model"
+  | "generating_documents"
+  | "review_documents"
   | "completed"
   | "error";
 
-export type EntryMode = "private" | "government" | "hybrid";
-export type AudienceType = "royal" | "minister" | "investor";
-
-export interface CountryOption {
-  name: string;
-  tier: number;
-  region: string;
-  potential: string;
-  key_factors: string;
-}
-
-export interface StateOption {
-  name: string;
-  rank: number;
-  esa_amount: string;
-  students_on_vouchers: string;
-  key_factors: string;
-}
-
-export interface RunStatusResponse {
+export interface RunStatus {
   run_id: string;
   status: PipelineStatus;
   target: string;
   tier: number | null;
   target_type: string | null;
   agent_logs: string[];
-  country_profile: any | null;
-  education_analysis: any | null;
-  strategy: any | null;
-  financial_model: any | null;
+
+  // Narrative reports
+  country_report: string | null;
+  education_report: string | null;
+  strategy_report: string | null;
+
+  // Structured data
+  country_profile: Record<string, unknown> | null;
+  education_analysis: Record<string, unknown> | null;
+  strategy: Record<string, unknown> | null;
+  financial_assumptions: { assumptions: FinancialAssumption[] } | null;
+  financial_model: FinancialModel | null;
+
+  // File paths
   pptx_path: string | null;
   docx_path: string | null;
   xlsx_path: string | null;
+  country_report_docx_path: string | null;
+  education_report_docx_path: string | null;
+  strategy_report_docx_path: string | null;
+
   error_message: string | null;
-}
-
-export interface Gate1Decision {
-  entry_mode: EntryMode;
-  notes?: string;
-}
-
-export interface Gate2Decision {
-  confirmed_student_count?: number;
-  confirmed_pricing?: number;
-  confirmed_school_types?: string[];
-  audience: AudienceType;
-  notes?: string;
-}
-
-export interface Gate3Decision {
-  approved: boolean;
-  revision_notes?: string;
 }
 
 // ---------------------------------------------------------------------------
 // API Functions
 // ---------------------------------------------------------------------------
 
-async function apiFetch<T>(
-  path: string,
-  options?: RequestInit
-): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
+export async function createRun(target: string): Promise<{ run_id: string }> {
+  const res = await fetch(`${API_URL}/api/runs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target }),
   });
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(error.detail || `API Error: ${res.status}`);
-  }
-
+  if (!res.ok) throw new Error(`Failed to create run: ${res.statusText}`);
   return res.json();
 }
 
-/** List priority countries */
-export async function getCountries(): Promise<{ countries: CountryOption[] }> {
-  return apiFetch("/api/countries");
+export async function getRunStatus(runId: string): Promise<RunStatus> {
+  const res = await fetch(`${API_URL}/api/runs/${runId}`);
+  if (!res.ok) throw new Error(`Failed to get run: ${res.statusText}`);
+  return res.json();
 }
 
-/** List priority US states */
-export async function getStates(): Promise<{ states: StateOption[] }> {
-  return apiFetch("/api/states");
-}
+// --- Feedback endpoints ---
 
-/** Start a new pipeline run */
-export async function createRun(
-  target: string,
-  audience?: AudienceType
-): Promise<RunStatusResponse> {
-  return apiFetch("/api/runs", {
-    method: "POST",
-    body: JSON.stringify({ target, audience }),
-  });
-}
-
-/** Get current status of a pipeline run */
-export async function getRunStatus(
-  runId: string
-): Promise<RunStatusResponse> {
-  return apiFetch(`/api/runs/${runId}`);
-}
-
-/** Submit Gate 1 decision */
-export async function submitGate1(
+export async function submitCountryReportFeedback(
   runId: string,
-  decision: Gate1Decision
-): Promise<RunStatusResponse> {
-  return apiFetch(`/api/runs/${runId}/gate1`, {
+  approved: boolean,
+  feedback?: string,
+  entryMode?: string
+) {
+  const res = await fetch(`${API_URL}/api/runs/${runId}/feedback/country-report`, {
     method: "POST",
-    body: JSON.stringify(decision),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ approved, feedback, entry_mode: entryMode }),
   });
+  if (!res.ok) throw new Error("Failed to submit feedback");
+  return res.json();
 }
 
-/** Submit Gate 2 decision */
-export async function submitGate2(
+export async function submitEducationReportFeedback(
   runId: string,
-  decision: Gate2Decision
-): Promise<RunStatusResponse> {
-  return apiFetch(`/api/runs/${runId}/gate2`, {
+  approved: boolean,
+  feedback?: string
+) {
+  const res = await fetch(`${API_URL}/api/runs/${runId}/feedback/education-report`, {
     method: "POST",
-    body: JSON.stringify(decision),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ approved, feedback }),
   });
+  if (!res.ok) throw new Error("Failed to submit feedback");
+  return res.json();
 }
 
-/** Submit Gate 3 decision */
-export async function submitGate3(
+export async function submitStrategyFeedback(
   runId: string,
-  decision: Gate3Decision
-): Promise<RunStatusResponse> {
-  return apiFetch(`/api/runs/${runId}/gate3`, {
+  approved: boolean,
+  feedback?: string
+) {
+  const res = await fetch(`${API_URL}/api/runs/${runId}/feedback/strategy`, {
     method: "POST",
-    body: JSON.stringify(decision),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ approved, feedback }),
   });
+  if (!res.ok) throw new Error("Failed to submit feedback");
+  return res.json();
 }
 
-/** Get download URL for a document */
-export function getDownloadUrl(
+export async function submitAssumptionsFeedback(
   runId: string,
-  docType: "pptx" | "docx" | "xlsx"
-): string {
-  return `${API_BASE}/api/runs/${runId}/download/${docType}`;
+  approved: boolean,
+  adjustments: Record<string, number>,
+  notes?: string
+) {
+  const res = await fetch(`${API_URL}/api/runs/${runId}/feedback/assumptions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ approved, adjustments, notes }),
+  });
+  if (!res.ok) throw new Error("Failed to submit assumptions");
+  return res.json();
 }
 
-/** List all runs */
-export async function listRuns(): Promise<{
-  runs: { run_id: string; target: string; status: string }[];
+export async function submitModelFeedback(
+  runId: string,
+  locked: boolean,
+  adjustments: Record<string, number>,
+  notes?: string
+) {
+  const res = await fetch(`${API_URL}/api/runs/${runId}/feedback/model`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ locked, adjustments, notes }),
+  });
+  if (!res.ok) throw new Error("Failed to submit model feedback");
+  return res.json();
+}
+
+export async function submitDocumentFeedback(
+  runId: string,
+  approved: boolean,
+  audience: string,
+  revisionNotes?: string
+) {
+  const res = await fetch(`${API_URL}/api/runs/${runId}/feedback/documents`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ approved, audience, revision_notes: revisionNotes }),
+  });
+  if (!res.ok) throw new Error("Failed to submit document feedback");
+  return res.json();
+}
+
+// --- Real-time recalculation ---
+
+export async function recalculateModel(
+  runId: string,
+  adjustments: Record<string, number>
+): Promise<{
+  financial_model: FinancialModel;
+  financial_assumptions: { assumptions: FinancialAssumption[] };
 }> {
-  return apiFetch("/api/runs");
+  const res = await fetch(`${API_URL}/api/runs/${runId}/recalculate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ adjustments }),
+  });
+  if (!res.ok) throw new Error("Failed to recalculate model");
+  return res.json();
+}
+
+// --- Downloads ---
+
+export function getDownloadUrl(runId: string, fileType: string): string {
+  return `${API_URL}/api/runs/${runId}/download/${fileType}`;
 }

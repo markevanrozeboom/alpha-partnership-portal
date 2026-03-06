@@ -28,7 +28,7 @@ def get_claude() -> ChatAnthropic:
         _claude = ChatAnthropic(
             model=PRIMARY_MODEL,
             anthropic_api_key=ANTHROPIC_API_KEY,
-            max_tokens=8192,
+            max_tokens=16384,
             temperature=0.2,
         )
     return _claude
@@ -40,7 +40,7 @@ def get_gpt4o() -> ChatOpenAI:
         _gpt4o = ChatOpenAI(
             model=FALLBACK_MODEL,
             openai_api_key=OPENAI_API_KEY,
-            max_tokens=8192,
+            max_tokens=16384,
             temperature=0.2,
         )
     return _gpt4o
