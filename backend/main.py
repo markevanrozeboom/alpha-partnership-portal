@@ -7,7 +7,7 @@ import logging
 import os
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
@@ -17,7 +17,13 @@ from models.schemas import (
     CountryProfile, EducationAnalysis, Strategy,
     FinancialAssumptions, FinancialModel, PipelineStatus,
 )
-from graph.pipeline import create_run as pipeline_create_run, execute_run, resume_run, get_run_state, get_pipeline
+from graph.pipeline import (
+    create_run as pipeline_create_run,
+    execute_step,
+    submit_feedback,
+    finalize_run,
+    get_run_state,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,7 +31,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Alpha Country/State Business Plan API",
     description="Agentic pipeline for country/state market-entry analysis and deal structuring",
-    version="2.0.0",
+    version="2.1.0",
 )
 
 app.add_middleware(
@@ -42,18 +48,15 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 @app.post("/api/runs", response_model=dict)
-async def create_run_endpoint(req: CreateRunRequest, background: BackgroundTasks):
+async def create_run_endpoint(req: CreateRunRequest):
     """Start a new pipeline run (runs in background)."""
     target = req.target.strip()
     if not target:
         raise HTTPException(400, "Target is required")
 
-    # Create the run and register initial state — returns immediately
     run_id = pipeline_create_run(target)
-
-    # Execute the pipeline in the background
-    background.add_task(execute_run, run_id, target)
-
+    # Start the first step (country research) in the background
+    asyncio.create_task(execute_step(run_id))
     return {"run_id": run_id}
 
 
@@ -134,70 +137,122 @@ async def get_run(run_id: str):
 # HITL Gates — User Feedback Endpoints
 # ---------------------------------------------------------------------------
 
-async def _safe_resume(run_id: str, update: dict):
-    """Resume a run with error handling — stores errors in pipeline state."""
-    try:
-        await resume_run(run_id, update)
-    except Exception as exc:
-        logger.error("Failed to resume run %s: %s", run_id, exc, exc_info=True)
-        # Try to update the state with the error so frontend can see it
-        try:
-            pipeline, _ = get_pipeline()
-            config = {"configurable": {"thread_id": run_id}}
-            await pipeline.aupdate_state(config, {
-                "status": PipelineStatus.ERROR.value,
-                "error_message": f"Resume failed: {exc}",
-            })
-        except Exception:
-            pass
-
-
 @app.post("/api/runs/{run_id}/feedback/country-report")
-async def submit_country_report_feedback(run_id: str, feedback: ReportFeedback, background: BackgroundTasks):
+async def submit_country_report_feedback(run_id: str, feedback: ReportFeedback):
     """Submit feedback on the country research report."""
-    update = {"country_report_feedback": feedback.model_dump()}
-    background.add_task(_safe_resume, run_id, update)
-    return {"status": "resuming", "next": "education_research" if feedback.approved else "country_research_revision"}
+    try:
+        if feedback.approved:
+            next_status = submit_feedback(
+                run_id, "country_report_feedback", feedback.model_dump(),
+                approved=True,
+                next_working_status=PipelineStatus.RESEARCHING_EDUCATION.value,
+                revision_working_status=PipelineStatus.RESEARCHING_COUNTRY.value,
+            )
+        else:
+            next_status = submit_feedback(
+                run_id, "country_report_feedback", feedback.model_dump(),
+                approved=False,
+                next_working_status=PipelineStatus.RESEARCHING_EDUCATION.value,
+                revision_working_status=PipelineStatus.RESEARCHING_COUNTRY.value,
+            )
+
+        # Start the next step in the background
+        asyncio.create_task(execute_step(run_id))
+        return {"status": "ok", "next_status": next_status}
+    except ValueError as e:
+        raise HTTPException(404, str(e))
 
 
 @app.post("/api/runs/{run_id}/feedback/education-report")
-async def submit_education_report_feedback(run_id: str, feedback: ReportFeedback, background: BackgroundTasks):
+async def submit_education_report_feedback(run_id: str, feedback: ReportFeedback):
     """Submit feedback on the education research report."""
-    update = {"education_report_feedback": feedback.model_dump()}
-    background.add_task(_safe_resume, run_id, update)
-    return {"status": "resuming", "next": "strategy" if feedback.approved else "education_research_revision"}
+    try:
+        next_status = submit_feedback(
+            run_id, "education_report_feedback", feedback.model_dump(),
+            approved=feedback.approved,
+            next_working_status=PipelineStatus.STRATEGIZING.value,
+            revision_working_status=PipelineStatus.RESEARCHING_EDUCATION.value,
+        )
+        asyncio.create_task(execute_step(run_id))
+        return {"status": "ok", "next_status": next_status}
+    except ValueError as e:
+        raise HTTPException(404, str(e))
 
 
 @app.post("/api/runs/{run_id}/feedback/strategy")
-async def submit_strategy_feedback(run_id: str, feedback: ReportFeedback, background: BackgroundTasks):
+async def submit_strategy_feedback(run_id: str, feedback: ReportFeedback):
     """Submit feedback on the strategy report."""
-    update = {"strategy_feedback": feedback.model_dump()}
-    background.add_task(_safe_resume, run_id, update)
-    return {"status": "resuming", "next": "financial_assumptions" if feedback.approved else "strategy_revision"}
+    try:
+        next_status = submit_feedback(
+            run_id, "strategy_feedback", feedback.model_dump(),
+            approved=feedback.approved,
+            next_working_status=PipelineStatus.PRESENTING_ASSUMPTIONS.value,
+            revision_working_status=PipelineStatus.STRATEGIZING.value,
+        )
+        asyncio.create_task(execute_step(run_id))
+        return {"status": "ok", "next_status": next_status}
+    except ValueError as e:
+        raise HTTPException(404, str(e))
 
 
 @app.post("/api/runs/{run_id}/feedback/assumptions")
-async def submit_assumptions_feedback(run_id: str, feedback: AssumptionsFeedback, background: BackgroundTasks):
+async def submit_assumptions_feedback(run_id: str, feedback: AssumptionsFeedback):
     """Submit validated/adjusted assumptions."""
-    update = {"assumptions_feedback": feedback.model_dump()}
-    background.add_task(_safe_resume, run_id, update)
-    return {"status": "resuming", "next": "financial_model"}
+    try:
+        next_status = submit_feedback(
+            run_id, "assumptions_feedback", feedback.model_dump(),
+            approved=True,  # assumptions always proceed
+            next_working_status=PipelineStatus.BUILDING_MODEL.value,
+            revision_working_status=PipelineStatus.PRESENTING_ASSUMPTIONS.value,
+        )
+        asyncio.create_task(execute_step(run_id))
+        return {"status": "ok", "next_status": next_status}
+    except ValueError as e:
+        raise HTTPException(404, str(e))
 
 
 @app.post("/api/runs/{run_id}/feedback/model")
-async def submit_model_feedback(run_id: str, feedback: ModelFeedback, background: BackgroundTasks):
+async def submit_model_feedback(run_id: str, feedback: ModelFeedback):
     """Submit financial model review — lock or adjust."""
-    update = {"model_feedback": feedback.model_dump()}
-    background.add_task(_safe_resume, run_id, update)
-    return {"status": "resuming", "next": "document_generation" if feedback.locked else "financial_model_revision"}
+    try:
+        if feedback.locked:
+            next_status = submit_feedback(
+                run_id, "model_feedback", feedback.model_dump(),
+                approved=True,
+                next_working_status=PipelineStatus.GENERATING_DOCUMENTS.value,
+                revision_working_status=PipelineStatus.BUILDING_MODEL.value,
+            )
+        else:
+            next_status = submit_feedback(
+                run_id, "model_feedback", feedback.model_dump(),
+                approved=False,
+                next_working_status=PipelineStatus.GENERATING_DOCUMENTS.value,
+                revision_working_status=PipelineStatus.BUILDING_MODEL.value,
+            )
+        asyncio.create_task(execute_step(run_id))
+        return {"status": "ok", "next_status": next_status}
+    except ValueError as e:
+        raise HTTPException(404, str(e))
 
 
 @app.post("/api/runs/{run_id}/feedback/documents")
-async def submit_document_feedback(run_id: str, feedback: DocumentFeedback, background: BackgroundTasks):
+async def submit_document_feedback(run_id: str, feedback: DocumentFeedback):
     """Submit final document review."""
-    update = {"document_feedback": feedback.model_dump()}
-    background.add_task(_safe_resume, run_id, update)
-    return {"status": "resuming", "next": "complete" if feedback.approved else "document_revision"}
+    try:
+        if feedback.approved:
+            finalize_run(run_id)
+            return {"status": "ok", "next_status": "completed"}
+        else:
+            next_status = submit_feedback(
+                run_id, "document_feedback", feedback.model_dump(),
+                approved=False,
+                next_working_status=PipelineStatus.COMPLETED.value,
+                revision_working_status=PipelineStatus.GENERATING_DOCUMENTS.value,
+            )
+            asyncio.create_task(execute_step(run_id))
+            return {"status": "ok", "next_status": next_status}
+    except ValueError as e:
+        raise HTTPException(404, str(e))
 
 
 # ---------------------------------------------------------------------------
@@ -238,7 +293,7 @@ async def recalculate_financial_model(run_id: str, req: RecalculateRequest):
 
 @app.get("/api/runs/{run_id}/download/{file_type}")
 async def download_file(run_id: str, file_type: str):
-    """Download a generated file (pptx, docx, xlsx, country_report, education_report, strategy_report)."""
+    """Download a generated file."""
     state = get_run_state(run_id)
 
     file_map = {
@@ -267,4 +322,4 @@ async def download_file(run_id: str, file_type: str):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "2.0.0"}
+    return {"status": "ok", "version": "2.1.0"}

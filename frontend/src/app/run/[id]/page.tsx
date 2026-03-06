@@ -51,6 +51,13 @@ function getActiveStageIndex(status: PipelineStatus): number {
   return -1;
 }
 
+function isWorkingStatus(status: PipelineStatus): boolean {
+  return [
+    "researching_country", "researching_education", "strategizing",
+    "presenting_assumptions", "building_model", "generating_documents",
+  ].includes(status);
+}
+
 function isReviewStatus(status: PipelineStatus): boolean {
   return status.startsWith("review_");
 }
@@ -71,11 +78,6 @@ export default function RunPage() {
   const [liveModel, setLiveModel] = useState<FinancialModel | null>(null);
   const [liveAssumptions, setLiveAssumptions] = useState<FinancialAssumption[] | null>(null);
 
-  // When true, we've submitted feedback and are waiting for the status to change.
-  // Prevents the "stop polling on review status" logic from firing prematurely.
-  const waitingForTransition = useRef(false);
-  const lastSubmittedStatus = useRef<PipelineStatus | null>(null);
-
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -84,37 +86,30 @@ export default function RunPage() {
       setData(res);
       if (res.financial_model && !liveModel) setLiveModel(res.financial_model);
       if (res.financial_assumptions?.assumptions && !liveAssumptions) setLiveAssumptions(res.financial_assumptions.assumptions);
-
-      // If we were waiting for a transition and the status has changed, clear the flag
-      if (waitingForTransition.current && lastSubmittedStatus.current && res.status !== lastSubmittedStatus.current) {
-        waitingForTransition.current = false;
-        lastSubmittedStatus.current = null;
-      }
     } catch (err) {
       setError(String(err));
     }
   }, [runId, liveModel, liveAssumptions]);
 
-  // Poll while pipeline is running
+  // Start polling on mount
   useEffect(() => {
     fetchStatus();
     pollRef.current = setInterval(fetchStatus, 3000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchStatus]);
 
-  // Stop polling when at a review gate or completed — but NOT if we just submitted feedback
+  // Stop polling at review gates, completed, or error
   useEffect(() => {
-    if (waitingForTransition.current) return; // don't stop polling while waiting for backend
     if (data && (isReviewStatus(data.status) || data.status === "completed" || data.status === "error")) {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     }
   }, [data]);
 
-  // Resume polling after submitting feedback
-  const startPolling = useCallback((currentStatus: PipelineStatus) => {
-    waitingForTransition.current = true;
-    lastSubmittedStatus.current = currentStatus;
+  // Restart polling (called after submitting feedback)
+  const restartPolling = useCallback(() => {
     if (pollRef.current) clearInterval(pollRef.current);
+    // Fetch immediately, then poll
+    fetchStatus();
     pollRef.current = setInterval(fetchStatus, 3000);
   }, [fetchStatus]);
 
@@ -124,64 +119,66 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitCountryReportFeedback(runId, true);
-      startPolling("review_country_report");
+      // Backend immediately set status to "researching_education" —
+      // restart polling to pick it up
+      restartPolling();
     } catch (err) { setError(String(err)); }
     setLoading(false);
-  }, [runId, startPolling]);
+  }, [runId, restartPolling]);
 
   const handleCountryRevise = useCallback(async (feedback: string) => {
     setLoading(true);
     try {
       await submitCountryReportFeedback(runId, false, feedback);
-      startPolling("review_country_report");
+      restartPolling();
     } catch (err) { setError(String(err)); }
     setLoading(false);
-  }, [runId, startPolling]);
+  }, [runId, restartPolling]);
 
   const handleEducationApprove = useCallback(async () => {
     setLoading(true);
     try {
       await submitEducationReportFeedback(runId, true);
-      startPolling("review_education_report");
+      restartPolling();
     } catch (err) { setError(String(err)); }
     setLoading(false);
-  }, [runId, startPolling]);
+  }, [runId, restartPolling]);
 
   const handleEducationRevise = useCallback(async (feedback: string) => {
     setLoading(true);
     try {
       await submitEducationReportFeedback(runId, false, feedback);
-      startPolling("review_education_report");
+      restartPolling();
     } catch (err) { setError(String(err)); }
     setLoading(false);
-  }, [runId, startPolling]);
+  }, [runId, restartPolling]);
 
   const handleStrategyApprove = useCallback(async () => {
     setLoading(true);
     try {
       await submitStrategyFeedback(runId, true);
-      startPolling("review_strategy");
+      restartPolling();
     } catch (err) { setError(String(err)); }
     setLoading(false);
-  }, [runId, startPolling]);
+  }, [runId, restartPolling]);
 
   const handleStrategyRevise = useCallback(async (feedback: string) => {
     setLoading(true);
     try {
       await submitStrategyFeedback(runId, false, feedback);
-      startPolling("review_strategy");
+      restartPolling();
     } catch (err) { setError(String(err)); }
     setLoading(false);
-  }, [runId, startPolling]);
+  }, [runId, restartPolling]);
 
   const handleAssumptionsConfirm = useCallback(async (adjustments: Record<string, number>) => {
     setLoading(true);
     try {
       await submitAssumptionsFeedback(runId, true, adjustments);
-      startPolling("review_assumptions");
+      restartPolling();
     } catch (err) { setError(String(err)); }
     setLoading(false);
-  }, [runId, startPolling]);
+  }, [runId, restartPolling]);
 
   const handleModelRecalculate = useCallback(async (adjustments: Record<string, number>) => {
     setLoading(true);
@@ -197,28 +194,28 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitModelFeedback(runId, true, adjustments);
-      startPolling("review_model");
+      restartPolling();
     } catch (err) { setError(String(err)); }
     setLoading(false);
-  }, [runId, startPolling]);
+  }, [runId, restartPolling]);
 
   const handleDocumentsApprove = useCallback(async () => {
     setLoading(true);
     try {
       await submitDocumentFeedback(runId, true, "investor");
-      startPolling("review_documents");
+      restartPolling();
     } catch (err) { setError(String(err)); }
     setLoading(false);
-  }, [runId, startPolling]);
+  }, [runId, restartPolling]);
 
   const handleDocumentsRevise = useCallback(async (feedback: string) => {
     setLoading(true);
     try {
       await submitDocumentFeedback(runId, false, "investor", feedback);
-      startPolling("review_documents");
+      restartPolling();
     } catch (err) { setError(String(err)); }
     setLoading(false);
-  }, [runId, startPolling]);
+  }, [runId, restartPolling]);
 
   // --- Render ---
 
@@ -292,11 +289,12 @@ export default function RunPage() {
           <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-6">
             <h2 className="text-lg font-bold text-red-400 mb-2">Pipeline Error</h2>
             <p className="text-gray-300">{data.error_message || "An unknown error occurred."}</p>
+            <AgentLog logs={data.agent_logs} />
           </div>
         )}
 
         {/* Working / Loading states */}
-        {!isReviewStatus(data.status) && data.status !== "completed" && data.status !== "error" && (
+        {isWorkingStatus(data.status) && (
           <div className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-8 text-center space-y-4">
             <div className="animate-pulse">
               <div className="text-4xl mb-4">
@@ -306,13 +304,22 @@ export default function RunPage() {
                 {STAGES[activeStage]?.label || "Processing"}...
               </h2>
               <p className="text-gray-400 text-sm mt-2">
-                {data.status === "researching_country" && "Conducting investment-bank quality country research with live data..."}
-                {data.status === "researching_education" && "Performing McKinsey-quality education sector deep-dive..."}
-                {data.status === "strategizing" && "Developing comprehensive market-entry strategy..."}
+                {data.status === "researching_country" && "Conducting investment-bank quality country research with live data... This may take 2-4 minutes."}
+                {data.status === "researching_education" && "Performing McKinsey-quality education sector deep-dive... This may take 2-4 minutes."}
+                {data.status === "strategizing" && "Developing comprehensive market-entry strategy... This may take 2-4 minutes."}
                 {data.status === "presenting_assumptions" && "Generating financial model assumptions..."}
                 {data.status === "building_model" && "Building the financial model..."}
                 {data.status === "generating_documents" && "Generating investor deck, proposal, and spreadsheet..."}
               </p>
+            </div>
+            <div className="flex justify-center">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#006D77] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#006D77]" />
+                </span>
+                Pipeline running...
+              </div>
             </div>
             <AgentLog logs={data.agent_logs} />
           </div>
@@ -501,7 +508,6 @@ export default function RunPage() {
               </div>
             </div>
 
-            {/* Show financial model summary at completion */}
             {data.financial_model && (
               <div className="space-y-6">
                 <h3 className="text-xl font-bold">Financial Summary</h3>
@@ -553,10 +559,12 @@ function StatusBadge({ status }: { status: PipelineStatus }) {
   };
 
   const c = config[status] || config.pending;
+  const isWorking = ["researching_country", "researching_education", "strategizing",
+    "presenting_assumptions", "building_model", "generating_documents"].includes(status);
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${c.bg} ${c.text}`}>
-      {(status.includes("researching") || status.includes("building") || status.includes("generating") || status === "strategizing") && (
+      {isWorking && (
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75" />
           <span className="relative inline-flex rounded-full h-2 w-2 bg-current" />

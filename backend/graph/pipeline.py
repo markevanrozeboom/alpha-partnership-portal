@@ -1,38 +1,30 @@
-"""LangGraph pipeline — multi-agent workflow with 6 HITL decision gates.
+"""Pipeline — simple step-based executor with in-memory state store.
 
-Pipeline flow:
-  START
-    → country_research         (IB-quality country report)
-    → ⏸  HITL Gate 1            User reviews country report → feedback/approve
-    → education_research       (McKinsey-quality education report)
-    → ⏸  HITL Gate 2            User reviews education report → feedback/approve
-    → strategy                 (McKinsey/VC strategy report)
-    → ⏸  HITL Gate 3            User reviews strategy report → feedback/approve
-    → financial_assumptions    (Present configurable assumptions)
-    → ⏸  HITL Gate 4            User validates/adjusts assumptions
-    → financial_model          (Build model from confirmed assumptions)
-    → ⏸  HITL Gate 5            User reviews model, adjusts sliders, locks
-    → document_generation      (Deck + Proposal + Spreadsheet)
-    → ⏸  HITL Gate 6            User reviews documents → approve
-    → finalize
-  END
+Replaces the LangGraph interrupt/resume mechanism with a straightforward
+dict-based state store and direct agent calls.  Much more reliable than
+the checkpoint-based approach for deployed environments.
+
+Flow:
+  1. country_research  → review_country_report  (HITL)
+  2. education_research → review_education_report (HITL)
+  3. strategy           → review_strategy         (HITL)
+  4. assumptions        → review_assumptions       (HITL)
+  5. financial_model    → review_model             (HITL)
+  6. documents          → review_documents         (HITL)
+  7. finalize           → completed
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime
 from typing import Any
 
-from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.memory import MemorySaver
-
-from graph.state import GraphState
 from models.schemas import (
     CountryProfile, EducationAnalysis, Strategy,
     FinancialAssumptions, FinancialModel,
-    ReportFeedback, AssumptionsFeedback, ModelFeedback, DocumentFeedback,
     AudienceType, PipelineStatus, EntryMode,
 )
 from agents.country_research import run_country_research
@@ -43,412 +35,14 @@ from agents.document_generation import generate_documents
 
 logger = logging.getLogger(__name__)
 
-
 # ---------------------------------------------------------------------------
-# Node functions
-# ---------------------------------------------------------------------------
-
-async def country_research_node(state: GraphState) -> dict[str, Any]:
-    """Run the Country Research Agent."""
-    target = state["target_input"]
-    logs = list(state.get("agent_logs", []))
-    logs.append(f"[{datetime.now().isoformat()}] Starting country research for '{target}'...")
-
-    try:
-        # Check for revision feedback
-        feedback_text = None
-        prev_report = state.get("country_report")
-        fb = state.get("country_report_feedback")
-        if fb and not fb.get("approved") and fb.get("feedback"):
-            feedback_text = fb["feedback"]
-            logs.append(f"[{datetime.now().isoformat()}] Revising country report with feedback...")
-
-        profile, report_md, docx_path = await run_country_research(
-            target, feedback=feedback_text, previous_report=prev_report
-        )
-
-        logs.append(
-            f"[{datetime.now().isoformat()}] Country research complete. "
-            f"Tier: {profile.target.tier}, Type: {profile.target.type.value}"
-        )
-
-        return {
-            "country_profile": profile.model_dump(),
-            "country_report": report_md,
-            "country_report_docx_path": docx_path,
-            "status": PipelineStatus.REVIEW_COUNTRY_REPORT.value,
-            "agent_logs": logs,
-        }
-    except Exception as exc:
-        logs.append(f"[{datetime.now().isoformat()}] ERROR: {exc}")
-        return {"status": PipelineStatus.ERROR.value, "error_message": str(exc), "agent_logs": logs}
-
-
-async def education_research_node(state: GraphState) -> dict[str, Any]:
-    """Run the Education Research Agent."""
-    target = state["target_input"]
-    logs = list(state.get("agent_logs", []))
-    logs.append(f"[{datetime.now().isoformat()}] Starting education research...")
-
-    try:
-        country_profile = CountryProfile(**state["country_profile"])
-
-        feedback_text = None
-        prev_report = state.get("education_report")
-        fb = state.get("education_report_feedback")
-        if fb and not fb.get("approved") and fb.get("feedback"):
-            feedback_text = fb["feedback"]
-            logs.append(f"[{datetime.now().isoformat()}] Revising education report with feedback...")
-
-        analysis, report_md, docx_path = await run_education_research(
-            target, country_profile,
-            feedback=feedback_text, previous_report=prev_report,
-        )
-
-        logs.append(f"[{datetime.now().isoformat()}] Education research complete.")
-
-        return {
-            "education_analysis": analysis.model_dump(),
-            "education_report": report_md,
-            "education_report_docx_path": docx_path,
-            "status": PipelineStatus.REVIEW_EDUCATION_REPORT.value,
-            "agent_logs": logs,
-        }
-    except Exception as exc:
-        logs.append(f"[{datetime.now().isoformat()}] ERROR: {exc}")
-        return {"status": PipelineStatus.ERROR.value, "error_message": str(exc), "agent_logs": logs}
-
-
-async def strategy_node(state: GraphState) -> dict[str, Any]:
-    """Run the Strategy Agent."""
-    target = state["target_input"]
-    logs = list(state.get("agent_logs", []))
-    logs.append(f"[{datetime.now().isoformat()}] Starting strategy development...")
-
-    try:
-        country_profile = CountryProfile(**state["country_profile"])
-        education_analysis = EducationAnalysis(**state["education_analysis"])
-
-        # Entry mode from country report feedback
-        entry_mode = None
-        cr_fb = state.get("country_report_feedback")
-        if cr_fb and cr_fb.get("entry_mode"):
-            entry_mode = EntryMode(cr_fb["entry_mode"])
-
-        feedback_text = None
-        prev_report = state.get("strategy_report")
-        fb = state.get("strategy_feedback")
-        if fb and not fb.get("approved") and fb.get("feedback"):
-            feedback_text = fb["feedback"]
-            logs.append(f"[{datetime.now().isoformat()}] Revising strategy with feedback...")
-
-        strategy, report_md, docx_path = await run_strategy(
-            target, country_profile, education_analysis,
-            entry_mode=entry_mode,
-            feedback=feedback_text, previous_report=prev_report,
-        )
-
-        logs.append(
-            f"[{datetime.now().isoformat()}] Strategy complete. "
-            f"Entry mode: {strategy.entry_mode}"
-        )
-
-        return {
-            "strategy": strategy.model_dump(),
-            "strategy_report": report_md,
-            "strategy_report_docx_path": docx_path,
-            "status": PipelineStatus.REVIEW_STRATEGY.value,
-            "agent_logs": logs,
-        }
-    except Exception as exc:
-        logs.append(f"[{datetime.now().isoformat()}] ERROR: {exc}")
-        return {"status": PipelineStatus.ERROR.value, "error_message": str(exc), "agent_logs": logs}
-
-
-async def financial_assumptions_node(state: GraphState) -> dict[str, Any]:
-    """Generate financial assumptions for user validation."""
-    target = state["target_input"]
-    logs = list(state.get("agent_logs", []))
-    logs.append(f"[{datetime.now().isoformat()}] Generating financial assumptions...")
-
-    try:
-        country_profile = CountryProfile(**state["country_profile"])
-        strategy = Strategy(**state["strategy"])
-
-        assumptions = generate_assumptions(target, country_profile, strategy)
-
-        # Apply any user adjustments from previous round
-        fb = state.get("assumptions_feedback")
-        if fb and fb.get("adjustments"):
-            for item in assumptions.assumptions:
-                if item.key in fb["adjustments"] and not item.locked:
-                    item.value = fb["adjustments"][item.key]
-
-        logs.append(f"[{datetime.now().isoformat()}] {len(assumptions.assumptions)} assumptions generated.")
-
-        return {
-            "financial_assumptions": assumptions.model_dump(),
-            "status": PipelineStatus.REVIEW_ASSUMPTIONS.value,
-            "agent_logs": logs,
-        }
-    except Exception as exc:
-        logs.append(f"[{datetime.now().isoformat()}] ERROR: {exc}")
-        return {"status": PipelineStatus.ERROR.value, "error_message": str(exc), "agent_logs": logs}
-
-
-async def financial_model_node(state: GraphState) -> dict[str, Any]:
-    """Build the financial model from confirmed assumptions."""
-    target = state["target_input"]
-    logs = list(state.get("agent_logs", []))
-    logs.append(f"[{datetime.now().isoformat()}] Building financial model...")
-
-    try:
-        strategy = Strategy(**state["strategy"])
-        assumptions = FinancialAssumptions(**state["financial_assumptions"])
-
-        # Apply user adjustments if any
-        fb = state.get("assumptions_feedback")
-        if fb and fb.get("adjustments"):
-            for item in assumptions.assumptions:
-                if item.key in fb["adjustments"] and not item.locked:
-                    item.value = max(item.min_val, min(item.max_val, fb["adjustments"][item.key]))
-
-        model = build_model(assumptions, target, strategy)
-
-        # Also apply model feedback adjustments
-        mfb = state.get("model_feedback")
-        if mfb and mfb.get("adjustments"):
-            from agents.financial import recalculate_model
-            assumptions, model = recalculate_model(assumptions, mfb["adjustments"], target, strategy)
-
-        logs.append(
-            f"[{datetime.now().isoformat()}] Financial model built. "
-            f"Y5 revenue: ${model.pnl_projection[-1].revenue:,.0f}, "
-            f"IRR: {model.returns_analysis.irr}%"
-        )
-
-        return {
-            "financial_model": model.model_dump(),
-            "financial_assumptions": assumptions.model_dump(),
-            "status": PipelineStatus.REVIEW_MODEL.value,
-            "agent_logs": logs,
-        }
-    except Exception as exc:
-        logs.append(f"[{datetime.now().isoformat()}] ERROR: {exc}")
-        return {"status": PipelineStatus.ERROR.value, "error_message": str(exc), "agent_logs": logs}
-
-
-async def document_generation_node(state: GraphState) -> dict[str, Any]:
-    """Generate investor deck, proposal, and spreadsheet."""
-    target = state["target_input"]
-    logs = list(state.get("agent_logs", []))
-    logs.append(f"[{datetime.now().isoformat()}] Generating documents...")
-
-    try:
-        country_profile = CountryProfile(**state["country_profile"])
-        education_analysis = EducationAnalysis(**state["education_analysis"])
-        strategy = Strategy(**state["strategy"])
-        model = FinancialModel(**state["financial_model"])
-        assumptions = FinancialAssumptions(**state["financial_assumptions"])
-
-        audience = AudienceType.INVESTOR
-        dfb = state.get("document_feedback")
-        if dfb and dfb.get("audience"):
-            audience = AudienceType(dfb["audience"])
-
-        revision_notes = None
-        if dfb and dfb.get("revision_notes"):
-            revision_notes = dfb["revision_notes"]
-
-        pptx_path, docx_path, xlsx_path = await generate_documents(
-            target, country_profile, education_analysis, strategy,
-            model, assumptions, audience, revision_notes,
-        )
-
-        logs.append(f"[{datetime.now().isoformat()}] All documents generated.")
-
-        return {
-            "pptx_path": pptx_path,
-            "docx_path": docx_path,
-            "xlsx_path": xlsx_path,
-            "status": PipelineStatus.REVIEW_DOCUMENTS.value,
-            "agent_logs": logs,
-        }
-    except Exception as exc:
-        logs.append(f"[{datetime.now().isoformat()}] ERROR: {exc}")
-        return {"status": PipelineStatus.ERROR.value, "error_message": str(exc), "agent_logs": logs}
-
-
-async def finalize_node(state: GraphState) -> dict[str, Any]:
-    """Mark pipeline as completed."""
-    logs = list(state.get("agent_logs", []))
-    logs.append(f"[{datetime.now().isoformat()}] Pipeline complete! All deliverables ready.")
-    return {"status": PipelineStatus.COMPLETED.value, "agent_logs": logs}
-
-
-# --- HITL Gate nodes (pause points) ---
-
-async def gate_country_report(state: GraphState) -> dict[str, Any]:
-    return {"status": PipelineStatus.REVIEW_COUNTRY_REPORT.value}
-
-async def gate_education_report(state: GraphState) -> dict[str, Any]:
-    return {"status": PipelineStatus.REVIEW_EDUCATION_REPORT.value}
-
-async def gate_strategy(state: GraphState) -> dict[str, Any]:
-    return {"status": PipelineStatus.REVIEW_STRATEGY.value}
-
-async def gate_assumptions(state: GraphState) -> dict[str, Any]:
-    return {"status": PipelineStatus.REVIEW_ASSUMPTIONS.value}
-
-async def gate_model(state: GraphState) -> dict[str, Any]:
-    return {"status": PipelineStatus.REVIEW_MODEL.value}
-
-async def gate_documents(state: GraphState) -> dict[str, Any]:
-    return {"status": PipelineStatus.REVIEW_DOCUMENTS.value}
-
-
-# ---------------------------------------------------------------------------
-# Routing logic — handles "revise" vs "proceed" for feedback gates
+# In-memory state store
 # ---------------------------------------------------------------------------
 
-def route_country_feedback(state: GraphState) -> str:
-    fb = state.get("country_report_feedback")
-    if fb and not fb.get("approved") and fb.get("feedback"):
-        return "country_research"  # re-run with feedback
-    return "education_research"
+_run_states: dict[str, dict[str, Any]] = {}
 
 
-def route_education_feedback(state: GraphState) -> str:
-    fb = state.get("education_report_feedback")
-    if fb and not fb.get("approved") and fb.get("feedback"):
-        return "education_research"
-    return "strategy"
-
-
-def route_strategy_feedback(state: GraphState) -> str:
-    fb = state.get("strategy_feedback")
-    if fb and not fb.get("approved") and fb.get("feedback"):
-        return "strategy"
-    return "financial_assumptions"
-
-
-def route_assumptions_feedback(state: GraphState) -> str:
-    # Assumptions are always "proceed" but might have adjustments applied
-    return "financial_model"
-
-
-def route_model_feedback(state: GraphState) -> str:
-    fb = state.get("model_feedback")
-    if fb and not fb.get("locked") and fb.get("adjustments"):
-        return "financial_model"  # rebuild with new adjustments
-    return "document_generation"
-
-
-def route_document_feedback(state: GraphState) -> str:
-    fb = state.get("document_feedback")
-    if fb and not fb.get("approved") and fb.get("revision_notes"):
-        return "document_generation"
-    return "finalize"
-
-
-# ---------------------------------------------------------------------------
-# Graph construction
-# ---------------------------------------------------------------------------
-
-def build_pipeline() -> tuple:
-    """Build and compile the LangGraph pipeline with 6 HITL gates."""
-
-    checkpointer = MemorySaver()
-    graph = StateGraph(GraphState)
-
-    # Add nodes
-    graph.add_node("country_research", country_research_node)
-    graph.add_node("gate_country_report", gate_country_report)
-    graph.add_node("education_research", education_research_node)
-    graph.add_node("gate_education_report", gate_education_report)
-    graph.add_node("strategy", strategy_node)
-    graph.add_node("gate_strategy", gate_strategy)
-    graph.add_node("financial_assumptions", financial_assumptions_node)
-    graph.add_node("gate_assumptions", gate_assumptions)
-    graph.add_node("financial_model", financial_model_node)
-    graph.add_node("gate_model", gate_model)
-    graph.add_node("document_generation", document_generation_node)
-    graph.add_node("gate_documents", gate_documents)
-    graph.add_node("finalize", finalize_node)
-
-    # Define edges
-    graph.set_entry_point("country_research")
-    graph.add_edge("country_research", "gate_country_report")
-
-    # After each gate, route based on feedback
-    graph.add_conditional_edges("gate_country_report", route_country_feedback, {
-        "country_research": "country_research",
-        "education_research": "education_research",
-    })
-
-    graph.add_edge("education_research", "gate_education_report")
-    graph.add_conditional_edges("gate_education_report", route_education_feedback, {
-        "education_research": "education_research",
-        "strategy": "strategy",
-    })
-
-    graph.add_edge("strategy", "gate_strategy")
-    graph.add_conditional_edges("gate_strategy", route_strategy_feedback, {
-        "strategy": "strategy",
-        "financial_assumptions": "financial_assumptions",
-    })
-
-    graph.add_edge("financial_assumptions", "gate_assumptions")
-    graph.add_conditional_edges("gate_assumptions", route_assumptions_feedback, {
-        "financial_model": "financial_model",
-    })
-
-    graph.add_edge("financial_model", "gate_model")
-    graph.add_conditional_edges("gate_model", route_model_feedback, {
-        "financial_model": "financial_model",
-        "document_generation": "document_generation",
-    })
-
-    graph.add_edge("document_generation", "gate_documents")
-    graph.add_conditional_edges("gate_documents", route_document_feedback, {
-        "document_generation": "document_generation",
-        "finalize": "finalize",
-    })
-
-    graph.add_edge("finalize", END)
-
-    compiled = graph.compile(
-        checkpointer=checkpointer,
-        interrupt_before=[
-            "gate_country_report", "gate_education_report", "gate_strategy",
-            "gate_assumptions", "gate_model", "gate_documents",
-        ],
-    )
-
-    return compiled, checkpointer
-
-
-# ---------------------------------------------------------------------------
-# Singleton pipeline instance
-# ---------------------------------------------------------------------------
-
-_pipeline = None
-_checkpointer = None
-
-# In-memory store for runs that have been created but not yet checkpointed
-# by the LangGraph pipeline. Once the pipeline writes its first checkpoint,
-# get_run_state will read from the checkpointer instead.
-_pending_runs: dict[str, dict[str, Any]] = {}
-
-
-def get_pipeline():
-    global _pipeline, _checkpointer
-    if _pipeline is None:
-        _pipeline, _checkpointer = build_pipeline()
-    return _pipeline, _checkpointer
-
-
-def _make_initial_state(run_id: str, target: str) -> GraphState:
+def _make_initial_state(run_id: str, target: str) -> dict[str, Any]:
     return {
         "run_id": run_id,
         "target_input": target,
@@ -478,76 +72,282 @@ def _make_initial_state(run_id: str, target: str) -> GraphState:
     }
 
 
-def create_run(target: str) -> str:
-    """Create a new pipeline run — returns the run_id immediately.
+def _log(state: dict, msg: str) -> None:
+    """Append a timestamped message to agent_logs."""
+    state.setdefault("agent_logs", []).append(f"[{datetime.now().isoformat()}] {msg}")
 
-    The initial state is stored in ``_pending_runs`` so that
-    ``get_run_state`` can return it while the pipeline is still starting.
-    Call ``execute_run`` afterwards (in a background task) to actually run it.
-    """
+
+# ---------------------------------------------------------------------------
+# Step executors — each runs one agent and updates state
+# ---------------------------------------------------------------------------
+
+async def _run_country_research(state: dict) -> None:
+    """Run the Country Research Agent."""
+    target = state["target_input"]
+    _log(state, f"Starting country research for '{target}'...")
+    state["status"] = PipelineStatus.RESEARCHING_COUNTRY.value
+
+    feedback_text = None
+    prev_report = state.get("country_report") or None
+    fb = state.get("country_report_feedback")
+    if fb and not fb.get("approved") and fb.get("feedback"):
+        feedback_text = fb["feedback"]
+        _log(state, "Revising country report with feedback...")
+
+    profile, report_md, docx_path = await run_country_research(
+        target, feedback=feedback_text, previous_report=prev_report
+    )
+
+    state["country_profile"] = profile.model_dump()
+    state["country_report"] = report_md
+    state["country_report_docx_path"] = docx_path
+    state["status"] = PipelineStatus.REVIEW_COUNTRY_REPORT.value
+    _log(state, f"Country research complete. Tier: {profile.target.tier}, Type: {profile.target.type.value}")
+
+
+async def _run_education_research(state: dict) -> None:
+    """Run the Education Research Agent."""
+    target = state["target_input"]
+    _log(state, "Starting education research...")
+    state["status"] = PipelineStatus.RESEARCHING_EDUCATION.value
+
+    country_profile = CountryProfile(**state["country_profile"])
+
+    feedback_text = None
+    prev_report = state.get("education_report") or None
+    fb = state.get("education_report_feedback")
+    if fb and not fb.get("approved") and fb.get("feedback"):
+        feedback_text = fb["feedback"]
+        _log(state, "Revising education report with feedback...")
+
+    analysis, report_md, docx_path = await run_education_research(
+        target, country_profile,
+        feedback=feedback_text, previous_report=prev_report,
+    )
+
+    state["education_analysis"] = analysis.model_dump()
+    state["education_report"] = report_md
+    state["education_report_docx_path"] = docx_path
+    state["status"] = PipelineStatus.REVIEW_EDUCATION_REPORT.value
+    _log(state, "Education research complete.")
+
+
+async def _run_strategy(state: dict) -> None:
+    """Run the Strategy Agent."""
+    target = state["target_input"]
+    _log(state, "Starting strategy development...")
+    state["status"] = PipelineStatus.STRATEGIZING.value
+
+    country_profile = CountryProfile(**state["country_profile"])
+    education_analysis = EducationAnalysis(**state["education_analysis"])
+
+    entry_mode = None
+    cr_fb = state.get("country_report_feedback")
+    if cr_fb and cr_fb.get("entry_mode"):
+        entry_mode = EntryMode(cr_fb["entry_mode"])
+
+    feedback_text = None
+    prev_report = state.get("strategy_report") or None
+    fb = state.get("strategy_feedback")
+    if fb and not fb.get("approved") and fb.get("feedback"):
+        feedback_text = fb["feedback"]
+        _log(state, "Revising strategy with feedback...")
+
+    strategy_obj, report_md, docx_path = await run_strategy(
+        target, country_profile, education_analysis,
+        entry_mode=entry_mode,
+        feedback=feedback_text, previous_report=prev_report,
+    )
+
+    state["strategy"] = strategy_obj.model_dump()
+    state["strategy_report"] = report_md
+    state["strategy_report_docx_path"] = docx_path
+    state["status"] = PipelineStatus.REVIEW_STRATEGY.value
+    _log(state, f"Strategy complete. Entry mode: {strategy_obj.entry_mode}")
+
+
+async def _run_assumptions(state: dict) -> None:
+    """Generate financial assumptions."""
+    target = state["target_input"]
+    _log(state, "Generating financial assumptions...")
+    state["status"] = PipelineStatus.PRESENTING_ASSUMPTIONS.value
+
+    country_profile = CountryProfile(**state["country_profile"])
+    strategy_obj = Strategy(**state["strategy"])
+
+    assumptions = generate_assumptions(target, country_profile, strategy_obj)
+
+    fb = state.get("assumptions_feedback")
+    if fb and fb.get("adjustments"):
+        for item in assumptions.assumptions:
+            if item.key in fb["adjustments"] and not item.locked:
+                item.value = fb["adjustments"][item.key]
+
+    state["financial_assumptions"] = assumptions.model_dump()
+    state["status"] = PipelineStatus.REVIEW_ASSUMPTIONS.value
+    _log(state, f"{len(assumptions.assumptions)} assumptions generated.")
+
+
+async def _run_financial_model(state: dict) -> None:
+    """Build the financial model."""
+    target = state["target_input"]
+    _log(state, "Building financial model...")
+    state["status"] = PipelineStatus.BUILDING_MODEL.value
+
+    strategy_obj = Strategy(**state["strategy"])
+    assumptions = FinancialAssumptions(**state["financial_assumptions"])
+
+    fb = state.get("assumptions_feedback")
+    if fb and fb.get("adjustments"):
+        for item in assumptions.assumptions:
+            if item.key in fb["adjustments"] and not item.locked:
+                item.value = max(item.min_val, min(item.max_val, fb["adjustments"][item.key]))
+
+    model = build_model(assumptions, target, strategy_obj)
+
+    mfb = state.get("model_feedback")
+    if mfb and mfb.get("adjustments"):
+        from agents.financial import recalculate_model
+        assumptions, model = recalculate_model(assumptions, mfb["adjustments"], target, strategy_obj)
+
+    state["financial_model"] = model.model_dump()
+    state["financial_assumptions"] = assumptions.model_dump()
+    state["status"] = PipelineStatus.REVIEW_MODEL.value
+    _log(state, (
+        f"Financial model built. Y5 revenue: ${model.pnl_projection[-1].revenue:,.0f}, "
+        f"IRR: {model.returns_analysis.irr}%"
+    ))
+
+
+async def _run_documents(state: dict) -> None:
+    """Generate documents (deck, proposal, spreadsheet)."""
+    target = state["target_input"]
+    _log(state, "Generating documents...")
+    state["status"] = PipelineStatus.GENERATING_DOCUMENTS.value
+
+    country_profile = CountryProfile(**state["country_profile"])
+    education_analysis = EducationAnalysis(**state["education_analysis"])
+    strategy_obj = Strategy(**state["strategy"])
+    model = FinancialModel(**state["financial_model"])
+    assumptions = FinancialAssumptions(**state["financial_assumptions"])
+
+    audience = AudienceType.INVESTOR
+    dfb = state.get("document_feedback")
+    if dfb and dfb.get("audience"):
+        audience = AudienceType(dfb["audience"])
+    revision_notes = None
+    if dfb and dfb.get("revision_notes"):
+        revision_notes = dfb["revision_notes"]
+
+    pptx_path, docx_path, xlsx_path = await generate_documents(
+        target, country_profile, education_analysis, strategy_obj,
+        model, assumptions, audience, revision_notes,
+    )
+
+    state["pptx_path"] = pptx_path
+    state["docx_path"] = docx_path
+    state["xlsx_path"] = xlsx_path
+    state["status"] = PipelineStatus.REVIEW_DOCUMENTS.value
+    _log(state, "All documents generated.")
+
+
+async def _finalize(state: dict) -> None:
+    """Mark pipeline as completed."""
+    state["status"] = PipelineStatus.COMPLETED.value
+    _log(state, "Pipeline complete! All deliverables ready.")
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+def create_run(target: str) -> str:
+    """Create a new pipeline run — returns the run_id immediately."""
     run_id = str(uuid.uuid4())
-    initial_state = _make_initial_state(run_id, target)
-    _pending_runs[run_id] = dict(initial_state)
+    state = _make_initial_state(run_id, target)
+    _run_states[run_id] = state
     logger.info("Created pipeline run %s for '%s'", run_id, target)
     return run_id
 
 
-async def execute_run(run_id: str, target: str) -> None:
-    """Execute the pipeline for a previously created run (call in background)."""
-    pipeline, _ = get_pipeline()
-    initial_state = _make_initial_state(run_id, target)
-    config = {"configurable": {"thread_id": run_id}}
+async def execute_step(run_id: str) -> None:
+    """Execute the current step of the pipeline (call in background).
 
-    logger.info("Executing pipeline run %s for '%s'", run_id, target)
+    Looks at the current ``status`` to decide which agent to run next.
+    After the agent completes, status is set to the corresponding review gate.
+    """
+    state = _run_states.get(run_id)
+    if not state:
+        logger.error("execute_step called for unknown run %s", run_id)
+        return
+
+    status = state["status"]
+    logger.info("execute_step for run %s — current status: %s", run_id, status)
+
     try:
-        await pipeline.ainvoke(initial_state, config)
+        if status == PipelineStatus.RESEARCHING_COUNTRY.value:
+            await _run_country_research(state)
+        elif status == PipelineStatus.RESEARCHING_EDUCATION.value:
+            await _run_education_research(state)
+        elif status == PipelineStatus.STRATEGIZING.value:
+            await _run_strategy(state)
+        elif status == PipelineStatus.PRESENTING_ASSUMPTIONS.value:
+            await _run_assumptions(state)
+        elif status == PipelineStatus.BUILDING_MODEL.value:
+            await _run_financial_model(state)
+        elif status == PipelineStatus.GENERATING_DOCUMENTS.value:
+            await _run_documents(state)
+        else:
+            logger.warning("execute_step called with unexpected status %s for run %s", status, run_id)
+            return
+
+        logger.info("execute_step complete for run %s — new status: %s", run_id, state["status"])
+
     except Exception as exc:
-        logger.error("Pipeline run %s failed: %s", run_id, exc)
-        # Store the error in pending runs so the frontend can see it
-        _pending_runs[run_id] = {
-            **_pending_runs.get(run_id, dict(initial_state)),
-            "status": PipelineStatus.ERROR.value,
-            "error_message": str(exc),
-        }
-    finally:
-        # Once checkpointer has taken over, clean up (but keep errors)
-        if run_id in _pending_runs and _pending_runs[run_id].get("status") != PipelineStatus.ERROR.value:
-            _pending_runs.pop(run_id, None)
+        logger.error("execute_step failed for run %s: %s", run_id, exc, exc_info=True)
+        state["status"] = PipelineStatus.ERROR.value
+        state["error_message"] = str(exc)
+        _log(state, f"ERROR: {exc}")
 
 
-async def resume_run(run_id: str, gate_update: dict[str, Any] | None = None) -> None:
-    """Resume a paused pipeline run after a HITL decision."""
-    pipeline, _ = get_pipeline()
-    config = {"configurable": {"thread_id": run_id}}
+def submit_feedback(
+    run_id: str,
+    feedback_key: str,
+    feedback_value: dict,
+    approved: bool,
+    next_working_status: str,
+    revision_working_status: str,
+) -> str:
+    """Apply user feedback and determine the next status.
 
-    if gate_update:
-        logger.info("Updating state for run %s with: %s", run_id, list(gate_update.keys()))
-        await pipeline.aupdate_state(config, gate_update)
+    Returns the next working status (the agent will start running).
+    """
+    state = _run_states.get(run_id)
+    if not state:
+        raise ValueError(f"Run {run_id} not found")
 
-    logger.info("Resuming pipeline run %s", run_id)
-    try:
-        await pipeline.ainvoke(None, config)
-        logger.info("Pipeline run %s resumed and completed/paused at next gate", run_id)
-    except Exception as exc:
-        logger.error("Error resuming pipeline run %s: %s", run_id, exc, exc_info=True)
-        raise
+    state[feedback_key] = feedback_value
+
+    if approved:
+        state["status"] = next_working_status
+        _log(state, f"User approved. Moving to {next_working_status}...")
+        return next_working_status
+    else:
+        state["status"] = revision_working_status
+        _log(state, f"User requested changes. Re-running {revision_working_status}...")
+        return revision_working_status
+
+
+def finalize_run(run_id: str) -> None:
+    """Mark a run as completed (called after document approval)."""
+    state = _run_states.get(run_id)
+    if state:
+        state["status"] = PipelineStatus.COMPLETED.value
+        _log(state, "Pipeline complete! All deliverables ready.")
 
 
 def get_run_state(run_id: str) -> dict[str, Any]:
     """Get the current state of a pipeline run."""
-    pipeline, _ = get_pipeline()
-    config = {"configurable": {"thread_id": run_id}}
-
-    # First try the LangGraph checkpointer (has latest state once pipeline has run)
-    try:
-        snapshot = pipeline.get_state(config)
-        if snapshot and snapshot.values:
-            return dict(snapshot.values)
-    except Exception as exc:
-        logger.error("Error getting state for run %s: %s", run_id, exc)
-
-    # Fall back to pending runs (for runs that were just created / still starting)
-    if run_id in _pending_runs:
-        return dict(_pending_runs[run_id])
-
+    if run_id in _run_states:
+        return dict(_run_states[run_id])
     return {"status": PipelineStatus.ERROR.value, "error_message": "Run not found"}
