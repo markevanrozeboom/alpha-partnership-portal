@@ -1,7 +1,8 @@
-"""Education System Research Agent — produces McKinsey-quality education sector analysis.
+"""Education System Research Agent — produces McKinsey-quality 15-20 page education sector analysis.
 
 Deep-dives into the education system, diagnoses what's broken, maps the reform landscape,
 and identifies where 2hr Learning's model creates the sharpest differentiation.
+Uses multi-call generation for comprehensive depth.
 """
 
 from __future__ import annotations
@@ -23,76 +24,368 @@ from config import OUTPUT_DIR
 
 logger = logging.getLogger(__name__)
 
-REPORT_PROMPT = """You are a senior education sector analyst at McKinsey & Company writing a
-comprehensive education system analysis for **{target}**.
+# ---------------------------------------------------------------------------
+# Multi-section prompts
+# ---------------------------------------------------------------------------
+
+SECTION_1_PROMPT = """You are a senior partner at McKinsey & Company's Global Education Practice
+writing the FIRST PART of a comprehensive education system analysis for **{target}**.
 
 This report will be read by CEOs, education ministers, and sovereign wealth fund managers
-evaluating a major partnership with 2hr Learning (Alpha).
+evaluating a $1B+ partnership with 2hr Learning (Alpha).
 
 ## About Alpha / 2hr Learning
-
-Alpha's education operating system:
-- **Timeback**: AI platform compressing core academics into 2 hours/day, freeing time for
-  specialisations (STEM, sports, arts, entrepreneurship, life skills)
-- **AlphaCore**: Core curriculum and learning management system
-- **Guide School**: 12-month program transforming traditional teachers into "Guides" —
-  facilitators of deeper, project-based, student-led learning
+- **Timeback**: AI platform compressing core academics into 2 hours/day
+- **AlphaCore**: Curriculum OS and learning management system
+- **Guide School**: 12-month program transforming teachers into facilitative "Guides"
 - **Incept eduLLM**: Custom education AI model adapted to local curriculum and culture
+- Alpha's three commitments: children love school, learn 2x faster, develop AI-age life skills
+- UAE reference: $1.5B, 200K students, $25K/student, JV with local cultural IP layer
 
-Alpha's three commitments: (1) Children will love school, (2) Children will learn 2x faster,
-(3) Children will develop life skills for the AI age.
+## Context Data
+{data_context}
 
-UAE reference: $1.5B deal, 200K students, $25K/student, local IP layer (AsasOne) for
-national identity and cultural values.
+## Write EXACTLY these sections:
 
-## Report Requirements
+# Education System Analysis: {target}
 
-Write an exhaustive education sector analysis in **markdown** with these sections.
-Include specific data, citations, and comparative benchmarks. Use tables for data.
-Mark Alpha-relevant insights with **⚡ Alpha Relevance:** callouts.
+## 1. Executive Summary
+Write 5-6 paragraphs synthesising:
+- Current state of the education system (quality, equity, efficiency)
+- Critical pain points across all stakeholders
+- Reform landscape and government appetite for innovation
+- Alpha's specific fit and value proposition
+- Recommended approach and expected impact
+- Key risks and success factors
 
-### Required Sections
+## 2. Education System Architecture
 
-1. **Executive Summary** — 3-4 paragraph synthesis of key findings and Alpha's strategic fit
-2. **Education System Architecture** — Structure overview, governance model, curriculum
-   framework, assessment system, language of instruction, school calendar, key regulatory bodies
-3. **Performance Assessment** — Learning outcomes (PISA, TIMSS, national assessments),
-   equity gaps (urban/rural, gender, income), efficiency metrics (spend per outcome),
-   international benchmarking vs. peer countries
-4. **Pain Point Analysis**
-   - **Student pain points**: engagement, relevance, mental health, future readiness
-   - **Parent pain points**: quality concerns, cost burden, aspirations gap
-   - **Government pain points**: fiscal pressure, outcomes gap, teacher quality, infrastructure
-   - **Employer pain points**: skills gap, workforce readiness
-5. **Reform Landscape** — Active reforms with budget and timeline, government appetite
-   for innovation, prior edtech initiatives (successes and failures), international
-   partnerships in education
-6. **Private Education Market** — Market size and growth, segmentation (premium/mid/mass),
-   major operators, pricing tiers, parent willingness to pay by income segment,
-   unmet demand analysis
-7. **Technology & Innovation Readiness** — Digital infrastructure, device penetration,
-   internet access, EdTech adoption, AI readiness, teacher digital literacy
-8. **Alpha Model Fit Analysis** — For each Alpha product (Timeback, AlphaCore, Guide School,
-   Incept eduLLM): specific pain point it solves, localisation requirements, competitive
-   advantage vs. existing solutions, implementation challenges
-9. **Recommended Entry Strategy** — Private / Government / Hybrid with detailed rationale,
-   target segments, pricing positioning, regulatory pathway, timeline
-10. **Localisation Requirements** — Language, curriculum, cultural values integration,
-    national identity considerations, mandatory subjects, teacher certification
-11. **Risk Factors** — Implementation risks, cultural risks, regulatory risks, competitive
-    response — each rated and with mitigation strategies
-12. **Sources** — All citations with dates
+### 2.1 System Structure Overview
+Create a comprehensive table:
 
-For US states: focus on ESA/voucher programs, charter/micro-school culture, homeschool
-populations, regulatory environment, school choice political landscape.
+| Element | Details |
+|---------|---------|
+| Education Ministry | ... |
+| Governance Model | Centralised / Decentralised / Mixed |
+| Compulsory Education | Ages X to Y |
+| System Structure | ... years primary + ... years secondary |
+| National Curriculum | ... |
+| Language of Instruction | ... |
+| Assessment Framework | ... (national exams, continuous assessment) |
+| School Calendar | ... (start month, term structure) |
+| School Hours | ... |
+| Grading System | ... |
+| Teacher Certification | ... |
+| Accreditation Bodies | ... |
+| Private School Oversight | ... |
 
-## Formatting Rules
-- Markdown headers, tables, bold for key figures
-- **⚡ Alpha Relevance:** callouts for actionable insights
-- Analytical and data-driven, not descriptive
-- Minimum 3,000 words
-- Write as if presenting to McKinsey's Global Education Practice leadership
-"""
+Write 4-5 paragraphs explaining the system architecture, recent structural reforms,
+and key institutional dynamics.
+
+### 2.2 Curriculum Framework
+Detailed analysis of the national curriculum: mandatory subjects, elective options,
+assessment methods, international curriculum options (IB, Cambridge, AP), flexibility
+for innovation. Create a table comparing curriculum frameworks available.
+
+### 2.3 Governance & Decision-Making
+Who makes education policy decisions? Map the decision-making chain from ministry
+to school level. Name specific individuals where possible.
+
+## 3. Performance Assessment
+
+### 3.1 Learning Outcomes
+Create a detailed benchmarking table:
+
+| Assessment | {target} Score | {target} Rank | Regional Avg | OECD Avg | Top Performer | Gap to Top |
+|-----------|---------------|---------------|-------------|----------|--------------|-----------|
+| PISA Reading | ... | ... | ... | ... | ... | ... |
+| PISA Mathematics | ... | ... | ... | ... | ... | ... |
+| PISA Science | ... | ... | ... | ... | ... | ... |
+| TIMSS Grade 4 Math | ... | ... | ... | ... | ... | ... |
+| TIMSS Grade 8 Math | ... | ... | ... | ... | ... | ... |
+| PIRLS (Reading) | ... | ... | ... | ... | ... | ... |
+
+Write 4-5 paragraphs analysing:
+- Performance relative to economic peers (countries with similar GDP/capita)
+- Trend analysis (improving, declining, stagnating)
+- Subject-specific strengths and weaknesses
+- Grade-level performance differences
+
+### 3.2 Equity Analysis
+Create a table:
+
+| Equity Dimension | Gap Size | Details |
+|-----------------|----------|---------|
+| Urban vs. Rural | ... | ... |
+| Male vs. Female | ... | ... |
+| Top vs. Bottom Income Quintile | ... | ... |
+| Public vs. Private | ... | ... |
+| Native vs. Immigrant | ... | ... |
+| Regional Disparities | ... | ... |
+
+Write 3-4 paragraphs on equity gaps, their causes, and implications for Alpha's
+market positioning.
+
+### 3.3 Efficiency Metrics
+Create a table:
+
+| Metric | {target} | Regional Avg | OECD Avg | Assessment |
+|--------|----------|-------------|----------|-----------|
+| Spend per Student (USD) | ... | ... | ... | ... |
+| Spend as % of GDP | ... | ... | ... | ... |
+| Spend per PISA point | ... | ... | ... | ... |
+| Student-Teacher Ratio | ... | ... | ... | ... |
+| Graduation Rate | ... | ... | ... | ... |
+| Dropout Rate | ... | ... | ... | ... |
+| Repetition Rate | ... | ... | ... | ... |
+
+Write 3 paragraphs on system efficiency — is the country getting value for its education spend?
+
+**⚡ Alpha Relevance:** Where are the biggest outcome gaps? Alpha's "learn 2x faster"
+commitment directly addresses which specific deficiencies?
+
+IMPORTANT: Minimum 3,000 words. Every data point with source. Analytical, not descriptive.
+Use peer country comparisons throughout."""
+
+SECTION_2_PROMPT = """You are continuing the McKinsey education analysis for **{target}**.
+Writing sections 4-6.
+
+## Context Data
+{data_context}
+
+## Write EXACTLY these sections:
+
+## 4. Stakeholder Pain Point Analysis
+
+### 4.1 Student Pain Points
+Create a table:
+
+| Pain Point | Severity (1-5) | Evidence | Alpha Solution |
+|-----------|----------------|----------|---------------|
+| Disengagement / boredom | ... | ... | Timeback: 2hr core + specialisations |
+| Rote learning / memorisation | ... | ... | AlphaCore: mastery-based progression |
+| Mental health / stress | ... | ... | Timeback: reduced academic pressure |
+| Future skills gap | ... | ... | Specialisation tracks (STEM, arts, etc.) |
+| Irrelevant curriculum | ... | ... | AI-personalised learning paths |
+| Long school hours | ... | ... | Timeback: 2hr core academics |
+| Limited specialisation | ... | ... | Afternoon specialisation blocks |
+| ... | ... | ... | ... |
+
+Write 4-5 paragraphs with specific data on student satisfaction, engagement metrics,
+mental health statistics, and skills mismatch with employer needs.
+
+### 4.2 Parent Pain Points
+Create a table:
+
+| Pain Point | Income Segment Most Affected | Evidence | Alpha Solution |
+|-----------|----------------------------|----------|---------------|
+| Quality concerns | ... | ... | ... |
+| Cost burden | ... | ... | ... |
+| Aspirations gap | ... | ... | ... |
+| Safety concerns | ... | ... | ... |
+| Teacher quality | ... | ... | ... |
+| University preparation | ... | ... | ... |
+| 21st century skills | ... | ... | ... |
+| ... | ... | ... | ... |
+
+Write 3-4 paragraphs on parent concerns, spending patterns, decision-making factors
+for school choice, and willingness to switch.
+
+### 4.3 Government Pain Points
+Create a table:
+
+| Pain Point | Budget Impact | Political Urgency | Alpha Solution |
+|-----------|-------------|-------------------|---------------|
+| Outcome deficiency | ... | ... | ... |
+| Fiscal pressure | ... | ... | ... |
+| Teacher shortage | ... | ... | Guide School: transform existing teachers |
+| Infrastructure gap | ... | ... | ... |
+| Global competitiveness | ... | ... | ... |
+| Youth unemployment | ... | ... | ... |
+| Brain drain | ... | ... | ... |
+| ... | ... | ... | ... |
+
+Write 3-4 paragraphs on government education challenges, budget constraints,
+political pressures, and how these create opportunity for a strategic partner like Alpha.
+
+### 4.4 Employer / Economy Pain Points
+Skills gap analysis: what do employers need vs. what schools produce?
+Youth unemployment data, NEET rates, workforce readiness indices.
+
+**⚡ Alpha Relevance:** Create a summary "pain-to-product" mapping showing which Alpha
+product (Timeback, AlphaCore, Guide School, Incept eduLLM) solves which specific pain point.
+
+## 5. Reform Landscape
+
+### 5.1 Active Reforms & Initiatives
+Create a table:
+
+| Reform/Initiative | Budget | Timeline | Lead Agency | Status | Relevance to Alpha |
+|------------------|--------|----------|-------------|--------|-------------------|
+| ... | ... | ... | ... | ... | ... |
+
+Include all significant reforms in the last 5 years and upcoming.
+
+Write 4-5 paragraphs on the reform trajectory, government appetite for innovation,
+precedent for foreign partnerships, budget allocation, and political commitment.
+
+### 5.2 International Partnerships
+List existing partnerships with international education organisations, bilateral
+agreements, World Bank/UNESCO programs. What precedent exists for a deal like Alpha's?
+
+### 5.3 EdTech Initiatives
+Create a table of major EdTech initiatives — government and private:
+
+| Initiative | Provider | Scale | Budget | Outcome | Lessons Learned |
+|-----------|----------|-------|--------|---------|-----------------|
+| ... | ... | ... | ... | ... | ... |
+
+### 5.4 Failed Reforms & Lessons
+What has been tried and failed? Why? What does this tell us about implementation risk?
+
+## 6. Private Education Market Deep Dive
+
+### 6.1 Market Sizing
+Create a table:
+
+| Segment | Market Size ($) | Annual Growth | # Schools | # Students | Avg Tuition |
+|---------|----------------|--------------|-----------|-----------|-------------|
+| International / Ultra-Premium | ... | ... | ... | ... | ... |
+| Premium Private | ... | ... | ... | ... | ... |
+| Mid-Market Private | ... | ... | ... | ... | ... |
+| Budget / Low-Cost Private | ... | ... | ... | ... | ... |
+| **Total** | ... | ... | ... | ... | ... |
+
+### 6.2 Parent Willingness to Pay
+Create a table by income segment:
+
+| Income Segment | % of Parents | Max Annual Tuition | Decision Factors | Alpha Price Fit |
+|---------------|-------------|-------------------|-----------------|----------------|
+| Top 1% | ... | ... | ... | Premium tier |
+| Top 5% | ... | ... | ... | ... |
+| Top 10% | ... | ... | ... | ... |
+| Top 20% | ... | ... | ... | Mid-tier |
+| Top 40% | ... | ... | ... | ... |
+
+Write 3-4 paragraphs on affordability, willingness to pay, and demand elasticity.
+
+### 6.3 Unmet Demand Analysis
+Write 3-4 paragraphs quantifying unmet demand: waitlists, underserved segments,
+quality gaps at each price point, geographic gaps.
+
+**⚡ Alpha Relevance:** What is the size of the unmet demand that Alpha can address?
+At what price points?
+
+IMPORTANT: Minimum 3,000 words. Data-rich with tables. Analytical."""
+
+SECTION_3_PROMPT = """You are completing the McKinsey education analysis for **{target}**.
+Writing sections 7-10 (final sections).
+
+## Context Data
+{data_context}
+
+## Write EXACTLY these sections:
+
+## 7. Technology & Innovation Readiness
+
+### 7.1 Digital Infrastructure
+Create a table:
+
+| Indicator | Value | Ranking | Source |
+|-----------|-------|---------|--------|
+| Internet Penetration | ... | ... | ... |
+| Mobile Penetration | ... | ... | ... |
+| Broadband Speed (avg) | ... | ... | ... |
+| School Internet Access | ... | ... | ... |
+| Device-to-Student Ratio | ... | ... | ... |
+| 4G/5G Coverage | ... | ... | ... |
+| Cloud Infrastructure | ... | ... | ... |
+| Data Protection Laws | ... | ... | ... |
+
+### 7.2 EdTech Adoption
+EdTech market size, key platforms, school adoption rates, teacher digital literacy,
+AI policy for education.
+
+### 7.3 AI Readiness
+National AI strategy, AI in education policy, teacher and parent attitudes toward AI,
+data privacy framework. Specific relevance to Incept eduLLM deployment.
+
+**⚡ Alpha Relevance:** What infrastructure investments are needed to deploy Timeback
+and Incept eduLLM? What is the implementation complexity?
+
+## 8. Alpha Model Fit Analysis
+
+### 8.1 Product-by-Product Assessment
+Create a comprehensive fit table:
+
+| Alpha Product | Pain Point Addressed | Fit Score (1-5) | Localisation Required | Competitive Advantage | Implementation Challenge |
+|-------------|---------------------|-----------------|---------------------|---------------------|------------------------|
+| Timeback | ... | ... | ... | ... | ... |
+| AlphaCore | ... | ... | ... | ... | ... |
+| Guide School | ... | ... | ... | ... | ... |
+| Incept eduLLM | ... | ... | ... | ... | ... |
+| **Integrated Model** | ... | ... | ... | ... | ... |
+
+Write 5-6 paragraphs providing a detailed analysis of how each Alpha product maps to
+specific pain points in the {target} education system. Be specific about:
+- Which outcome gaps each product addresses
+- What localisation is required (language, curriculum, cultural values)
+- How Alpha's integrated model creates compound value vs. point solutions
+- Competitive differentiation from existing operators
+
+### 8.2 Recommended Entry Strategy
+Write 4-5 paragraphs on:
+- Private / Government / Hybrid recommendation with detailed rationale
+- Target customer segments (by income, geography, school type)
+- Pricing strategy (PPP-adjusted from UAE baseline)
+- Regulatory pathway and timeline
+- First-mover advantages and timing considerations
+
+### 8.3 Competitive Positioning
+How does Alpha's integrated model differentiate from:
+- Traditional private schools
+- International school chains
+- EdTech platforms
+- Government reform programs
+
+## 9. Localisation Requirements
+
+Create a comprehensive table:
+
+| Dimension | Requirement | Complexity (H/M/L) | Timeline | Notes |
+|-----------|------------|-------------------|----------|-------|
+| Language | ... | ... | ... | ... |
+| Core Curriculum | ... | ... | ... | ... |
+| Cultural Values | ... | ... | ... | ... |
+| National Identity | ... | ... | ... | ... |
+| Religious Education | ... | ... | ... | ... |
+| Mandatory Subjects | ... | ... | ... | ... |
+| Assessment Standards | ... | ... | ... | ... |
+| Teacher Certification | ... | ... | ... | ... |
+| Facility Standards | ... | ... | ... | ... |
+| Technology Standards | ... | ... | ... | ... |
+| Data Privacy | ... | ... | ... | ... |
+| Content Moderation | ... | ... | ... | ... |
+
+Write 4-5 paragraphs on localisation strategy, referencing the AsasOne model from
+the UAE deal as the template for cultural IP layer development.
+
+**⚡ Alpha Relevance:** What is the estimated timeline and cost for localisation?
+What are the non-negotiable localisation requirements vs. nice-to-haves?
+
+## 10. Conclusions & Sources
+
+### 10.1 Key Findings Summary
+Bullet-point summary of the 10 most important findings from this analysis.
+
+### 10.2 Recommended Next Steps
+Numbered list of specific next steps for Alpha's executive team.
+
+### 10.3 Sources & Data Notes
+List all sources with dates. Note any estimates and data gaps.
+
+IMPORTANT: Minimum 2,500 words. Data-rich. Analytical. This completes a report for
+McKinsey's Global Education Practice leadership."""
 
 REPORT_REVISION_PROMPT = """You are revising an education sector analysis based on user feedback.
 
@@ -103,7 +396,8 @@ User feedback:
 {feedback}
 
 Produce a revised full report incorporating the feedback. Maintain the same depth,
-data richness, and ⚡ Alpha Relevance callouts."""
+data richness, tables, and ⚡ Alpha Relevance callouts. Do not shorten — must be
+at least as long as the original."""
 
 
 async def run_education_research(
@@ -120,7 +414,7 @@ async def run_education_research(
     research_text = perplexity_result.get("answer", "")
     citations = perplexity_result.get("citations", [])
 
-    # --- Build context from country profile ---
+    # --- Build context ---
     ctx_parts = [f"Target: {target}", f"Type: {country_profile.target.type.value}"]
     if country_profile.target.tier:
         ctx_parts.append(f"Tier: {country_profile.target.tier}")
@@ -134,13 +428,18 @@ async def run_education_research(
         ctx_parts.append(f"Avg private tuition: ${country_profile.education.avg_private_tuition:,.0f}")
     if country_profile.regulatory.foreign_ownership_rules:
         ctx_parts.append(f"Foreign ownership: {country_profile.regulatory.foreign_ownership_rules}")
-    context = "\n".join(ctx_parts)
+
+    data_context = (
+        f"**Country Profile:**\n{chr(10).join(ctx_parts)}\n\n"
+        f"**Live Research (Perplexity):**\n{research_text}\n\n"
+        f"**Citations:**\n{chr(10).join(str(c) for c in citations)}"
+    )
 
     # --- Structured analysis ---
     try:
         analysis: EducationAnalysis = await call_llm(
             system_prompt="Extract structured education analysis from the research data.",
-            user_prompt=f"Context:\n{context}\n\nResearch:\n{research_text}",
+            user_prompt=f"Context:\n{chr(10).join(ctx_parts)}\n\nResearch:\n{research_text}",
             output_schema=EducationAnalysis,
         )
     except Exception as exc:
@@ -159,16 +458,25 @@ async def run_education_research(
             user_prompt=f"Revise the education report for {target}.",
         )
     else:
-        report_md = await call_llm_plain(
-            system_prompt=REPORT_PROMPT.format(target=target),
-            user_prompt=(
-                f"Write the full education system analysis for **{target}**.\n\n"
-                f"**Country Profile Context:**\n{context}\n\n"
-                f"**Live Research:**\n{research_text}\n\n"
-                f"**Citations:**\n{chr(10).join(str(c) for c in citations)}\n\n"
-                f"Produce the complete report."
-            ),
+        logger.info("Generating education report section 1/3 for %s", target)
+        section_1 = await call_llm_plain(
+            system_prompt=SECTION_1_PROMPT.format(target=target, data_context=data_context),
+            user_prompt=f"Write sections 1-3 of the education system analysis for {target}.",
         )
+
+        logger.info("Generating education report section 2/3 for %s", target)
+        section_2 = await call_llm_plain(
+            system_prompt=SECTION_2_PROMPT.format(target=target, data_context=data_context),
+            user_prompt=f"Write sections 4-6 of the education system analysis for {target}.",
+        )
+
+        logger.info("Generating education report section 3/3 for %s", target)
+        section_3 = await call_llm_plain(
+            system_prompt=SECTION_3_PROMPT.format(target=target, data_context=data_context),
+            user_prompt=f"Write sections 7-10 of the education system analysis for {target}.",
+        )
+
+        report_md = section_1 + "\n\n" + section_2 + "\n\n" + section_3
 
     # --- Save as DOCX ---
     docx_path = _save_report_docx(target, report_md, "Education System Analysis")

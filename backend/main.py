@@ -17,7 +17,7 @@ from models.schemas import (
     CountryProfile, EducationAnalysis, Strategy,
     FinancialAssumptions, FinancialModel, PipelineStatus,
 )
-from graph.pipeline import create_run as pipeline_create_run, execute_run, resume_run, get_run_state
+from graph.pipeline import create_run as pipeline_create_run, execute_run, resume_run, get_run_state, get_pipeline
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -134,15 +134,29 @@ async def get_run(run_id: str):
 # HITL Gates — User Feedback Endpoints
 # ---------------------------------------------------------------------------
 
+async def _safe_resume(run_id: str, update: dict):
+    """Resume a run with error handling — stores errors in pipeline state."""
+    try:
+        await resume_run(run_id, update)
+    except Exception as exc:
+        logger.error("Failed to resume run %s: %s", run_id, exc, exc_info=True)
+        # Try to update the state with the error so frontend can see it
+        try:
+            pipeline, _ = get_pipeline()
+            config = {"configurable": {"thread_id": run_id}}
+            await pipeline.aupdate_state(config, {
+                "status": PipelineStatus.ERROR.value,
+                "error_message": f"Resume failed: {exc}",
+            })
+        except Exception:
+            pass
+
+
 @app.post("/api/runs/{run_id}/feedback/country-report")
 async def submit_country_report_feedback(run_id: str, feedback: ReportFeedback, background: BackgroundTasks):
     """Submit feedback on the country research report."""
     update = {"country_report_feedback": feedback.model_dump()}
-
-    async def _resume():
-        await resume_run(run_id, update)
-
-    background.add_task(_resume)
+    background.add_task(_safe_resume, run_id, update)
     return {"status": "resuming", "next": "education_research" if feedback.approved else "country_research_revision"}
 
 
@@ -150,11 +164,7 @@ async def submit_country_report_feedback(run_id: str, feedback: ReportFeedback, 
 async def submit_education_report_feedback(run_id: str, feedback: ReportFeedback, background: BackgroundTasks):
     """Submit feedback on the education research report."""
     update = {"education_report_feedback": feedback.model_dump()}
-
-    async def _resume():
-        await resume_run(run_id, update)
-
-    background.add_task(_resume)
+    background.add_task(_safe_resume, run_id, update)
     return {"status": "resuming", "next": "strategy" if feedback.approved else "education_research_revision"}
 
 
@@ -162,11 +172,7 @@ async def submit_education_report_feedback(run_id: str, feedback: ReportFeedback
 async def submit_strategy_feedback(run_id: str, feedback: ReportFeedback, background: BackgroundTasks):
     """Submit feedback on the strategy report."""
     update = {"strategy_feedback": feedback.model_dump()}
-
-    async def _resume():
-        await resume_run(run_id, update)
-
-    background.add_task(_resume)
+    background.add_task(_safe_resume, run_id, update)
     return {"status": "resuming", "next": "financial_assumptions" if feedback.approved else "strategy_revision"}
 
 
@@ -174,11 +180,7 @@ async def submit_strategy_feedback(run_id: str, feedback: ReportFeedback, backgr
 async def submit_assumptions_feedback(run_id: str, feedback: AssumptionsFeedback, background: BackgroundTasks):
     """Submit validated/adjusted assumptions."""
     update = {"assumptions_feedback": feedback.model_dump()}
-
-    async def _resume():
-        await resume_run(run_id, update)
-
-    background.add_task(_resume)
+    background.add_task(_safe_resume, run_id, update)
     return {"status": "resuming", "next": "financial_model"}
 
 
@@ -186,11 +188,7 @@ async def submit_assumptions_feedback(run_id: str, feedback: AssumptionsFeedback
 async def submit_model_feedback(run_id: str, feedback: ModelFeedback, background: BackgroundTasks):
     """Submit financial model review — lock or adjust."""
     update = {"model_feedback": feedback.model_dump()}
-
-    async def _resume():
-        await resume_run(run_id, update)
-
-    background.add_task(_resume)
+    background.add_task(_safe_resume, run_id, update)
     return {"status": "resuming", "next": "document_generation" if feedback.locked else "financial_model_revision"}
 
 
@@ -198,11 +196,7 @@ async def submit_model_feedback(run_id: str, feedback: ModelFeedback, background
 async def submit_document_feedback(run_id: str, feedback: DocumentFeedback, background: BackgroundTasks):
     """Submit final document review."""
     update = {"document_feedback": feedback.model_dump()}
-
-    async def _resume():
-        await resume_run(run_id, update)
-
-    background.add_task(_resume)
+    background.add_task(_safe_resume, run_id, update)
     return {"status": "resuming", "next": "complete" if feedback.approved else "document_revision"}
 
 

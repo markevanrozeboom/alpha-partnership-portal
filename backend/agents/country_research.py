@@ -1,7 +1,8 @@
 """Country Research Agent — produces investment-bank-quality country/state profiles.
 
-Generates both structured data AND a comprehensive narrative report suitable
-for CEOs, heads of state, and institutional investors.
+Generates both structured data AND a comprehensive 15-20 page narrative report
+suitable for CEOs, heads of state, and institutional investors.
+Uses multi-call generation to achieve the necessary depth and length.
 """
 
 from __future__ import annotations
@@ -56,80 +57,352 @@ def _classify_tier(gdp_per_capita: float | None, population: float | None) -> Ti
         return TierClassification.TIER_3
 
 
-# ---------------------------------------------------------------------------
-# System prompt for structured data synthesis
-# ---------------------------------------------------------------------------
 SYNTHESIS_PROMPT = """You are a senior research analyst at Goldman Sachs synthesising country data
 into a structured profile. Extract specific numbers wherever available. If a data point is not
 available, provide your best estimate and note it. Output a JSON matching the CountryProfile schema."""
 
 # ---------------------------------------------------------------------------
-# System prompt for the narrative report
+# Multi-section report prompts — each call generates 2-4 pages
 # ---------------------------------------------------------------------------
-REPORT_PROMPT = """You are a senior research analyst at a top-tier investment bank (Goldman Sachs / Morgan Stanley / J.P. Morgan).
 
-You are writing a comprehensive country research report for **{target}** that will be read by
-CEOs, sovereign wealth fund managers, and heads of state considering a major education
-partnership with 2hr Learning (Alpha).
+SECTION_1_PROMPT = """You are a senior research analyst at Goldman Sachs / J.P. Morgan writing the
+FIRST PART of a comprehensive country research report for **{target}**.
 
-## About Alpha / 2hr Learning
+You are writing for an audience of CEOs, sovereign wealth fund managers, and heads of state
+evaluating a $1B+ education partnership with 2hr Learning (Alpha).
 
-Alpha's education operating system includes:
-- **Timeback**: AI-powered learning platform compressing core academics into 2 hours/day
-- **AlphaCore**: Core curriculum and learning management system
-- **Guide School**: Transforms traditional teachers into facilitative "Guides"
-- **Incept eduLLM**: Custom education-focused large language model
+## Context Data
+{data_context}
 
-The UAE deal (Ed71/Next71) is the reference: $1.5B upfront, 200K students over 5 years,
-$25K per-student budget, JV structure with local entity (AsasOne) owning cultural IP layer.
+## Write EXACTLY these sections:
 
-## Report Requirements
+# Country Research Report: {target}
 
-Write an exhaustive, data-rich research report in **markdown** format with the following sections.
-Every section must include specific numbers, dates, and cited data points. Use tables for
-comparative data. Highlight items of specific relevance to Alpha's education model with
-**⚡ Alpha Relevance:** callouts.
+## 1. Executive Summary
+Write 5-6 paragraphs providing a complete synthesis of the investment opportunity. Cover:
+- Macroeconomic positioning and trajectory
+- Education sector opportunity (market size, growth, gaps)
+- Regulatory environment for foreign education operators
+- Recommended entry strategy and partnership structure
+- Key risks and mitigants
+- Expected financial returns parameters
 
-### Required Sections
+## 2. Macroeconomic Overview
 
-1. **Executive Summary** — 3-4 paragraph overview of key findings and investment thesis
-2. **Macroeconomic Overview** — GDP, growth trajectory, fiscal position, currency, inflation,
-   sovereign credit rating, sovereign wealth funds, FDI environment
-3. **Demographics & Social Indicators** — Population pyramid, school-age cohort, urbanisation,
-   income distribution by decile, Gini coefficient, middle class growth
-4. **Education Sector Deep Dive** — K-12 enrollment, public/private split, spend per student,
-   tuition ranges (mass market through ultra-premium), teacher workforce, student-teacher
-   ratios, PISA/assessment scores, literacy/numeracy gaps, dropout rates, language of
-   instruction, mandatory curriculum
-5. **Regulatory & Political Landscape** — Government structure, key decision-makers,
-   education ministry, private school licensing process and timeline, foreign ownership rules
-   and caps, charter/PPP frameworks, curriculum flexibility, political stability assessment
-6. **Private Education Market** — Market size ($), growth rate, major operators (with
-   student counts and tuition ranges), international school chains, market gaps,
-   parent willingness to pay, edtech penetration
-7. **Market Opportunity Sizing** — Total addressable market, serviceable addressable market
-   at Alpha's price points, penetration scenarios (conservative/base/aggressive)
-8. **Risk Assessment** — Regulatory risk, political risk, FX risk, competitive risk,
-   execution risk, cultural risk — each rated High/Medium/Low with mitigation strategies
-9. **Alpha-Specific Implications** — Tier classification rationale, recommended entry mode,
-   partnership structure considerations, localisation requirements, pricing strategy
-   implications, competitive positioning, key success factors
-10. **Key Data Tables** — Summary tables of all critical metrics
-11. **Sources** — All data sources with dates
+### 2.1 Economic Performance
+Create a detailed table:
 
-For US states, adapt the structure to focus on: ESA/voucher landscape (program name, amount,
-eligibility, growth trajectory), charter school penetration, homeschool population, regulatory
-environment for new school models, competitor landscape, demographic targeting.
+| Indicator | Value | Source | Year |
+|-----------|-------|--------|------|
+| Nominal GDP | ... | ... | ... |
+| GDP per Capita (USD) | ... | ... | ... |
+| Real GDP Growth (5-yr avg) | ... | ... | ... |
+| GDP Growth Forecast (next 3 yrs) | ... | ... | ... |
+| Inflation Rate | ... | ... | ... |
+| Unemployment Rate | ... | ... | ... |
+| Current Account Balance (% GDP) | ... | ... | ... |
+| Government Debt (% GDP) | ... | ... | ... |
+| Sovereign Credit Rating | ... | ... | ... |
+| FX Rate to USD | ... | ... | ... |
+| FDI Inflows (annual) | ... | ... | ... |
 
-## Formatting Rules
-- Use markdown headers (## for sections, ### for subsections)
-- Use markdown tables for data comparisons
-- Use **bold** for key figures and **⚡ Alpha Relevance:** for Alpha-specific insights
-- Use bullet points for lists of findings
-- Be analytical, not descriptive — every paragraph should advance an argument
-- Minimum 3,000 words
-- Write as if presenting to a board of directors
-"""
+Write 3-4 paragraphs analysing the economic trajectory, fiscal position, and implications for
+a long-term education investment. Compare to regional peers.
+
+### 2.2 Sovereign Wealth & Investment Capacity
+Detail sovereign wealth funds (name, AUM, mandate), government investment capacity,
+appetite for education sector investments, precedent deals.
+
+### 2.3 Currency & FX Considerations
+Currency stability analysis, hedging considerations, dollarisation factors.
+
+**⚡ Alpha Relevance:** What does the economic profile mean for per-student budget sizing,
+pricing strategy, and upfront deal commitment capacity?
+
+## 3. Demographics & Social Indicators
+
+### 3.1 Population Profile
+Create a detailed table:
+
+| Indicator | Value | Source |
+|-----------|-------|--------|
+| Total Population | ... | ... |
+| Population Growth Rate | ... | ... |
+| Population aged 0-4 | ... | ... |
+| Population aged 5-14 | ... | ... |
+| Population aged 15-18 | ... | ... |
+| Total School-Age (0-18) | ... | ... |
+| Median Age | ... | ... |
+| Urbanisation Rate | ... | ... |
+| Fertility Rate | ... | ... |
+
+Write 3-4 paragraphs on demographic trends, the youth bulge (if any), urbanisation patterns,
+and what this means for school demand projections.
+
+### 3.2 Income Distribution & Affordability
+Create a table:
+
+| Income Segment | % of Population | Household Income Range | Education Spend Capacity |
+|---------------|-----------------|----------------------|------------------------|
+| Ultra-High Net Worth | ... | ... | ... |
+| Affluent | ... | ... | ... |
+| Upper-Middle Class | ... | ... | ... |
+| Middle Class | ... | ... | ... |
+| Lower-Middle Class | ... | ... | ... |
+
+Write 3 paragraphs on income inequality, middle class growth trajectory, Gini coefficient,
+and willingness/ability to pay for premium education.
+
+**⚡ Alpha Relevance:** Which income segments are addressable at Alpha's price points
+($15K-$50K per student)?
+
+IMPORTANT: Be exhaustive. Use specific numbers with sources. Write at least 2,500 words for this section.
+Every data point should include the source and year. If exact data is unavailable, provide
+clearly-labelled estimates based on available proxies. Write analytically, not descriptively."""
+
+SECTION_2_PROMPT = """You are continuing the Goldman Sachs country research report for **{target}**.
+You are writing sections 4-6. The audience is CEOs and sovereign fund managers.
+
+## Context Data
+{data_context}
+
+Write EXACTLY these sections (continue from section 3):
+
+## 4. Education Sector Deep Dive
+
+### 4.1 System Overview
+Create a summary table:
+
+| Indicator | Value | Source |
+|-----------|-------|--------|
+| Total K-12 Students | ... | ... |
+| Public School Students | ... | ... |
+| Private School Students | ... | ... |
+| Public/Private Split | ... | ... |
+| Number of Schools | ... | ... |
+| Number of Teachers | ... | ... |
+| Student-Teacher Ratio | ... | ... |
+| Government Education Budget | ... | ... |
+| Education Spend (% of GDP) | ... | ... |
+| Per-Student Public Spend | ... | ... |
+| Compulsory Education Ages | ... | ... |
+| Language of Instruction | ... | ... |
+| Academic Calendar | ... | ... |
+
+Write 4-5 paragraphs providing a comprehensive overview of the education system architecture.
+
+### 4.2 Learning Outcomes & Quality Assessment
+Create a table:
+
+| Assessment | Score | Global Ranking | Peer Comparison |
+|-----------|-------|----------------|-----------------|
+| PISA Reading | ... | ... | ... |
+| PISA Mathematics | ... | ... | ... |
+| PISA Science | ... | ... | ... |
+| TIMSS Grade 4 | ... | ... | ... |
+| TIMSS Grade 8 | ... | ... | ... |
+| Literacy Rate | ... | ... | ... |
+| Numeracy Rate | ... | ... | ... |
+| Net Enrollment Rate (Primary) | ... | ... | ... |
+| Net Enrollment Rate (Secondary) | ... | ... | ... |
+| Dropout Rate | ... | ... | ... |
+| Tertiary Enrollment Rate | ... | ... | ... |
+
+Write 3-4 paragraphs analysing learning outcomes vs. peer countries, skills gaps, and
+what this means for the case for education reform.
+
+### 4.3 Private Education Market
+Create a table:
+
+| Segment | Est. Market Size | Growth Rate | Avg Tuition | Student Count |
+|---------|-----------------|-------------|-------------|---------------|
+| Ultra-Premium International | ... | ... | ... | ... |
+| Premium Private | ... | ... | ... | ... |
+| Mid-Market Private | ... | ... | ... | ... |
+| Budget Private | ... | ... | ... | ... |
+| Total Private Market | ... | ... | ... | ... |
+
+Write 4-5 paragraphs on the private education market: market size ($), growth rate,
+segmentation, parent willingness to pay, unmet demand, market gaps.
+
+**⚡ Alpha Relevance:** Where does Alpha's pricing ($15K-$50K) position within this market?
+What is the addressable segment?
+
+### 4.4 Teacher Workforce
+Teacher qualifications, compensation, shortages, training infrastructure, teacher
+satisfaction. Include comparative data.
+
+## 5. Regulatory & Political Environment
+
+### 5.1 Governance Structure
+Government type, education ministry structure, key decision-makers by name and role.
+
+### 5.2 Private School Regulation
+Create a table:
+
+| Regulatory Factor | Details |
+|-------------------|---------|
+| Licensing Authority | ... |
+| Licensing Process | ... |
+| Licensing Timeline | ... |
+| Capital Requirements | ... |
+| Foreign Ownership Cap | ... |
+| Curriculum Requirements | ... |
+| Teacher Certification | ... |
+| Inspection Regime | ... |
+| Land/Building Requirements | ... |
+| Tax Treatment | ... |
+
+Write 3-4 paragraphs analysing the regulatory pathway for a foreign education operator.
+
+### 5.3 Political Context
+Write 3 paragraphs on political stability, national vision plans relevant to education,
+government education reform priorities, key political risks.
+
+**⚡ Alpha Relevance:** What regulatory concessions would Alpha need? What is the likely
+timeline from partnership agreement to first school opening?
+
+## 6. Competitive Landscape
+
+### 6.1 Major Operators
+Create a detailed competitor table:
+
+| Operator | Type | Schools | Students | Tuition Range | Curriculum | Key Differentiator |
+|----------|------|---------|----------|---------------|------------|-------------------|
+| ... | ... | ... | ... | ... | ... | ... |
+
+Include at least 8-10 operators.
+
+Write 4-5 paragraphs on competitive dynamics, market concentration, barriers to entry,
+competitive positioning opportunities for Alpha.
+
+### 6.2 EdTech Landscape
+Major edtech players, adoption rates, government edtech initiatives.
+
+**⚡ Alpha Relevance:** How does Alpha's integrated model (AI + curriculum + teacher training)
+differentiate from existing competitors? What is the competitive moat?
+
+IMPORTANT: Be exhaustive. At least 3,000 words. Every data point cited. Analytical, not descriptive."""
+
+SECTION_3_PROMPT = """You are completing the Goldman Sachs country research report for **{target}**.
+You are writing sections 7-10 (final sections). The audience is CEOs and sovereign fund managers.
+
+## Context Data
+{data_context}
+
+Write EXACTLY these sections:
+
+## 7. Market Opportunity Sizing
+
+### 7.1 Total Addressable Market (TAM)
+Calculate and present the TAM with methodology:
+
+| Component | Calculation | Value |
+|-----------|------------|-------|
+| Total K-12 students | ... | ... |
+| Students in target income segments | ... | ... |
+| Average revenue per student (blended) | ... | ... |
+| **Total TAM** | ... | **$...** |
+
+### 7.2 Serviceable Addressable Market (SAM)
+Factor in Alpha's specific positioning:
+
+| Filter | Rationale | SAM Students | SAM Revenue |
+|--------|-----------|-------------|-------------|
+| Income-qualified families | ... | ... | ... |
+| Urban/accessible geographies | ... | ... | ... |
+| Openness to innovation | ... | ... | ... |
+| **SAM** | ... | **...** | **$...** |
+
+### 7.3 Penetration Scenarios
+
+| Scenario | Penetration Rate | Students (Yr 5) | Revenue (Yr 5) | Key Assumptions |
+|----------|-----------------|-----------------|-----------------|-----------------|
+| Conservative | ... | ... | ... | ... |
+| Base Case | ... | ... | ... | ... |
+| Aggressive | ... | ... | ... | ... |
+
+Write 4-5 paragraphs on the market sizing methodology, key assumptions,
+comparison to the UAE deal (200K students, $1.5B commitment), and scalability thesis.
+
+**⚡ Alpha Relevance:** How does this market compare to the UAE reference deal? What scaling
+factor should be applied?
+
+## 8. Risk Assessment
+
+Create a comprehensive risk register:
+
+| Risk Category | Specific Risk | Probability | Impact | Mitigation Strategy |
+|--------------|--------------|------------|--------|-------------------|
+| Regulatory | Licensing delays | ... | ... | ... |
+| Regulatory | Curriculum restrictions | ... | ... | ... |
+| Political | Government change | ... | ... | ... |
+| Political | Policy reversal | ... | ... | ... |
+| Financial | FX depreciation | ... | ... | ... |
+| Financial | Pricing pressure | ... | ... | ... |
+| Operational | Teacher recruitment | ... | ... | ... |
+| Operational | Quality consistency | ... | ... | ... |
+| Competitive | Incumbent response | ... | ... | ... |
+| Competitive | New entrants | ... | ... | ... |
+| Cultural | Resistance to AI | ... | ... | ... |
+| Cultural | Traditional education values | ... | ... | ... |
+| Reputational | Regulatory non-compliance | ... | ... | ... |
+| Macroeconomic | Recession impact | ... | ... | ... |
+
+Include at least 12-14 specific risks. Write 4-5 paragraphs providing a narrative assessment
+of the overall risk profile, key interdependencies, and recommended risk mitigation framework.
+
+## 9. Alpha-Specific Strategic Implications
+
+### 9.1 Tier Classification & Rationale
+Explain the tier classification with a scoring table:
+
+| Factor | Score (1-5) | Rationale |
+|--------|------------|-----------|
+| Economic capacity | ... | ... |
+| Demographic opportunity | ... | ... |
+| Education market readiness | ... | ... |
+| Regulatory accessibility | ... | ... |
+| Political stability | ... | ... |
+| Competitive landscape | ... | ... |
+| Cultural receptiveness | ... | ... |
+| **Overall Tier** | ... | **Tier X** |
+
+### 9.2 Recommended Entry Mode
+Detailed comparison table:
+
+| Factor | Private Entry | Government Partnership | Hybrid Model |
+|--------|--------------|----------------------|-------------|
+| Speed to market | ... | ... | ... |
+| Scale potential | ... | ... | ... |
+| Revenue per student | ... | ... | ... |
+| Regulatory complexity | ... | ... | ... |
+| Capital required | ... | ... | ... |
+| Political risk | ... | ... | ... |
+| Sustainability | ... | ... | ... |
+| **Recommendation** | ... | ... | **✓** |
+
+### 9.3 Deal Structure Implications
+Write 3-4 paragraphs on:
+- Recommended upfront commitment (scaled from UAE $1.5B baseline)
+- Per-student budget (PPP-adjusted from $25K UAE baseline)
+- Partnership structure (JV ownership, IP rights, cultural layer)
+- Key terms and conditions to negotiate
+
+### 9.4 Localisation Requirements
+Specific requirements for curriculum, language, cultural values, mandatory subjects,
+teacher certification, facility standards.
+
+**⚡ Alpha Relevance:** Provide a clear, actionable summary of the recommended approach
+including specific dollar figures, student count targets, and timeline.
+
+## 10. Sources & Data Notes
+List all sources used with dates, note any estimates or proxies used, and flag any data
+gaps that should be addressed through on-the-ground due diligence.
+
+IMPORTANT: Be exhaustive. At least 2,500 words. This is the final section of a report that
+will be presented to heads of state. Every number must be cited. Every recommendation must
+be supported by data."""
 
 REPORT_REVISION_PROMPT = """You are revising a country research report based on user feedback.
 
@@ -141,8 +414,9 @@ Here is the user's feedback:
 
 {feedback}
 
-Produce a revised version of the full report incorporating the feedback. Maintain the same
-high quality, structure, and depth. Keep all data tables and ⚡ Alpha Relevance callouts."""
+Produce a revised version of the FULL report incorporating the feedback. Maintain the same
+high quality, structure, depth, tables, and ⚡ Alpha Relevance callouts. Do not shorten or
+summarise — the revised report must be at least as long as the original."""
 
 
 async def run_country_research(
@@ -208,28 +482,43 @@ async def run_country_research(
     if not profile.target.region:
         profile.target.region = "North America" if target_type == TargetType.US_STATE else ""
 
+    # --- Build data context for report prompts ---
+    data_context = (
+        f"**World Bank Data:**\n{wb_data}\n\n"
+        f"**Live Research (Perplexity Sonar Deep Research):**\n{research_text}\n\n"
+        f"**Citations:**\n{chr(10).join(str(c) for c in citations)}"
+    )
+
     # --- Generate narrative report ---
     if feedback and previous_report:
-        # Revision mode
+        # Revision mode — single call
         report_md = await call_llm_plain(
             system_prompt=REPORT_REVISION_PROMPT.format(
                 original_report=previous_report, feedback=feedback
             ),
-            user_prompt=f"Revise the report for {target} incorporating the feedback above.",
+            user_prompt=f"Revise the full report for {target} incorporating the feedback above.",
         )
     else:
-        # Fresh report
-        report_md = await call_llm_plain(
-            system_prompt=REPORT_PROMPT.format(target=target),
-            user_prompt=(
-                f"Write the full country research report for **{target}**.\n\n"
-                f"Use the following verified data sources:\n\n"
-                f"**World Bank Data:**\n{wb_data}\n\n"
-                f"**Live Research (Perplexity Sonar):**\n{research_text}\n\n"
-                f"**Citations:**\n{chr(10).join(str(c) for c in citations)}\n\n"
-                f"Produce the complete research report following all formatting requirements."
-            ),
+        # Fresh report — multi-call for length and depth
+        logger.info("Generating report section 1/3 for %s", target)
+        section_1 = await call_llm_plain(
+            system_prompt=SECTION_1_PROMPT.format(target=target, data_context=data_context),
+            user_prompt=f"Write sections 1-3 of the country research report for {target}. Be exhaustive and data-rich.",
         )
+
+        logger.info("Generating report section 2/3 for %s", target)
+        section_2 = await call_llm_plain(
+            system_prompt=SECTION_2_PROMPT.format(target=target, data_context=data_context),
+            user_prompt=f"Write sections 4-6 of the country research report for {target}. Be exhaustive and data-rich.",
+        )
+
+        logger.info("Generating report section 3/3 for %s", target)
+        section_3 = await call_llm_plain(
+            system_prompt=SECTION_3_PROMPT.format(target=target, data_context=data_context),
+            user_prompt=f"Write sections 7-10 of the country research report for {target}. Be exhaustive and data-rich.",
+        )
+
+        report_md = section_1 + "\n\n" + section_2 + "\n\n" + section_3
 
     # --- Save report as DOCX ---
     docx_path = _save_report_docx(target, report_md, "Country Research Report")
@@ -250,7 +539,6 @@ def _save_report_docx(target: str, markdown: str, title: str) -> str:
     doc.add_paragraph("CONFIDENTIAL & PROPRIETARY — 2hr Learning (Alpha)").alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.add_page_break()
 
-    # Simple markdown → docx conversion
     for line in markdown.split("\n"):
         stripped = line.strip()
         if stripped.startswith("# "):
@@ -262,7 +550,6 @@ def _save_report_docx(target: str, markdown: str, title: str) -> str:
         elif stripped.startswith("- ") or stripped.startswith("* "):
             doc.add_paragraph(stripped[2:], style="List Bullet")
         elif stripped.startswith("|"):
-            # Table rows — add as plain text for now
             doc.add_paragraph(stripped, style="Normal")
         elif stripped:
             doc.add_paragraph(stripped)
@@ -275,7 +562,6 @@ def _save_report_docx(target: str, markdown: str, title: str) -> str:
 
 
 def _merge_profiles(base: CountryProfile, synth: CountryProfile) -> None:
-    """Merge synthesised data into base, preferring existing World Bank data."""
     for model_cls, attr in [
         (Demographics, "demographics"), (Economy, "economy"),
         (EducationData, "education"), (Regulatory, "regulatory"),
@@ -287,7 +573,6 @@ def _merge_profiles(base: CountryProfile, synth: CountryProfile) -> None:
             if getattr(base_obj, field) is None and getattr(synth_obj, field) is not None:
                 setattr(base_obj, field, getattr(synth_obj, field))
 
-    # Competitive landscape
     if synth.competitive_landscape.major_operators:
         base.competitive_landscape.major_operators = synth.competitive_landscape.major_operators
     for f in ("international_chains", "edtech_penetration", "market_gaps"):

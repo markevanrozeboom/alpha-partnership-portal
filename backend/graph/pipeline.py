@@ -521,10 +521,16 @@ async def resume_run(run_id: str, gate_update: dict[str, Any] | None = None) -> 
     config = {"configurable": {"thread_id": run_id}}
 
     if gate_update:
+        logger.info("Updating state for run %s with: %s", run_id, list(gate_update.keys()))
         await pipeline.aupdate_state(config, gate_update)
 
     logger.info("Resuming pipeline run %s", run_id)
-    await pipeline.ainvoke(None, config)
+    try:
+        await pipeline.ainvoke(None, config)
+        logger.info("Pipeline run %s resumed and completed/paused at next gate", run_id)
+    except Exception as exc:
+        logger.error("Error resuming pipeline run %s: %s", run_id, exc, exc_info=True)
+        raise
 
 
 def get_run_state(run_id: str) -> dict[str, Any]:

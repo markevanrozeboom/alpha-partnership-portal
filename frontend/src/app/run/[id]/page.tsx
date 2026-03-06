@@ -71,6 +71,11 @@ export default function RunPage() {
   const [liveModel, setLiveModel] = useState<FinancialModel | null>(null);
   const [liveAssumptions, setLiveAssumptions] = useState<FinancialAssumption[] | null>(null);
 
+  // When true, we've submitted feedback and are waiting for the status to change.
+  // Prevents the "stop polling on review status" logic from firing prematurely.
+  const waitingForTransition = useRef(false);
+  const lastSubmittedStatus = useRef<PipelineStatus | null>(null);
+
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -79,6 +84,12 @@ export default function RunPage() {
       setData(res);
       if (res.financial_model && !liveModel) setLiveModel(res.financial_model);
       if (res.financial_assumptions?.assumptions && !liveAssumptions) setLiveAssumptions(res.financial_assumptions.assumptions);
+
+      // If we were waiting for a transition and the status has changed, clear the flag
+      if (waitingForTransition.current && lastSubmittedStatus.current && res.status !== lastSubmittedStatus.current) {
+        waitingForTransition.current = false;
+        lastSubmittedStatus.current = null;
+      }
     } catch (err) {
       setError(String(err));
     }
@@ -91,15 +102,18 @@ export default function RunPage() {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchStatus]);
 
-  // Stop polling when at a review gate or completed
+  // Stop polling when at a review gate or completed — but NOT if we just submitted feedback
   useEffect(() => {
+    if (waitingForTransition.current) return; // don't stop polling while waiting for backend
     if (data && (isReviewStatus(data.status) || data.status === "completed" || data.status === "error")) {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     }
   }, [data]);
 
   // Resume polling after submitting feedback
-  const startPolling = useCallback(() => {
+  const startPolling = useCallback((currentStatus: PipelineStatus) => {
+    waitingForTransition.current = true;
+    lastSubmittedStatus.current = currentStatus;
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(fetchStatus, 3000);
   }, [fetchStatus]);
@@ -110,7 +124,7 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitCountryReportFeedback(runId, true);
-      startPolling();
+      startPolling("review_country_report");
     } catch (err) { setError(String(err)); }
     setLoading(false);
   }, [runId, startPolling]);
@@ -119,7 +133,7 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitCountryReportFeedback(runId, false, feedback);
-      startPolling();
+      startPolling("review_country_report");
     } catch (err) { setError(String(err)); }
     setLoading(false);
   }, [runId, startPolling]);
@@ -128,7 +142,7 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitEducationReportFeedback(runId, true);
-      startPolling();
+      startPolling("review_education_report");
     } catch (err) { setError(String(err)); }
     setLoading(false);
   }, [runId, startPolling]);
@@ -137,7 +151,7 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitEducationReportFeedback(runId, false, feedback);
-      startPolling();
+      startPolling("review_education_report");
     } catch (err) { setError(String(err)); }
     setLoading(false);
   }, [runId, startPolling]);
@@ -146,7 +160,7 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitStrategyFeedback(runId, true);
-      startPolling();
+      startPolling("review_strategy");
     } catch (err) { setError(String(err)); }
     setLoading(false);
   }, [runId, startPolling]);
@@ -155,7 +169,7 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitStrategyFeedback(runId, false, feedback);
-      startPolling();
+      startPolling("review_strategy");
     } catch (err) { setError(String(err)); }
     setLoading(false);
   }, [runId, startPolling]);
@@ -164,7 +178,7 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitAssumptionsFeedback(runId, true, adjustments);
-      startPolling();
+      startPolling("review_assumptions");
     } catch (err) { setError(String(err)); }
     setLoading(false);
   }, [runId, startPolling]);
@@ -183,7 +197,7 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitModelFeedback(runId, true, adjustments);
-      startPolling();
+      startPolling("review_model");
     } catch (err) { setError(String(err)); }
     setLoading(false);
   }, [runId, startPolling]);
@@ -192,7 +206,7 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitDocumentFeedback(runId, true, "investor");
-      startPolling();
+      startPolling("review_documents");
     } catch (err) { setError(String(err)); }
     setLoading(false);
   }, [runId, startPolling]);
@@ -201,7 +215,7 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitDocumentFeedback(runId, false, "investor", feedback);
-      startPolling();
+      startPolling("review_documents");
     } catch (err) { setError(String(err)); }
     setLoading(false);
   }, [runId, startPolling]);

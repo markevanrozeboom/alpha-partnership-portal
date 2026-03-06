@@ -1,7 +1,7 @@
-"""Strategy Agent — produces McKinsey/VC quality market-entry strategy.
+"""Strategy Agent — produces McKinsey/VC quality 15-20 page market-entry strategy.
 
 Synthesises country research and education analysis into a comprehensive
-go-to-market strategy for Alpha's expansion into the target market.
+go-to-market strategy. Uses multi-call generation for exhaustive depth.
 """
 
 from __future__ import annotations
@@ -22,110 +22,387 @@ from config import OUTPUT_DIR
 
 logger = logging.getLogger(__name__)
 
-REPORT_PROMPT = """You are a senior partner at McKinsey & Company's Education Practice, working
-alongside a managing director from a top-tier VC fund. You are producing a comprehensive
-market-entry strategy for 2hr Learning (Alpha) in **{target}**.
+# ---------------------------------------------------------------------------
+# Multi-section prompts
+# ---------------------------------------------------------------------------
 
-This document will be presented to Alpha's executive team, prospective sovereign partners,
-and institutional investors.
+SECTION_1_PROMPT = """You are a senior partner at McKinsey & Company working alongside a
+managing director from Goldman Sachs' investment banking division. You are writing the
+FIRST PART of a comprehensive market-entry strategy for 2hr Learning (Alpha) in **{target}**.
+
+This will be presented to Alpha's CEO, the target country's sovereign leadership, and
+institutional investors.
 
 ## About Alpha / 2hr Learning
+- **Timeback**: AI compresses core academics into 2 hours/day → remaining time for
+  specialisations (STEM, sports, arts, entrepreneurship, life skills)
+- **AlphaCore**: Curriculum OS and learning management system
+- **Guide School**: 12-month program transforming traditional teachers into "Guides"
+- **Incept eduLLM**: Custom education AI adapted to local curriculum and culture
+- **Three commitments**: Children love school | Learn 2x faster | Future-ready skills
+- **UAE deal (Ed71/Next71)**: $1.5B upfront, 200K students over 5 years, $25K/student budget,
+  JV with AsasOne (local cultural IP layer), Emirati Guide cohort
+- **Revenue model**: Management fees (10% school revenue), Timeback License (20% per-student
+  budget), upfront IP fee ($25M+), Guide School fees
+- **Fee floor**: Minimum $15K per student
 
-- **Mission**: Transform K-12 education globally by making children love school, learn 2x
-  faster, and develop future-ready skills
-- **Products**: Timeback (AI learning compression), AlphaCore (curriculum OS), Guide School
-  (teacher transformation), Incept eduLLM (education AI)
-- **UAE Reference Deal (Ed71/Next71)**: $1.5B upfront commitment, 200,000 students over
-  5 years, $25K per-student budget, JV structure with local entity AsasOne managing
-  cultural IP layer, Emirati Guide cohort trained through Guide School
-- **Revenue Model**: Management fees (10% of school revenue), Timeback License (20% of
-  per-student budget), upfront IP/development fee ($25M+), curriculum development fees
-- **Fee Floor**: Minimum $15K per student; below that, economic model breaks
-
-## Country/State Profile
-
+## Country & Education Context
 {country_context}
-
-## Education Analysis
 
 {education_context}
 
-## Report Requirements
+## Write EXACTLY these sections:
 
-Write a comprehensive market-entry strategy in **markdown** with these sections.
-Be specific, actionable, and investment-thesis oriented. Include specific numbers,
-timelines, and decision criteria. Use tables for comparisons. Mark critical strategic
-insights with **🎯 Strategic Priority:** callouts.
+# Market Entry Strategy: {target}
 
-### Required Sections
+## 1. Executive Summary
+Write 6-8 paragraphs covering:
+- The strategic opportunity in {target} (quantified)
+- Recommended entry mode and partnership structure
+- Proposed deal parameters (commitment size, student count, per-student budget)
+- Phased rollout plan summary
+- Financial return thesis (IRR, MOIC range)
+- Key risks and why the opportunity justifies them
+- Comparison to the UAE reference deal
+- Timeline from agreement to first school opening
 
-1. **Executive Summary** — 4-5 paragraph synthesis: the opportunity, the approach,
-   the deal structure, the returns thesis, and the key risks
-2. **Market Opportunity Assessment** — TAM/SAM/SOM with calculation methodology,
-   penetration scenarios, growth trajectory, comparison to UAE baseline
-3. **Recommended Entry Mode** — Private / Government / Hybrid with detailed rationale,
-   decision matrix comparing all three options across 8+ criteria
-4. **Partnership Structure**
-   - Recommended partner type (sovereign fund, government ministry, private operator)
-   - Specific potential partners with assessment of each
-   - JV structure recommendation (ownership split, governance, IP rights)
-   - Local entity structure (based on AsasOne model)
-   - Cultural IP layer design
-5. **Brand & Positioning** — JV name suggestions (following Ed71/Next71 naming pattern),
-   brand positioning, messaging framework for each stakeholder (parents, students,
-   government, investors)
-6. **School Type Portfolio** — For each recommended school type:
-   - Target market segment and demographic
-   - Student capacity and physical model
-   - Pricing with PPP-adjusted rationale
-   - Curriculum mix (Timeback + specialisations)
-   - Differentiation from competitors
-7. **Phased Rollout Plan** — 5-year plan with specific milestones per phase:
-   - Phase 1 (Year 1): Flagship launch — student count, location, hiring
-   - Phase 2 (Year 2-3): Expansion — additional schools, geographies
-   - Phase 3 (Year 4-5): Scale — target student count, new school types
-   - Include decision gates between phases
-8. **Value Proposition Framework** — Value propositions for each stakeholder:
-   - Government/sovereign: economic diversification, human capital, global ranking
-   - Parents: outcomes data, child wellbeing, 2x learning efficiency
-   - Students: love school, specialisations, future readiness
-   - Investors: returns thesis, capital deployment, exit optionality
-9. **Competitive Positioning** — Positioning vs. existing operators, defensibility
-   of Alpha's model, moat analysis (technology, outcomes data, teacher training IP)
-10. **Risk Mitigation Strategy** — Top 10 risks with probability, impact, and
-    specific mitigation actions
-11. **Key Asks & Deal Parameters** — Specific asks for the sovereign partner:
-    - Upfront commitment (scaled from UAE deal)
-    - Per-student budget (PPP-adjusted)
-    - Student volume commitments
-    - Regulatory concessions needed
-    - Infrastructure/real estate support
-    - Timeline commitments
-12. **Implementation Roadmap** — 18-month pre-launch timeline with workstreams:
-    partnership negotiation, regulatory, hiring, facilities, curriculum, technology
-13. **Sources & Appendices**
+## 2. Market Opportunity Assessment
 
-For US states: adapt the strategy around ESA/voucher economics, charter school frameworks,
-micro-school networks, direct-to-parent model, and school choice advocacy partnerships.
+### 2.1 Total Addressable Market
+Create a detailed TAM calculation table:
 
-## Formatting Rules
-- Markdown headers (## sections, ### subsections)
-- Tables for comparisons, decision matrices, risk registers
-- **🎯 Strategic Priority:** for key strategic decisions
-- Minimum 4,000 words
-- Write as if co-presenting at a McKinsey-VC board session
-"""
+| Component | Value | Source | Methodology |
+|-----------|-------|--------|-------------|
+| Total K-12 students | ... | ... | ... |
+| % in target income segments | ... | ... | ... |
+| # of addressable students | ... | ... | ... |
+| Blended revenue per student | ... | ... | PPP-adjusted |
+| **Total TAM** | **$...** | ... | ... |
+
+### 2.2 Serviceable Market
+Create SAM table:
+
+| Filter | Students | Revenue | Rationale |
+|--------|----------|---------|-----------|
+| Income-qualified | ... | ... | ... |
+| Geographically accessible | ... | ... | ... |
+| Innovation-receptive | ... | ... | ... |
+| Regulatory-feasible | ... | ... | ... |
+| **SAM** | **...** | **$...** | ... |
+
+### 2.3 Penetration Scenarios
+Create scenarios table:
+
+| Scenario | Market Share | Students (Yr 5) | Revenue (Yr 5) | Commitment Ask | Assumptions |
+|----------|-------------|-----------------|-----------------|---------------|-------------|
+| Conservative | ...% | ... | $... | $... | ... |
+| Base Case | ...% | ... | $... | $... | ... |
+| Aggressive | ...% | ... | $... | $... | ... |
+
+### 2.4 Comparison to UAE Benchmark
+
+| Dimension | UAE Deal | {target} (Proposed) | Scaling Factor | Rationale |
+|-----------|---------|-------------------|---------------|-----------|
+| Population | 10M | ... | ... | ... |
+| GDP/Capita | $44K | ... | ... | ... |
+| Student Commitment | 200K | ... | ... | ... |
+| Per-Student Budget | $25K | ... | PPP-adjusted | ... |
+| Upfront Commitment | $1.5B | ... | ... | ... |
+| JV Structure | 51/49 | ... | ... | ... |
+
+Write 5-6 paragraphs on market sizing methodology, key assumptions, and why the numbers
+are achievable based on the country research.
+
+**🎯 Strategic Priority:** Quantify the specific opportunity with confidence intervals.
+
+## 3. Recommended Entry Mode
+
+### 3.1 Entry Mode Decision Matrix
+Create a comprehensive comparison:
+
+| Evaluation Criteria | Weight | Private Entry | Government Partnership | Hybrid Model |
+|--------------------|--------|--------------|----------------------|-------------|
+| Speed to market | 15% | ... /5 | ... /5 | ... /5 |
+| Scale potential (Yr 5) | 20% | ... /5 | ... /5 | ... /5 |
+| Revenue per student | 10% | ... /5 | ... /5 | ... /5 |
+| Regulatory simplicity | 10% | ... /5 | ... /5 | ... /5 |
+| Capital efficiency | 10% | ... /5 | ... /5 | ... /5 |
+| Political sustainability | 15% | ... /5 | ... /5 | ... /5 |
+| Brand building | 10% | ... /5 | ... /5 | ... /5 |
+| Exit optionality | 10% | ... /5 | ... /5 | ... /5 |
+| **Weighted Score** | **100%** | **...** | **...** | **...** |
+
+Write 4-5 paragraphs justifying the recommended entry mode based on the scoring above,
+country-specific regulatory factors, and precedent from the UAE deal.
+
+**🎯 Strategic Priority:** Provide a clear, defensible recommendation with rationale.
+
+IMPORTANT: Minimum 3,000 words. Investment-thesis quality. Data-driven. Tables throughout."""
+
+SECTION_2_PROMPT = """You are continuing the McKinsey/Goldman market-entry strategy for **{target}**.
+Writing sections 4-7.
+
+## Country & Education Context
+{country_context}
+
+{education_context}
+
+## Write EXACTLY these sections:
+
+## 4. Partnership Structure
+
+### 4.1 Recommended Partner Profile
+Create a table of potential partner types:
+
+| Partner Type | Specific Candidates | Pros | Cons | Fit Score |
+|-------------|-------------------|------|------|----------|
+| Sovereign Wealth Fund | ... | ... | ... | ... |
+| Royal Family Office | ... | ... | ... | ... |
+| Government Ministry | ... | ... | ... | ... |
+| Private Conglomerate | ... | ... | ... | ... |
+| Education Foundation | ... | ... | ... | ... |
+
+### 4.2 JV Structure Design
+Based on the AsasOne model from the UAE deal:
+
+| Structural Element | UAE (AsasOne) | {target} (Proposed) | Rationale |
+|-------------------|---------------|-------------------|-----------|
+| Entity Name | Ed71 / Next71 | ... (suggest 2-3 options) | ... |
+| Ownership Split | Alpha 49% / Local 51% | ... | ... |
+| Board Composition | ... | ... | ... |
+| IP Ownership | Alpha retains core IP | ... | ... |
+| Cultural IP Layer | AsasOne | ... | ... |
+| Management Control | Alpha operational control | ... | ... |
+| Revenue Distribution | ... | ... | ... |
+| Exit Mechanism | ... | ... | ... |
+| Non-Compete | ... | ... | ... |
+| Dispute Resolution | ... | ... | ... |
+
+Write 5-6 paragraphs on the partnership structure rationale, governance design,
+IP protection strategy, and cultural IP layer development.
+
+### 4.3 Cultural IP Layer Design
+How to localise Alpha's model while preserving national identity, cultural values,
+and local curriculum requirements. Reference the AsasOne approach.
+
+**🎯 Strategic Priority:** The local entity name and structure is critical for political buy-in.
+
+## 5. Brand & Positioning
+
+### 5.1 Brand Architecture
+Suggest 3-4 JV entity names (following the Ed71/Next71 naming pattern):
+
+| Name Option | Meaning/Rationale | Positioning | Target Association |
+|------------|-------------------|------------|-------------------|
+| ... | ... | ... | ... |
+| ... | ... | ... | ... |
+| ... | ... | ... | ... |
+
+### 5.2 Messaging Framework
+Create a messaging matrix:
+
+| Stakeholder | Key Message | Proof Points | Emotional Hook |
+|-------------|-----------|-------------|----------------|
+| Head of State | ... | ... | ... |
+| Education Minister | ... | ... | ... |
+| Sovereign Fund | ... | ... | ... |
+| Parents (Affluent) | ... | ... | ... |
+| Parents (Middle Class) | ... | ... | ... |
+| Students | ... | ... | ... |
+| Teachers | ... | ... | ... |
+| Media | ... | ... | ... |
+
+Write 3-4 paragraphs on brand positioning strategy.
+
+## 6. School Type Portfolio
+
+### 6.1 Recommended School Types
+Create a detailed table for each school type:
+
+| Dimension | Flagship Premium | Innovation Academy | Community School | Specialised (STEM/Arts) |
+|-----------|-----------------|-------------------|-----------------|----------------------|
+| Target Segment | Top 5% income | Top 15% income | Top 30% income | Talent-identified |
+| Annual Tuition | $... | $... | $... | $... (subsidised) |
+| Capacity | ... students | ... students | ... students | ... students |
+| Location Type | CBD/Prime | Suburban | Urban fringe | Various |
+| Curriculum Mix | 2hr core + specialisations | ... | ... | ... |
+| Teacher Model | All Guides | Mix | ... | ... |
+| Physical Model | Premium campus | Modern | Efficient | Purpose-built |
+| Technology | Full Timeback + eduLLM | Full Timeback | Timeback | Full suite |
+| Year 1 Target | ... schools | ... schools | ... schools | ... schools |
+| Year 5 Target | ... schools | ... schools | ... schools | ... schools |
+
+Write 4-5 paragraphs on the portfolio strategy, pricing rationale (PPP-adjusted),
+sequencing, and how each type serves a different market need.
+
+### 6.2 Pricing Strategy
+PPP-adjusted pricing analysis with comparison to local competitors and the UAE benchmark.
+
+**🎯 Strategic Priority:** Pricing must be above the $15K floor while being competitive locally.
+
+## 7. Phased Rollout Plan
+
+### 7.1 Five-Year Rollout
+
+| Phase | Timeline | Schools | Students | Revenue | Key Milestones | Decision Gate |
+|-------|----------|---------|----------|---------|---------------|--------------|
+| Pre-Launch | M1-M12 | 0 | 0 | $0 | ... | Go/No-Go |
+| Phase 1: Flagship | Yr 1 | ... | ... | $... | ... | Phase 2 approval |
+| Phase 2: Expansion | Yr 2-3 | ... | ... | $... | ... | Phase 3 approval |
+| Phase 3: Scale | Yr 4-5 | ... | ... | $... | ... | Continuation |
+| **Total** | **5 years** | **...** | **...** | **$...** | ... | ... |
+
+### 7.2 Pre-Launch Workstreams (18-month timeline)
+
+| Workstream | M1-3 | M4-6 | M7-9 | M10-12 | M13-15 | M16-18 | Owner |
+|-----------|-------|-------|-------|--------|--------|--------|-------|
+| Partnership/Legal | ... | ... | ... | ... | ... | ... | ... |
+| Regulatory | ... | ... | ... | ... | ... | ... | ... |
+| Curriculum Localisation | ... | ... | ... | ... | ... | ... | ... |
+| Guide School (Teachers) | ... | ... | ... | ... | ... | ... | ... |
+| Technology Deployment | ... | ... | ... | ... | ... | ... | ... |
+| Facilities/RE | ... | ... | ... | ... | ... | ... | ... |
+| Hiring | ... | ... | ... | ... | ... | ... | ... |
+| Marketing/Brand | ... | ... | ... | ... | ... | ... | ... |
+
+Write 4-5 paragraphs on the rollout strategy, critical path, and decision gates.
+
+**🎯 Strategic Priority:** Phase 1 flagship success is the make-or-break moment.
+
+IMPORTANT: Minimum 3,000 words. Specific, actionable, investment-thesis quality."""
+
+SECTION_3_PROMPT = """You are completing the McKinsey/Goldman strategy report for **{target}**.
+Writing sections 8-12 (final sections).
+
+## Country & Education Context
+{country_context}
+
+{education_context}
+
+## Write EXACTLY these sections:
+
+## 8. Value Proposition Framework
+
+### 8.1 Government / Sovereign Value Proposition
+Write 3-4 paragraphs covering:
+- Economic diversification through education sector development
+- Human capital development and global competitiveness
+- National brand positioning (education hub)
+- Job creation (teachers, administrators, support staff)
+- Technology transfer and AI capability building
+- Measurable outcomes and global rankings improvement
+
+### 8.2 Parent Value Proposition
+Write 3-4 paragraphs covering:
+- "Children will love school" — engagement and happiness metrics
+- "Learn 2x faster" — academic outcomes evidence
+- "Future-ready skills" — specialisations, AI-age preparation
+- Premium experience at competitive price points
+- University placement outcomes
+
+### 8.3 Investor Value Proposition
+Write 3-4 paragraphs covering:
+- Returns thesis (IRR, MOIC expectations)
+- Capital deployment efficiency
+- Recurring revenue model
+- Scale optionality (domestic expansion + regional)
+- Exit pathways (IPO, strategic sale, sovereign buyout)
+
+Create a value proposition summary table:
+
+| Stakeholder | Primary Value | Secondary Value | Evidence/Proof | Risk |
+|-------------|-------------|----------------|---------------|------|
+| Head of State | ... | ... | ... | ... |
+| Education Minister | ... | ... | ... | ... |
+| Finance Minister | ... | ... | ... | ... |
+| Sovereign Fund | ... | ... | ... | ... |
+| Parents | ... | ... | ... | ... |
+| Students | ... | ... | ... | ... |
+| Teachers | ... | ... | ... | ... |
+| Employers | ... | ... | ... | ... |
+
+## 9. Competitive Positioning & Moat Analysis
+
+### 9.1 Competitive Advantage Assessment
+
+| Competitive Factor | Alpha | Traditional Private | International Chains | EdTech | Government Schools |
+|-------------------|-------|-------------------|-------------------|--------|------------------|
+| Learning Outcomes | ★★★★★ | ★★★ | ★★★★ | ★★★ | ★★ |
+| Student Engagement | ★★★★★ | ★★ | ★★★ | ★★★ | ★★ |
+| Technology | ★★★★★ | ★★ | ★★★ | ★★★★ | ★ |
+| Teacher Quality | ★★★★★ | ★★★ | ★★★★ | N/A | ★★ |
+| Curriculum Innovation | ★★★★★ | ★★ | ★★★ | ★★★ | ★★ |
+| Affordability | ★★★ | ★★★ | ★★ | ★★★★ | ★★★★★ |
+| Scale Potential | ★★★★★ | ★★ | ★★★ | ★★★★ | ★★★★★ |
+| Data & AI | ★★★★★ | ★ | ★★ | ★★★★ | ★ |
+
+### 9.2 Moat Analysis
+Write 4-5 paragraphs on Alpha's defensibility: proprietary AI (Incept eduLLM),
+outcomes data flywheel, teacher training IP (Guide School), integrated model
+complexity, first-mover advantage in sovereign partnerships.
+
+## 10. Risk Mitigation Strategy
+
+Create a comprehensive risk register:
+
+| # | Risk | Category | Prob | Impact | Risk Score | Mitigation | Owner | Timeline |
+|---|------|----------|------|--------|-----------|-----------|-------|----------|
+| 1 | ... | Regulatory | H/M/L | H/M/L | ... | ... | ... | ... |
+| 2 | ... | Political | ... | ... | ... | ... | ... | ... |
+| ... | ... | ... | ... | ... | ... | ... | ... | ... |
+
+Include at least 15 specific risks across categories: regulatory, political, financial,
+operational, competitive, cultural, reputational, macroeconomic, technology, legal.
+
+Write 4-5 paragraphs on the overall risk framework and mitigation strategy.
+
+**🎯 Strategic Priority:** Political risk and regulatory risk are typically the biggest
+dealbreakers — address them head-on.
+
+## 11. Key Asks & Deal Parameters
+
+### 11.1 Proposed Deal Terms
+
+| Term | UAE Reference | {target} Proposal | Rationale |
+|------|-------------|-------------------|-----------|
+| Upfront Commitment | $1.5B | $... | ... |
+| Per-Student Budget | $25K | $... | PPP-adjusted |
+| Student Count (5yr) | 200K | ... | ... |
+| IP Development Fee | $25M | $... | ... |
+| Management Fee | 10% | 10% | Non-negotiable |
+| Timeback License | 20% | 20% | Non-negotiable |
+| JV Ownership | 49/51 | ... | ... |
+| Exclusivity | UAE | {target} + ... | ... |
+| Duration | 10 years | ... | ... |
+| Performance Guarantees | ... | ... | ... |
+
+### 11.2 Key Asks from Sovereign Partner
+Numbered list of 8-10 specific asks with justification.
+
+### 11.3 Key Concessions Alpha Can Offer
+Numbered list of 5-6 concessions with strategic rationale.
+
+## 12. Sources & Appendices
+
+### 12.1 Sources
+List all sources cited.
+
+### 12.2 Key Assumptions
+Table of all key assumptions used in this strategy.
+
+IMPORTANT: Minimum 3,000 words. This completes a document that will be read by heads
+of state and VC managing directors. Every recommendation must be data-backed."""
 
 REPORT_REVISION_PROMPT = """You are revising a market-entry strategy based on executive feedback.
 
-Original strategy report:
+Original strategy:
 {original_report}
 
 Executive feedback:
 {feedback}
 
-Produce a revised full strategy incorporating the feedback. Maintain depth and
-🎯 Strategic Priority callouts."""
+Produce a revised full strategy incorporating the feedback. Maintain depth,
+🎯 Strategic Priority callouts, and all tables. Must be at least as long as original."""
 
 
 async def run_strategy(
@@ -139,7 +416,6 @@ async def run_strategy(
     """Execute strategy development. Returns (strategy, report_md, docx_path)."""
     logger.info("Running strategy agent for %s", target)
 
-    # --- Build context strings ---
     country_ctx = _build_country_context(country_profile)
     education_ctx = _build_education_context(education_analysis)
 
@@ -169,18 +445,33 @@ async def run_strategy(
             user_prompt=f"Revise the strategy for {target}.",
         )
     else:
-        report_md = await call_llm_plain(
-            system_prompt=REPORT_PROMPT.format(
-                target=target,
-                country_context=country_ctx,
-                education_context=education_ctx,
+        entry_note = f"\nEntry mode preference: {entry_mode.value}" if entry_mode else ""
+
+        logger.info("Generating strategy section 1/3 for %s", target)
+        section_1 = await call_llm_plain(
+            system_prompt=SECTION_1_PROMPT.format(
+                target=target, country_context=country_ctx, education_context=education_ctx,
             ),
-            user_prompt=(
-                f"Write the full market-entry strategy for **{target}**.\n"
-                f"{'Entry mode preference: ' + entry_mode.value if entry_mode else ''}\n"
-                f"Produce the complete strategy report."
-            ),
+            user_prompt=f"Write sections 1-3 of the strategy for {target}.{entry_note}",
         )
+
+        logger.info("Generating strategy section 2/3 for %s", target)
+        section_2 = await call_llm_plain(
+            system_prompt=SECTION_2_PROMPT.format(
+                target=target, country_context=country_ctx, education_context=education_ctx,
+            ),
+            user_prompt=f"Write sections 4-7 of the strategy for {target}.{entry_note}",
+        )
+
+        logger.info("Generating strategy section 3/3 for %s", target)
+        section_3 = await call_llm_plain(
+            system_prompt=SECTION_3_PROMPT.format(
+                target=target, country_context=country_ctx, education_context=education_ctx,
+            ),
+            user_prompt=f"Write sections 8-12 of the strategy for {target}.{entry_note}",
+        )
+
+        report_md = section_1 + "\n\n" + section_2 + "\n\n" + section_3
 
     # --- Save DOCX ---
     docx_path = _save_report_docx(target, report_md, "Market Entry Strategy")
@@ -190,39 +481,49 @@ async def run_strategy(
 
 
 def _build_country_context(p: CountryProfile) -> str:
-    parts = [f"Name: {p.target.name}", f"Type: {p.target.type.value}"]
+    parts = [f"**Country Profile: {p.target.name}**"]
     if p.target.tier:
-        parts.append(f"Tier: {p.target.tier}")
+        parts.append(f"- Tier: {p.target.tier}")
     if p.demographics.total_population:
-        parts.append(f"Population: {p.demographics.total_population:,.0f}")
-    if p.economy.gdp_per_capita:
-        parts.append(f"GDP/cap: ${p.economy.gdp_per_capita:,.0f}")
-    if p.economy.gdp:
-        parts.append(f"GDP: ${p.economy.gdp:,.0f}")
-    if p.economy.gdp_growth_rate:
-        parts.append(f"GDP growth: {p.economy.gdp_growth_rate}%")
+        parts.append(f"- Population: {p.demographics.total_population:,.0f}")
     if p.demographics.population_0_18:
-        parts.append(f"School-age pop: {p.demographics.population_0_18:,.0f}")
+        parts.append(f"- School-age population: {p.demographics.population_0_18:,.0f}")
+    if p.economy.gdp:
+        parts.append(f"- GDP: ${p.economy.gdp:,.0f}")
+    if p.economy.gdp_per_capita:
+        parts.append(f"- GDP per capita: ${p.economy.gdp_per_capita:,.0f}")
+    if p.economy.gdp_growth_rate:
+        parts.append(f"- GDP growth: {p.economy.gdp_growth_rate}%")
+    if p.economy.sovereign_wealth_fund:
+        parts.append(f"- SWF: {p.economy.sovereign_wealth_fund}")
+    if p.education.k12_enrolled:
+        parts.append(f"- K-12 students: {p.education.k12_enrolled:,.0f}")
+    if p.education.avg_private_tuition:
+        parts.append(f"- Avg private tuition: ${p.education.avg_private_tuition:,.0f}")
     if p.regulatory.foreign_ownership_rules:
-        parts.append(f"Foreign ownership: {p.regulatory.foreign_ownership_rules}")
+        parts.append(f"- Foreign ownership: {p.regulatory.foreign_ownership_rules}")
     if p.political_context.national_vision_plan:
-        parts.append(f"National vision: {p.political_context.national_vision_plan}")
+        parts.append(f"- National vision: {p.political_context.national_vision_plan}")
     if p.competitive_landscape.major_operators:
         ops = ", ".join(o.name for o in p.competitive_landscape.major_operators[:5])
-        parts.append(f"Major operators: {ops}")
+        parts.append(f"- Major operators: {ops}")
     return "\n".join(parts)
 
 
 def _build_education_context(e: EducationAnalysis) -> str:
-    parts = []
+    parts = ["**Education Analysis Summary:**"]
     if e.system_diagnosis.primary_pain_points:
-        parts.append(f"Pain points: {'; '.join(e.system_diagnosis.primary_pain_points[:5])}")
+        parts.append(f"- Student pain points: {'; '.join(e.system_diagnosis.primary_pain_points[:5])}")
+    if e.system_diagnosis.parent_pain_points:
+        parts.append(f"- Parent pain points: {'; '.join(e.system_diagnosis.parent_pain_points[:5])}")
+    if e.system_diagnosis.government_pain_points:
+        parts.append(f"- Government pain points: {'; '.join(e.system_diagnosis.government_pain_points[:5])}")
     if e.reform_landscape.active_reforms:
-        parts.append(f"Active reforms: {'; '.join(e.reform_landscape.active_reforms[:5])}")
+        parts.append(f"- Active reforms: {'; '.join(e.reform_landscape.active_reforms[:5])}")
     if e.two_hr_learning_fit.unique_value_propositions:
-        parts.append(f"Alpha UVPs: {'; '.join(e.two_hr_learning_fit.unique_value_propositions[:5])}")
+        parts.append(f"- Alpha UVPs: {'; '.join(e.two_hr_learning_fit.unique_value_propositions[:5])}")
     if e.two_hr_learning_fit.model_recommendation:
-        parts.append(f"Recommended model: {e.two_hr_learning_fit.model_recommendation.value}")
+        parts.append(f"- Recommended model: {e.two_hr_learning_fit.model_recommendation.value}")
     return "\n".join(parts) or "Education analysis pending"
 
 
