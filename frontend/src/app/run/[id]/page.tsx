@@ -74,6 +74,9 @@ export default function RunPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Navigation: which stage the user is viewing (null = current active stage)
+  const [viewingStageKey, setViewingStageKey] = useState<string | null>(null);
+
   // For interactive model recalculation
   const [liveModel, setLiveModel] = useState<FinancialModel | null>(null);
   const [liveAssumptions, setLiveAssumptions] = useState<FinancialAssumption[] | null>(null);
@@ -108,7 +111,7 @@ export default function RunPage() {
   // Restart polling (called after submitting feedback)
   const restartPolling = useCallback(() => {
     if (pollRef.current) clearInterval(pollRef.current);
-    // Fetch immediately, then poll
+    setViewingStageKey(null); // Return to active view when pipeline moves
     fetchStatus();
     pollRef.current = setInterval(fetchStatus, 3000);
   }, [fetchStatus]);
@@ -119,8 +122,6 @@ export default function RunPage() {
     setLoading(true);
     try {
       await submitCountryReportFeedback(runId, true);
-      // Backend immediately set status to "researching_education" —
-      // restart polling to pick it up
       restartPolling();
     } catch (err) { setError(String(err)); }
     setLoading(false);
@@ -232,6 +233,32 @@ export default function RunPage() {
 
   const activeStage = getActiveStageIndex(data.status);
 
+  // Determine which stage's content to show
+  const isViewingPrevious = viewingStageKey !== null;
+  const viewingStageIndex = isViewingPrevious
+    ? STAGES.findIndex((s) => s.key === viewingStageKey)
+    : activeStage;
+
+  // Can the user click on a stage? Only completed stages + the active stage
+  function canClickStage(stageIndex: number): boolean {
+    if (data!.status === "completed") return stageIndex < STAGES.length; // all stages clickable when complete
+    return stageIndex < activeStage || stageIndex === activeStage;
+  }
+
+  // Check if a stage has viewable content
+  function hasStageContent(stageKey: string): boolean {
+    switch (stageKey) {
+      case "country": return !!data!.country_report;
+      case "education": return !!data!.education_report;
+      case "strategy": return !!data!.strategy_report;
+      case "assumptions": return !!data!.financial_assumptions?.assumptions?.length;
+      case "model": return !!data!.financial_model;
+      case "documents": return !!(data!.pptx_path || data!.docx_path || data!.xlsx_path);
+      case "complete": return data!.status === "completed";
+      default: return false;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a14] text-white">
       {/* Header */}
@@ -253,26 +280,44 @@ export default function RunPage() {
         </div>
       </header>
 
-      {/* Pipeline Progress */}
+      {/* Pipeline Progress — clickable stepper */}
       <div className="max-w-7xl mx-auto px-4 pt-6 pb-2">
         <div className="flex items-center gap-1 overflow-x-auto pb-2">
           {STAGES.map((stage, i) => {
             const isComplete = i < activeStage || data.status === "completed";
-            const isActive = i === activeStage;
-            const isPending = i > activeStage;
+            const isActive = i === activeStage && !isViewingPrevious;
+            const isViewing = i === viewingStageIndex && isViewingPrevious;
+            const isPending = i > activeStage && data.status !== "completed";
+            const clickable = canClickStage(i) && hasStageContent(stage.key);
 
             return (
               <div key={stage.key} className="flex items-center">
-                <div
+                <button
+                  onClick={() => {
+                    if (!clickable) return;
+                    if (i === activeStage && !isViewingPrevious) {
+                      // Clicking the active stage when already viewing it → no-op
+                      return;
+                    }
+                    if (i === activeStage) {
+                      // Return to current active view
+                      setViewingStageKey(null);
+                    } else {
+                      setViewingStageKey(stage.key);
+                    }
+                  }}
+                  disabled={!clickable}
                   className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all
-                    ${isComplete ? "bg-emerald-500/20 text-emerald-400" : ""}
+                    ${clickable ? "cursor-pointer" : "cursor-default"}
+                    ${isComplete && !isViewing ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30" : ""}
                     ${isActive ? "bg-[#006D77]/30 text-[#00d4aa] ring-1 ring-[#006D77]/50" : ""}
+                    ${isViewing ? "bg-blue-500/30 text-blue-400 ring-2 ring-blue-500/60" : ""}
                     ${isPending ? "bg-white/5 text-gray-500" : ""}
                   `}
                 >
-                  <span>{isComplete ? "✓" : stage.icon}</span>
+                  <span>{isComplete && !isViewing && !isActive ? "✓" : stage.icon}</span>
                   <span className="hidden sm:inline">{stage.label}</span>
-                </div>
+                </button>
                 {i < STAGES.length - 1 && (
                   <div className={`w-4 h-px mx-1 ${isComplete ? "bg-emerald-500/40" : "bg-white/10"}`} />
                 )}
@@ -282,10 +327,31 @@ export default function RunPage() {
         </div>
       </div>
 
+      {/* "Viewing previous step" banner */}
+      {isViewingPrevious && (
+        <div className="max-w-7xl mx-auto px-4 py-2">
+          <div className="flex items-center justify-between rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-2.5">
+            <div className="flex items-center gap-2 text-sm text-blue-300">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Viewing: <strong>{STAGES[viewingStageIndex]?.label}</strong> (completed)
+            </div>
+            <button
+              onClick={() => setViewingStageKey(null)}
+              className="text-sm text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+            >
+              Return to current step →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
         {/* Error state */}
-        {data.status === "error" && (
+        {data.status === "error" && !isViewingPrevious && (
           <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-6">
             <h2 className="text-lg font-bold text-red-400 mb-2">Pipeline Error</h2>
             <p className="text-gray-300">{data.error_message || "An unknown error occurred."}</p>
@@ -293,242 +359,251 @@ export default function RunPage() {
           </div>
         )}
 
-        {/* Working / Loading states */}
-        {isWorkingStatus(data.status) && (
-          <div className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-8 text-center space-y-4">
-            <div className="animate-pulse">
-              <div className="text-4xl mb-4">
-                {STAGES[activeStage]?.icon || "⏳"}
-              </div>
-              <h2 className="text-xl font-bold">
-                {STAGES[activeStage]?.label || "Processing"}...
-              </h2>
-              <p className="text-gray-400 text-sm mt-2">
-                {data.status === "researching_country" && "Conducting investment-bank quality country research with live data... This may take 2-4 minutes."}
-                {data.status === "researching_education" && "Performing McKinsey-quality education sector deep-dive... This may take 2-4 minutes."}
-                {data.status === "strategizing" && "Developing comprehensive market-entry strategy... This may take 2-4 minutes."}
-                {data.status === "presenting_assumptions" && "Generating financial model assumptions..."}
-                {data.status === "building_model" && "Building the financial model..."}
-                {data.status === "generating_documents" && "Generating investor deck, proposal, and spreadsheet..."}
-              </p>
-            </div>
-            <div className="flex justify-center">
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#006D77] opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#006D77]" />
-                </span>
-                Pipeline running...
-              </div>
-            </div>
-            <AgentLog logs={data.agent_logs} />
-          </div>
-        )}
-
         {/* ============================================================ */}
-        {/* GATE 1: Country Research Report Review */}
+        {/* VIEWING PREVIOUS: Country Research (read-only) */}
         {/* ============================================================ */}
-        {data.status === "review_country_report" && data.country_report && (
+        {isViewingPrevious && viewingStageKey === "country" && data.country_report && (
           <div className="space-y-6">
             <ReportViewer
               title="🌍 Country Research Report"
               report={data.country_report}
               downloadUrl={data.country_report_docx_path ? getDownloadUrl(runId, "country_report") : undefined}
             />
-            <FeedbackForm
-              title="Review Country Research"
-              description="Review the country research report above. Approve to proceed to education analysis, or request changes."
-              onApprove={handleCountryApprove}
-              onRequestChanges={handleCountryRevise}
-              loading={loading}
-            />
+            <ReadOnlyBanner stage="Country Research" />
           </div>
         )}
 
         {/* ============================================================ */}
-        {/* GATE 2: Education Report Review */}
+        {/* VIEWING PREVIOUS: Education Analysis (read-only) */}
         {/* ============================================================ */}
-        {data.status === "review_education_report" && data.education_report && (
+        {isViewingPrevious && viewingStageKey === "education" && data.education_report && (
           <div className="space-y-6">
             <ReportViewer
               title="📚 Education System Analysis"
               report={data.education_report}
               downloadUrl={data.education_report_docx_path ? getDownloadUrl(runId, "education_report") : undefined}
             />
-            <FeedbackForm
-              title="Review Education Analysis"
-              description="Review the education system analysis. Approve to proceed to strategy development, or request changes."
-              onApprove={handleEducationApprove}
-              onRequestChanges={handleEducationRevise}
-              loading={loading}
-            />
+            <ReadOnlyBanner stage="Education Analysis" />
           </div>
         )}
 
         {/* ============================================================ */}
-        {/* GATE 3: Strategy Report Review */}
+        {/* VIEWING PREVIOUS: Strategy (read-only) */}
         {/* ============================================================ */}
-        {data.status === "review_strategy" && data.strategy_report && (
+        {isViewingPrevious && viewingStageKey === "strategy" && data.strategy_report && (
           <div className="space-y-6">
             <ReportViewer
               title="🎯 Market Entry Strategy"
               report={data.strategy_report}
               downloadUrl={data.strategy_report_docx_path ? getDownloadUrl(runId, "strategy_report") : undefined}
             />
-            <FeedbackForm
-              title="Review Strategy"
-              description="Review the market-entry strategy. Approve to proceed to financial modelling, or request changes."
-              onApprove={handleStrategyApprove}
-              onRequestChanges={handleStrategyRevise}
-              loading={loading}
-            />
+            <ReadOnlyBanner stage="Strategy" />
           </div>
         )}
 
         {/* ============================================================ */}
-        {/* GATE 4: Financial Assumptions Review */}
+        {/* VIEWING PREVIOUS: Assumptions (read-only summary) */}
         {/* ============================================================ */}
-        {data.status === "review_assumptions" && data.financial_assumptions?.assumptions && (
-          <AssumptionEditor
-            assumptions={data.financial_assumptions.assumptions}
-            onConfirm={handleAssumptionsConfirm}
-            loading={loading}
-          />
+        {isViewingPrevious && viewingStageKey === "assumptions" && data.financial_assumptions?.assumptions && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">⚙️ Financial Assumptions (Locked)</h2>
+            <div className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 overflow-auto max-h-[70vh]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {data.financial_assumptions.assumptions.map((a) => (
+                  <div key={a.key} className="flex items-center justify-between rounded-lg bg-white/5 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-white">{a.label}</div>
+                      <div className="text-xs text-gray-500">{a.category}</div>
+                    </div>
+                    <div className="text-sm font-semibold text-[#00d4aa]">
+                      {a.unit === "$" ? `$${a.value.toLocaleString()}` :
+                       a.unit === "%" ? `${a.value}%` :
+                       a.unit === "x" ? `${a.value}x` :
+                       `${a.value.toLocaleString()} ${a.unit}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <ReadOnlyBanner stage="Financial Assumptions" />
+          </div>
         )}
 
         {/* ============================================================ */}
-        {/* GATE 5: Financial Model Review */}
+        {/* VIEWING PREVIOUS: Financial Model (read-only) */}
         {/* ============================================================ */}
-        {data.status === "review_model" && (liveModel || data.financial_model) && (
-          <FinancialModelViewer
-            model={liveModel || data.financial_model!}
-            assumptions={liveAssumptions || data.financial_assumptions?.assumptions || []}
-            onLock={handleModelLock}
-            onRecalculate={handleModelRecalculate}
-            loading={loading}
-          />
+        {isViewingPrevious && viewingStageKey === "model" && data.financial_model && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">📊 Financial Model (Locked)</h2>
+            <FinancialSummaryCards model={data.financial_model} />
+            <PnLTable model={data.financial_model} />
+            <ReadOnlyBanner stage="Financial Model" />
+          </div>
         )}
 
         {/* ============================================================ */}
-        {/* GATE 6: Document Review */}
+        {/* VIEWING PREVIOUS: Documents (read-only downloads) */}
         {/* ============================================================ */}
-        {data.status === "review_documents" && (
+        {isViewingPrevious && viewingStageKey === "documents" && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">📄 Generated Documents</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { label: "Investor Deck", type: "pptx", icon: "📊", path: data.pptx_path },
-                { label: "Proposal Document", type: "docx", icon: "📝", path: data.docx_path },
-                { label: "Financial Model", type: "xlsx", icon: "📈", path: data.xlsx_path },
-              ].map((doc) => (
-                <div key={doc.type} className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 text-center space-y-3">
-                  <div className="text-4xl">{doc.icon}</div>
-                  <h3 className="font-semibold">{doc.label}</h3>
-                  {doc.path ? (
-                    <a
-                      href={getDownloadUrl(runId, doc.type)}
-                      className="inline-flex items-center gap-2 rounded-lg bg-[#006D77] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#005a63]"
-                    >
-                      Download
-                    </a>
-                  ) : (
-                    <span className="text-gray-500 text-sm">Not available</span>
-                  )}
-                </div>
-              ))}
-            </div>
-            <FeedbackForm
-              title="Review Documents"
-              description="Review the generated documents. Approve to complete the pipeline, or request changes."
-              onApprove={handleDocumentsApprove}
-              onRequestChanges={handleDocumentsRevise}
-              loading={loading}
-            />
+            <DocumentDownloadGrid runId={runId} data={data} />
+            <ReadOnlyBanner stage="Documents" />
           </div>
         )}
 
         {/* ============================================================ */}
-        {/* COMPLETED */}
+        {/* VIEWING PREVIOUS: Complete (read-only) */}
         {/* ============================================================ */}
-        {data.status === "completed" && (
-          <div className="space-y-8">
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-8 text-center space-y-4">
-              <div className="text-5xl">🎉</div>
-              <h2 className="text-2xl font-bold text-emerald-400">Pipeline Complete</h2>
-              <p className="text-gray-400 max-w-lg mx-auto">
-                All deliverables for <strong className="text-white">{data.target}</strong> have been generated
-                and approved. Download your documents below.
-              </p>
-            </div>
+        {isViewingPrevious && viewingStageKey === "complete" && (
+          <CompletedView runId={runId} data={data} />
+        )}
 
-            {/* All reports */}
-            <div className="space-y-6">
-              <h3 className="text-xl font-bold">Research Reports</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  { label: "Country Research", type: "country_report", path: data.country_report_docx_path },
-                  { label: "Education Analysis", type: "education_report", path: data.education_report_docx_path },
-                  { label: "Strategy Report", type: "strategy_report", path: data.strategy_report_docx_path },
-                ].map((doc) => (
-                  <div key={doc.type} className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-5 text-center space-y-3">
-                    <h4 className="font-semibold">{doc.label}</h4>
-                    {doc.path ? (
-                      <a href={getDownloadUrl(runId, doc.type)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 transition-colors">
-                        Download DOCX
-                      </a>
-                    ) : <span className="text-gray-500 text-sm">Not available</span>}
+        {/* ============================================================ */}
+        {/* ACTIVE CONTENT — only shown when NOT viewing a previous stage */}
+        {/* ============================================================ */}
+        {!isViewingPrevious && (
+          <>
+            {/* Working / Loading states */}
+            {isWorkingStatus(data.status) && (
+              <div className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-8 text-center space-y-4">
+                <div className="animate-pulse">
+                  <div className="text-4xl mb-4">
+                    {STAGES[activeStage]?.icon || "⏳"}
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <h3 className="text-xl font-bold">Final Deliverables</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  { label: "Investor Deck (PPTX)", type: "pptx", path: data.pptx_path, accent: "from-purple-500 to-blue-500" },
-                  { label: "Proposal Document (DOCX)", type: "docx", path: data.docx_path, accent: "from-blue-500 to-teal-500" },
-                  { label: "Financial Model (XLSX)", type: "xlsx", path: data.xlsx_path, accent: "from-emerald-500 to-green-500" },
-                ].map((doc) => (
-                  <div key={doc.type} className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 text-center space-y-3">
-                    <div className={`h-1 w-16 mx-auto rounded-full bg-gradient-to-r ${doc.accent}`} />
-                    <h4 className="font-semibold text-lg">{doc.label}</h4>
-                    {doc.path ? (
-                      <a href={getDownloadUrl(runId, doc.type)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-[#006D77] px-6 py-2.5 text-sm font-medium text-white hover:bg-[#005a63] transition-colors">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        Download
-                      </a>
-                    ) : <span className="text-gray-500 text-sm">Not available</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {data.financial_model && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-bold">Financial Summary</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[
-                    { label: "Y5 Revenue", value: fmtMoney(data.financial_model.pnl_projection[4]?.revenue), color: "text-emerald-400" },
-                    { label: "Y5 EBITDA", value: fmtMoney(data.financial_model.pnl_projection[4]?.ebitda), color: "text-blue-400" },
-                    { label: "IRR", value: data.financial_model.returns_analysis.irr ? `${data.financial_model.returns_analysis.irr}%` : "—", color: "text-purple-400" },
-                    { label: "MOIC", value: data.financial_model.returns_analysis.moic ? `${data.financial_model.returns_analysis.moic}x` : "—", color: "text-amber-400" },
-                  ].map((m) => (
-                    <div key={m.label} className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-4 text-center">
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{m.label}</div>
-                      <div className={`text-2xl font-bold ${m.color}`}>{m.value}</div>
-                    </div>
-                  ))}
+                  <h2 className="text-xl font-bold">
+                    {STAGES[activeStage]?.label || "Processing"}...
+                  </h2>
+                  <p className="text-gray-400 text-sm mt-2">
+                    {data.status === "researching_country" && "Conducting investment-bank quality country research with live data... This may take 2-4 minutes."}
+                    {data.status === "researching_education" && "Performing McKinsey-quality education sector deep-dive... This may take 2-4 minutes."}
+                    {data.status === "strategizing" && "Developing comprehensive market-entry strategy... This may take 2-4 minutes."}
+                    {data.status === "presenting_assumptions" && "Generating financial model assumptions..."}
+                    {data.status === "building_model" && "Building the financial model..."}
+                    {data.status === "generating_documents" && "Generating investor deck, proposal, and spreadsheet... This may take 3-5 minutes."}
+                  </p>
                 </div>
+                <div className="flex justify-center">
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#006D77] opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#006D77]" />
+                    </span>
+                    Pipeline running...
+                  </div>
+                </div>
+                <AgentLog logs={data.agent_logs} />
               </div>
             )}
 
-            <AgentLog logs={data.agent_logs} />
-          </div>
+            {/* ============================================================ */}
+            {/* GATE 1: Country Research Report Review */}
+            {/* ============================================================ */}
+            {data.status === "review_country_report" && data.country_report && (
+              <div className="space-y-6">
+                <ReportViewer
+                  title="🌍 Country Research Report"
+                  report={data.country_report}
+                  downloadUrl={data.country_report_docx_path ? getDownloadUrl(runId, "country_report") : undefined}
+                />
+                <FeedbackForm
+                  title="Review Country Research"
+                  description="Review the country research report above. Approve to proceed to education analysis, or request changes."
+                  onApprove={handleCountryApprove}
+                  onRequestChanges={handleCountryRevise}
+                  loading={loading}
+                />
+              </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* GATE 2: Education Report Review */}
+            {/* ============================================================ */}
+            {data.status === "review_education_report" && data.education_report && (
+              <div className="space-y-6">
+                <ReportViewer
+                  title="📚 Education System Analysis"
+                  report={data.education_report}
+                  downloadUrl={data.education_report_docx_path ? getDownloadUrl(runId, "education_report") : undefined}
+                />
+                <FeedbackForm
+                  title="Review Education Analysis"
+                  description="Review the education system analysis. Approve to proceed to strategy development, or request changes."
+                  onApprove={handleEducationApprove}
+                  onRequestChanges={handleEducationRevise}
+                  loading={loading}
+                />
+              </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* GATE 3: Strategy Report Review */}
+            {/* ============================================================ */}
+            {data.status === "review_strategy" && data.strategy_report && (
+              <div className="space-y-6">
+                <ReportViewer
+                  title="🎯 Market Entry Strategy"
+                  report={data.strategy_report}
+                  downloadUrl={data.strategy_report_docx_path ? getDownloadUrl(runId, "strategy_report") : undefined}
+                />
+                <FeedbackForm
+                  title="Review Strategy"
+                  description="Review the market-entry strategy. Approve to proceed to financial modelling, or request changes."
+                  onApprove={handleStrategyApprove}
+                  onRequestChanges={handleStrategyRevise}
+                  loading={loading}
+                />
+              </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* GATE 4: Financial Assumptions Review */}
+            {/* ============================================================ */}
+            {data.status === "review_assumptions" && data.financial_assumptions?.assumptions && (
+              <AssumptionEditor
+                assumptions={data.financial_assumptions.assumptions}
+                onConfirm={handleAssumptionsConfirm}
+                loading={loading}
+              />
+            )}
+
+            {/* ============================================================ */}
+            {/* GATE 5: Financial Model Review */}
+            {/* ============================================================ */}
+            {data.status === "review_model" && (liveModel || data.financial_model) && (
+              <FinancialModelViewer
+                model={liveModel || data.financial_model!}
+                assumptions={liveAssumptions || data.financial_assumptions?.assumptions || []}
+                onLock={handleModelLock}
+                onRecalculate={handleModelRecalculate}
+                loading={loading}
+              />
+            )}
+
+            {/* ============================================================ */}
+            {/* GATE 6: Document Review */}
+            {/* ============================================================ */}
+            {data.status === "review_documents" && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-white">📄 Generated Documents</h2>
+                <DocumentDownloadGrid runId={runId} data={data} />
+                <FeedbackForm
+                  title="Review Documents"
+                  description="Review the generated documents. Approve to complete the pipeline, or request changes."
+                  onApprove={handleDocumentsApprove}
+                  onRequestChanges={handleDocumentsRevise}
+                  loading={loading}
+                />
+              </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* COMPLETED */}
+            {/* ============================================================ */}
+            {data.status === "completed" && (
+              <CompletedView runId={runId} data={data} />
+            )}
+          </>
         )}
       </main>
     </div>
@@ -538,6 +613,225 @@ export default function RunPage() {
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
+
+/** Read-only banner shown when viewing a previous step */
+function ReadOnlyBanner({ stage }: { stage: string }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center text-sm text-gray-400">
+      <svg className="h-4 w-4 inline mr-1.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+      This is a read-only view of the approved <strong className="text-white">{stage}</strong> step. Click the stepper above to navigate between steps.
+    </div>
+  );
+}
+
+/** Financial summary cards (reused in read-only and completed views) */
+function FinancialSummaryCards({ model }: { model: FinancialModel }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {[
+        { label: "Y5 Revenue", value: fmtMoney(model.pnl_projection[4]?.revenue), color: "text-emerald-400" },
+        { label: "Y5 EBITDA", value: fmtMoney(model.pnl_projection[4]?.ebitda), color: "text-blue-400" },
+        { label: "IRR", value: model.returns_analysis.irr ? `${model.returns_analysis.irr}%` : "—", color: "text-purple-400" },
+        { label: "MOIC", value: model.returns_analysis.moic ? `${model.returns_analysis.moic}x` : "—", color: "text-amber-400" },
+      ].map((m) => (
+        <div key={m.label} className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-4 text-center">
+          <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{m.label}</div>
+          <div className={`text-2xl font-bold ${m.color}`}>{m.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Simple P&L table for read-only viewing */
+function PnLTable({ model }: { model: FinancialModel }) {
+  if (!model.pnl_projection?.length) return null;
+
+  const rows = [
+    { label: "Students", key: "students", fmt: (n: number) => n.toLocaleString() },
+    { label: "Schools", key: "schools", fmt: (n: number) => n.toLocaleString() },
+    { label: "Revenue", key: "revenue", fmt: fmtMoney },
+    { label: "COGS", key: "cogs", fmt: fmtMoney },
+    { label: "Gross Margin", key: "gross_margin", fmt: fmtMoney },
+    { label: "OPEX", key: "opex", fmt: fmtMoney },
+    { label: "EBITDA", key: "ebitda", fmt: fmtMoney },
+    { label: "Net Income", key: "net_income", fmt: fmtMoney },
+    { label: "FCF", key: "free_cash_flow", fmt: fmtMoney },
+  ];
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-[#1a1a2e]">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Metric</th>
+              {model.pnl_projection.map((p) => (
+                <th key={p.year} className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider">
+                  Year {p.year}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {rows.map((row) => (
+              <tr key={row.key} className="hover:bg-white/[0.03]">
+                <td className="px-4 py-2.5 text-sm font-medium text-gray-300">{row.label}</td>
+                {model.pnl_projection.map((p) => (
+                  <td key={p.year} className="px-4 py-2.5 text-sm text-gray-400 text-right font-mono">
+                    {row.fmt((p as Record<string, number>)[row.key] ?? 0)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/** Document download grid (reused in documents gate and completed view) */
+function DocumentDownloadGrid({ runId, data }: { runId: string; data: RunStatus }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {[
+        { label: "Investor Deck", type: "pptx", icon: "📊", path: data.pptx_path },
+        { label: "Proposal Document", type: "docx", icon: "📝", path: data.docx_path },
+        { label: "Financial Model", type: "xlsx", icon: "📈", path: data.xlsx_path },
+      ].map((doc) => (
+        <div key={doc.type} className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 text-center space-y-3">
+          <div className="text-4xl">{doc.icon}</div>
+          <h3 className="font-semibold">{doc.label}</h3>
+          {doc.path ? (
+            <a
+              href={getDownloadUrl(runId, doc.type)}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#006D77] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#005a63]"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download
+            </a>
+          ) : (
+            <span className="text-gray-500 text-sm">Not available</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Completed view with all downloads */
+function CompletedView({ runId, data }: { runId: string; data: RunStatus }) {
+  const [expandedReport, setExpandedReport] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-8">
+      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-8 text-center space-y-4">
+        <div className="text-5xl">🎉</div>
+        <h2 className="text-2xl font-bold text-emerald-400">Pipeline Complete</h2>
+        <p className="text-gray-400 max-w-lg mx-auto">
+          All deliverables for <strong className="text-white">{data.target}</strong> have been generated
+          and approved. Download your documents below.
+        </p>
+      </div>
+
+      {/* All Research Reports with expand/collapse */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-bold flex items-center gap-2">
+          <span>📋</span> Research Reports
+        </h3>
+        <p className="text-sm text-gray-400">Click to expand and read in-app, or download as DOCX.</p>
+
+        {[
+          { key: "country", label: "🌍 Country Research Report", report: data.country_report, docxPath: data.country_report_docx_path, type: "country_report" },
+          { key: "education", label: "📚 Education System Analysis", report: data.education_report, docxPath: data.education_report_docx_path, type: "education_report" },
+          { key: "strategy", label: "🎯 Market Entry Strategy", report: data.strategy_report, docxPath: data.strategy_report_docx_path, type: "strategy_report" },
+        ].map((item) => (
+          <div key={item.key} className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 overflow-hidden">
+            <button
+              onClick={() => setExpandedReport(expandedReport === item.key ? null : item.key)}
+              className="w-full flex items-center justify-between px-6 py-4 hover:bg-white/[0.03] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <h4 className="font-semibold text-white">{item.label}</h4>
+                {item.report && (
+                  <span className="text-xs text-gray-500">~{item.report.split(/\s+/).length.toLocaleString()} words</span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {item.docxPath && (
+                  <a
+                    href={getDownloadUrl(runId, item.type)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/20 transition-colors"
+                  >
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    DOCX
+                  </a>
+                )}
+                <svg
+                  className={`h-5 w-5 text-gray-400 transition-transform ${expandedReport === item.key ? "rotate-180" : ""}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+            {expandedReport === item.key && item.report && (
+              <div className="border-t border-white/10">
+                <ReportViewer title="" report={item.report} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Final Deliverables */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-bold flex items-center gap-2">
+          <span>📦</span> Final Deliverables
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { label: "Investor Deck (PPTX)", type: "pptx", path: data.pptx_path, accent: "from-purple-500 to-blue-500" },
+            { label: "Investment Memorandum (DOCX)", type: "docx", path: data.docx_path, accent: "from-blue-500 to-teal-500" },
+            { label: "Financial Model (XLSX)", type: "xlsx", path: data.xlsx_path, accent: "from-emerald-500 to-green-500" },
+          ].map((doc) => (
+            <div key={doc.type} className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 text-center space-y-3">
+              <div className={`h-1 w-16 mx-auto rounded-full bg-gradient-to-r ${doc.accent}`} />
+              <h4 className="font-semibold text-lg">{doc.label}</h4>
+              {doc.path ? (
+                <a href={getDownloadUrl(runId, doc.type)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#006D77] px-6 py-2.5 text-sm font-medium text-white hover:bg-[#005a63] transition-colors">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
+                </a>
+              ) : <span className="text-gray-500 text-sm">Not available</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Financial Summary */}
+      {data.financial_model && (
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold">Financial Summary</h3>
+          <FinancialSummaryCards model={data.financial_model} />
+        </div>
+      )}
+
+      <AgentLog logs={data.agent_logs} />
+    </div>
+  );
+}
 
 function StatusBadge({ status }: { status: PipelineStatus }) {
   const config: Record<string, { bg: string; text: string; label: string }> = {
