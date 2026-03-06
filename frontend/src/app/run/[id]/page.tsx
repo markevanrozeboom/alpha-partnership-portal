@@ -681,7 +681,7 @@ function PnLTable({ model }: { model: FinancialModel }) {
                 <td className="px-4 py-2.5 text-sm font-medium text-gray-300">{row.label}</td>
                 {model.pnl_projection.map((p) => (
                   <td key={p.year} className="px-4 py-2.5 text-sm text-gray-400 text-right font-mono">
-                    {row.fmt((p as Record<string, number>)[row.key] ?? 0)}
+                    {row.fmt((p as unknown as Record<string, number>)[row.key] ?? 0)}
                   </td>
                 ))}
               </tr>
