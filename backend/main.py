@@ -17,7 +17,7 @@ from models.schemas import (
     CountryProfile, EducationAnalysis, Strategy,
     FinancialAssumptions, FinancialModel, PipelineStatus,
 )
-from graph.pipeline import start_run, resume_run, get_run_state
+from graph.pipeline import create_run as pipeline_create_run, execute_run, resume_run, get_run_state
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,33 +42,17 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 @app.post("/api/runs", response_model=dict)
-async def create_run(req: CreateRunRequest, background: BackgroundTasks):
+async def create_run_endpoint(req: CreateRunRequest, background: BackgroundTasks):
     """Start a new pipeline run (runs in background)."""
     target = req.target.strip()
     if not target:
         raise HTTPException(400, "Target is required")
 
-    # Run the pipeline in background
-    loop = asyncio.get_event_loop()
-    run_id_future = loop.create_future()
+    # Create the run and register initial state — returns immediately
+    run_id = pipeline_create_run(target)
 
-    async def _run():
-        try:
-            rid = await start_run(target)
-            run_id_future.set_result(rid)
-        except Exception as exc:
-            if not run_id_future.done():
-                run_id_future.set_exception(exc)
-
-    background.add_task(_run)
-
-    # Wait briefly for run_id to be assigned
-    try:
-        run_id = await asyncio.wait_for(asyncio.shield(run_id_future), timeout=2.0)
-    except (asyncio.TimeoutError, Exception):
-        # Generate a provisional run_id
-        import uuid
-        run_id = str(uuid.uuid4())
+    # Execute the pipeline in the background
+    background.add_task(execute_run, run_id, target)
 
     return {"run_id": run_id}
 

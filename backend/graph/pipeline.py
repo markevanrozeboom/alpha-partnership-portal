@@ -435,6 +435,11 @@ def build_pipeline() -> tuple:
 _pipeline = None
 _checkpointer = None
 
+# In-memory store for runs that have been created but not yet checkpointed
+# by the LangGraph pipeline. Once the pipeline writes its first checkpoint,
+# get_run_state will read from the checkpointer instead.
+_pending_runs: dict[str, dict[str, Any]] = {}
+
 
 def get_pipeline():
     global _pipeline, _checkpointer
@@ -443,12 +448,8 @@ def get_pipeline():
     return _pipeline, _checkpointer
 
 
-async def start_run(target: str) -> str:
-    """Start a new pipeline run. Returns the run_id."""
-    run_id = str(uuid.uuid4())
-    pipeline, _ = get_pipeline()
-
-    initial_state: GraphState = {
+def _make_initial_state(run_id: str, target: str) -> GraphState:
+    return {
         "run_id": run_id,
         "target_input": target,
         "status": PipelineStatus.RESEARCHING_COUNTRY.value,
@@ -476,10 +477,42 @@ async def start_run(target: str) -> str:
         "error_message": None,
     }
 
-    config = {"configurable": {"thread_id": run_id}}
-    logger.info("Starting pipeline run %s for '%s'", run_id, target)
-    await pipeline.ainvoke(initial_state, config)
+
+def create_run(target: str) -> str:
+    """Create a new pipeline run — returns the run_id immediately.
+
+    The initial state is stored in ``_pending_runs`` so that
+    ``get_run_state`` can return it while the pipeline is still starting.
+    Call ``execute_run`` afterwards (in a background task) to actually run it.
+    """
+    run_id = str(uuid.uuid4())
+    initial_state = _make_initial_state(run_id, target)
+    _pending_runs[run_id] = dict(initial_state)
+    logger.info("Created pipeline run %s for '%s'", run_id, target)
     return run_id
+
+
+async def execute_run(run_id: str, target: str) -> None:
+    """Execute the pipeline for a previously created run (call in background)."""
+    pipeline, _ = get_pipeline()
+    initial_state = _make_initial_state(run_id, target)
+    config = {"configurable": {"thread_id": run_id}}
+
+    logger.info("Executing pipeline run %s for '%s'", run_id, target)
+    try:
+        await pipeline.ainvoke(initial_state, config)
+    except Exception as exc:
+        logger.error("Pipeline run %s failed: %s", run_id, exc)
+        # Store the error in pending runs so the frontend can see it
+        _pending_runs[run_id] = {
+            **_pending_runs.get(run_id, dict(initial_state)),
+            "status": PipelineStatus.ERROR.value,
+            "error_message": str(exc),
+        }
+    finally:
+        # Once checkpointer has taken over, clean up (but keep errors)
+        if run_id in _pending_runs and _pending_runs[run_id].get("status") != PipelineStatus.ERROR.value:
+            _pending_runs.pop(run_id, None)
 
 
 async def resume_run(run_id: str, gate_update: dict[str, Any] | None = None) -> None:
@@ -499,11 +532,16 @@ def get_run_state(run_id: str) -> dict[str, Any]:
     pipeline, _ = get_pipeline()
     config = {"configurable": {"thread_id": run_id}}
 
+    # First try the LangGraph checkpointer (has latest state once pipeline has run)
     try:
         snapshot = pipeline.get_state(config)
         if snapshot and snapshot.values:
             return dict(snapshot.values)
     except Exception as exc:
         logger.error("Error getting state for run %s: %s", run_id, exc)
+
+    # Fall back to pending runs (for runs that were just created / still starting)
+    if run_id in _pending_runs:
+        return dict(_pending_runs[run_id])
 
     return {"status": PipelineStatus.ERROR.value, "error_message": "Run not found"}
