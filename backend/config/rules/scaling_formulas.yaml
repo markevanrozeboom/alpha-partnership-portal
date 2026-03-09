@@ -1,0 +1,45 @@
+# Scaling Formulas (SPECS.md Section 2D)
+# The system uses these formulas to calculate the headline numbers for any country.
+# All are user-overridable at HITL decision gates.
+
+formulas:
+  ppp_factor:
+    formula: "min(1.0, gdp_per_capita / 30000)"
+    description: "Purchasing Power Parity factor, capped at 1.0"
+    reference_gdp: 30000
+
+  upfront_ask:
+    formula: "max(25000000, school_age_pop * 2 * ppp_factor)"
+    description: "Upfront IP + Management Fee ask"
+    minimum: 25000000  # $25M floor
+
+  student_target_5yr:
+    formula: "max(5000, school_age_pop * 0.01 * demand_factor)"
+    description: "Target student count at Year 5"
+    minimum: 5000
+    penetration_rate: 0.01  # 1% of school-age population
+
+  per_student_budget:
+    formula: "max(5000, min(30000, private_school_avg_tuition * 0.8))"
+    description: "Per-student budget, bounded between $5K and $30K"
+    minimum: 5000
+    maximum: 30000
+    tuition_multiplier: 0.8  # 80% of average private school tuition
+
+  management_fee_rev:
+    formula: "students * per_student_budget * 0.10 * 5"
+    description: "Management fee revenue over 5 years"
+    fee_pct: 0.10
+    years: 5
+
+  timeback_license_rev:
+    formula: "students * per_student_budget * 0.20 * 5"
+    description: "Timeback license fee revenue over 5 years"
+    fee_pct: 0.20
+    years: 5
+
+demand_factor_defaults:
+  tier_1: 1.0
+  tier_2: 0.5
+  tier_3: 0.2
+  description: "Derived from private school enrollment rate, government reform appetite, and competitive density."

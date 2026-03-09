@@ -20,6 +20,7 @@ from models.schemas import (
 )
 from services.llm import call_llm, call_llm_plain
 from services.perplexity import research_education
+from services.humanizer import humanize_report
 from config import OUTPUT_DIR
 
 logger = logging.getLogger(__name__)
@@ -477,6 +478,10 @@ async def run_education_research(
         )
 
         report_md = section_1 + "\n\n" + section_2 + "\n\n" + section_3
+
+    # --- Humanize: remove AI writing patterns ---
+    logger.info("Humanizing education report for %s", target)
+    report_md = await humanize_report(report_md)
 
     # --- Save as DOCX ---
     docx_path = _save_report_docx(target, report_md, "Education System Analysis")

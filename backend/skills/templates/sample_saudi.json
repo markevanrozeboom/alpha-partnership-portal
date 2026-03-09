@@ -1,0 +1,36 @@
+{
+  "target": {
+    "name": "Saudi Arabia",
+    "type": "sovereign_nation",
+    "region": "Middle East"
+  },
+  "demographics": {
+    "total_population": 36000000,
+    "school_age_population": 7200000
+  },
+  "economy": {
+    "gdp_per_capita": 23000,
+    "inflation_rate": 2.3,
+    "fx_rate_to_usd": 3.75
+  },
+  "education": {
+    "avg_private_school_tuition": 18000,
+    "premium_private_tuition": 35000,
+    "govt_education_spend_per_student": 9500,
+    "private_enrollment_pct": 0.15,
+    "total_k12_students": 6200000
+  },
+  "costs": {
+    "teacher_salary_usd": 42000,
+    "construction_cost_per_sqm": 1800,
+    "commercial_re_lease_per_sqm": 350,
+    "re_lease_yield_pct": 0.08,
+    "school_facility_sqm_per_student": 8
+  },
+  "regulatory": {
+    "foreign_ownership_cap_pct": 1.0,
+    "for_profit_allowed": true,
+    "ppp_framework_exists": true
+  },
+  "overrides": {}
+}

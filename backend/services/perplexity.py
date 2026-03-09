@@ -1,8 +1,19 @@
-"""Perplexity Sonar Deep Research API client."""
+"""Perplexity multi-mode research API client.
+
+Supports multiple Perplexity models for different research depths:
+  - sonar:                Quick factual lookup (fast, cheap)
+  - sonar-pro:            Multi-source AI synthesis (default for research)
+  - sonar-reasoning-pro:  Chain-of-thought analysis (for tradeoffs/decisions)
+  - sonar-deep-research:  Exhaustive multi-source research (slow, expensive)
+
+Adapted from AI-Builder-Team/2hr_Learning_Global_Expansion skills.
+"""
 
 from __future__ import annotations
 
 import logging
+from enum import Enum
+
 import httpx
 
 from config import PERPLEXITY_API_KEY, PERPLEXITY_BASE_URL, PERPLEXITY_MODEL
@@ -15,24 +26,47 @@ _HEADERS = {
 }
 
 
-async def deep_research(query: str, context: str = "") -> dict:
-    """Run a Perplexity Sonar Deep Research query.
+class ResearchMode(str, Enum):
+    """Perplexity research modes, ordered by depth/cost."""
+    ASK = "sonar"                         # Quick fact with AI answer
+    RESEARCH = "sonar-pro"                # AI combines multiple sources
+    REASON = "sonar-reasoning-pro"        # Chain-of-thought analysis
+    DEEP = "sonar-deep-research"          # Exhaustive multi-source research
 
-    Returns a dict with keys: ``answer`` (str) and ``citations`` (list[str]).
+
+# System prompt shared across all modes
+_SYSTEM_PROMPT = (
+    "You are a research assistant for 2hr Learning (Alpha), an education "
+    "technology company that deploys a complete education operating system "
+    "(Timeback, AlphaCore, Guide School, Incept eduLLM). "
+    "Provide detailed, data-rich answers with specific numbers, dates, "
+    "and source citations. Focus on education systems, economics, "
+    "demographics, and regulatory environments."
+)
+
+
+async def multi_mode_research(
+    query: str,
+    mode: ResearchMode = ResearchMode.DEEP,
+    context: str = "",
+) -> dict:
+    """Run a Perplexity query in the specified mode.
+
+    Args:
+        query: The research question.
+        mode: Which Perplexity model/depth to use.
+        context: Optional extra context added to system prompt.
+
+    Returns:
+        dict with keys ``answer`` (str), ``citations`` (list[str]),
+        ``model`` (str), and optionally ``error`` (str).
     """
-    system_msg = (
-        "You are a research assistant for 2hr Learning (Alpha), an education "
-        "technology company that deploys a complete education operating system "
-        "(Timeback, AlphaCore, Guide School, Incept eduLLM). "
-        "Provide detailed, data-rich answers with specific numbers, dates, "
-        "and source citations. Focus on education systems, economics, "
-        "demographics, and regulatory environments."
-    )
+    system_msg = _SYSTEM_PROMPT
     if context:
         system_msg += f"\n\nAdditional context:\n{context}"
 
     payload = {
-        "model": PERPLEXITY_MODEL,
+        "model": mode.value,
         "messages": [
             {"role": "system", "content": system_msg},
             {"role": "user", "content": query},
@@ -41,8 +75,11 @@ async def deep_research(query: str, context: str = "") -> dict:
         "return_citations": True,
     }
 
+    # Deep research needs longer timeout
+    timeout = 600.0 if mode == ResearchMode.DEEP else 120.0
+
     try:
-        async with httpx.AsyncClient(timeout=300.0) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             resp = await client.post(
                 f"{PERPLEXITY_BASE_URL}/chat/completions",
                 headers=_HEADERS,
@@ -53,11 +90,38 @@ async def deep_research(query: str, context: str = "") -> dict:
 
         answer = data["choices"][0]["message"]["content"]
         citations = data.get("citations", [])
-        return {"answer": answer, "citations": citations}
+        return {
+            "answer": answer,
+            "citations": citations,
+            "model": data.get("model", mode.value),
+        }
 
     except Exception as exc:
-        logger.error("Perplexity API error: %s", exc)
-        return {"answer": "", "citations": [], "error": str(exc)}
+        logger.error("Perplexity API error (mode=%s): %s", mode.value, exc)
+        return {"answer": "", "citations": [], "model": mode.value, "error": str(exc)}
+
+
+async def deep_research(query: str, context: str = "") -> dict:
+    """Run a Perplexity Sonar Deep Research query (backward-compatible).
+
+    Returns a dict with keys: ``answer`` (str) and ``citations`` (list[str]).
+    """
+    return await multi_mode_research(query, ResearchMode.DEEP, context)
+
+
+async def quick_research(query: str, context: str = "") -> dict:
+    """Fast factual lookup using sonar model."""
+    return await multi_mode_research(query, ResearchMode.ASK, context)
+
+
+async def pro_research(query: str, context: str = "") -> dict:
+    """Multi-source AI synthesis using sonar-pro."""
+    return await multi_mode_research(query, ResearchMode.RESEARCH, context)
+
+
+async def reasoning_research(query: str, context: str = "") -> dict:
+    """Chain-of-thought analysis using sonar-reasoning-pro."""
+    return await multi_mode_research(query, ResearchMode.REASON, context)
 
 
 async def research_country(country: str) -> dict:

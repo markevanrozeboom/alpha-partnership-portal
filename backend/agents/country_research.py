@@ -22,7 +22,9 @@ from models.schemas import (
 from services.llm import call_llm, call_llm_plain
 from services.perplexity import research_country, research_us_state
 from services.world_bank import get_country_data
+from services.humanizer import humanize_report
 from config import OUTPUT_DIR
+from config.rules_loader import classify_tier as classify_country_tier
 
 logger = logging.getLogger(__name__)
 
@@ -474,9 +476,12 @@ async def run_country_research(
     except Exception as exc:
         logger.warning("Structured synthesis failed: %s", exc)
 
-    # Tier classification
+    # Tier classification — use YAML config first, fallback to heuristic
     if target_type == TargetType.SOVEREIGN_NATION:
-        profile.target.tier = _classify_tier(
+        yaml_tier = classify_country_tier(
+            target, profile.economy.gdp_per_capita, profile.demographics.total_population
+        )
+        profile.target.tier = yaml_tier or _classify_tier(
             profile.economy.gdp_per_capita, profile.demographics.total_population
         )
     if not profile.target.region:
@@ -519,6 +524,10 @@ async def run_country_research(
         )
 
         report_md = section_1 + "\n\n" + section_2 + "\n\n" + section_3
+
+    # --- Humanize: remove AI writing patterns ---
+    logger.info("Humanizing country report for %s", target)
+    report_md = await humanize_report(report_md)
 
     # --- Save report as DOCX ---
     docx_path = _save_report_docx(target, report_md, "Country Research Report")

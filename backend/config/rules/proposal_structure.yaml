@@ -1,0 +1,102 @@
+# Proposal Output Requirements (SPECS.md Section 2E + Section 4.6)
+# Every generated proposal must include these sections.
+
+# DOCX Narrative Proposal Structure
+proposal_sections:
+  - section_number: 1
+    title: "Executive Summary"
+    description: "Three commitments and a headline financial ask."
+    required_data_fields:
+      - "three_commitments"
+      - "upfront_ask"
+      - "target_students_5yr"
+      - "entry_mode"
+
+  - section_number: 2
+    title: "Country/State Education System Diagnosis"
+    description: "What is broken, what the government is trying to fix, where Alpha's model creates the sharpest wedge."
+    required_data_fields:
+      - "system_diagnosis"
+      - "reform_landscape"
+      - "competitive_landscape"
+
+  - section_number: 3
+    title: "The Alpha Education Stack"
+    description: "How Timeback, AlphaCore, Guide School, and Incept eduLLM solve their specific problems. Includes the local IP layer concept."
+    required_data_fields:
+      - "local_ip_layer"
+      - "school_types"
+      - "localization_requirements"
+
+  - section_number: 4
+    title: "Proposed Deal Structure"
+    description: "School types, phased rollout plan (Phase 0 through Phase 3), and ownership/partnership structure."
+    required_data_fields:
+      - "school_types"
+      - "phased_rollout"
+      - "partnership_structure"
+      - "entry_mode"
+
+  - section_number: 5
+    title: "Financial Summary"
+    description: "Upfront ask, ongoing fee structure, projected student enrollment, revenue at scale, and return profile (IRR/MOIC for investor audiences)."
+    required_data_fields:
+      - "upfront_ask"
+      - "fee_structure"
+      - "student_rollout"
+      - "revenue_at_scale"
+      - "returns"
+
+  - section_number: 6
+    title: "The Ask"
+    description: "Exactly what Alpha needs from the counterparty: regulatory access, tuition/subsidy approval, real estate, scholarship funding, and sovereign/political sponsorship."
+    required_data_fields:
+      - "key_asks"
+
+# PPTX Deck Structure (SPECS.md Section 4.6)
+deck_structure:
+  standard_slides:
+    - slide_number: 0
+      title_pattern: "Title"
+      content: "Country branding, partnership name, audience"
+      content_varies_by: "Country branding, partnership name, audience"
+
+    - slide_number: 1
+      title_pattern: "Vision & Executive Summary"
+      content: "National vision alignment, three commitments"
+      content_varies_by: "National vision alignment, three commitments"
+
+    - slide_number: 2
+      title_pattern: "Proof - Alpha Outcomes"
+      content: "Same global proof points, contextualized for local concerns"
+      content_varies_by: "Same global proof points, contextualised for local concerns"
+
+    - slide_number: 3
+      title_pattern: "The System"
+      content: "IP stack + local sovereignty layer (equivalent of AsasOne)"
+      content_varies_by: "IP stack + local sovereignty layer (equivalent of AsasOne)"
+
+    - slide_number: 4
+      title_pattern: "Scope, Timeline & Economics"
+      content: "Country-specific financials from Financial Agent"
+      content_varies_by: "Country-specific financials from Financial Agent"
+
+    - slide_number: 5
+      title_pattern: "The Ask & Next Steps"
+      content: "Tailored asks (regulatory, funding, partnership terms)"
+      content_varies_by: "Tailored asks (regulatory, funding, partnership terms)"
+
+  appendix_slides:
+    range: "A1-A10"
+    content: "Country-specific deep dives"
+
+  audience_variations:
+    royal:
+      tone: "Nation-building language, sovereignty emphasis"
+      focus: "National vision, children's future, sovereignty over education"
+    minister:
+      tone: "System reform language, outcomes data"
+      focus: "Reform outcomes, efficiency gains, measurable improvements"
+    investor:
+      tone: "Returns, growth metrics, IRR/MOIC"
+      focus: "Financial returns, market opportunity, growth trajectory"

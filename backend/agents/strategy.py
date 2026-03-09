@@ -18,6 +18,7 @@ from models.schemas import (
     EntryMode, PartnershipType, TargetType,
 )
 from services.llm import call_llm, call_llm_plain
+from services.humanizer import humanize_report
 from config import OUTPUT_DIR
 
 logger = logging.getLogger(__name__)
@@ -472,6 +473,10 @@ async def run_strategy(
         )
 
         report_md = section_1 + "\n\n" + section_2 + "\n\n" + section_3
+
+    # --- Humanize: remove AI writing patterns ---
+    logger.info("Humanizing strategy report for %s", target)
+    report_md = await humanize_report(report_md)
 
     # --- Save DOCX ---
     docx_path = _save_report_docx(target, report_md, "Market Entry Strategy")

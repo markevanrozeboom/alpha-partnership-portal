@@ -11,8 +11,6 @@ import logging
 import math
 import os
 
-import xlsxwriter
-
 from models.schemas import (
     FinancialAssumption, FinancialAssumptions,
     FinancialModel, YearProjection, UnitEconomics, CapitalDeployment,
@@ -21,6 +19,10 @@ from models.schemas import (
 )
 from services.llm import call_llm_plain
 from config import OUTPUT_DIR
+from config.rules_loader import (
+    classify_tier as classify_country_tier,
+    get_fee_floors, get_tier_defaults, get_esa_data,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +47,18 @@ def generate_assumptions(
     premium_tuition = max(15_000, round(base_per_student * 1.2 / 500) * 500)
     mid_tuition = max(12_000, round(base_per_student * 0.8 / 500) * 500)
     if country_profile.target.type.value == "us_state":
-        base_per_student = 18_000
-        premium_tuition = 25_000
-        mid_tuition = 15_000
+        # Load ESA-specific data from config if available
+        esa_cfg = get_esa_data(target)
+        if esa_cfg:
+            esa_amount = esa_cfg.get("esa_amount", 8_000)
+            base_per_student = max(esa_amount, 18_000)
+            premium_tuition = max(25_000, esa_amount * 3)
+            mid_tuition = max(15_000, esa_amount * 2)
+            logger.info("Using ESA data for %s: $%s/student", target, esa_amount)
+        else:
+            base_per_student = 18_000
+            premium_tuition = 25_000
+            mid_tuition = 15_000
 
     # Target students from strategy or default
     target_students_y5 = strategy.target_student_count_year5 or round(200_000 * ppp_factor / 10_000) * 10_000
@@ -382,102 +393,242 @@ def recalculate_model(
 
 
 # ---------------------------------------------------------------------------
-# Excel export
+# Excel export — IB-quality 8-sheet workbook with real Excel formulas
+# Uses build_model.py from EduPitch skills (openpyxl-based)
 # ---------------------------------------------------------------------------
 
 def export_model_xlsx(
     target: str,
     model: FinancialModel,
     assumptions: FinancialAssumptions,
+    country_profile: CountryProfile | None = None,
 ) -> str:
-    """Export the financial model to a formatted Excel workbook."""
+    """Export the financial model to an IB-quality formatted Excel workbook.
+
+    Produces an 8-sheet workbook with real Excel formulas, IB-standard color
+    coding (blue font + yellow bg for inputs), named ranges, conditional
+    formatting, and cross-sheet references.
+    """
+    import json as _json
+    import sys as _sys
+
+    # Import the IB-quality model builder and XLSX generator
+    _skills_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "skills")
+    if _skills_dir not in _sys.path:
+        _sys.path.insert(0, _skills_dir)
+
+    try:
+        from build_model import build_model as ib_build_model, classify_tier, is_us_state
+        from generate_xlsx import build_workbook
+    except ImportError:
+        logger.warning("IB model builder not available, falling back to basic export")
+        return _export_model_xlsx_basic(target, model, assumptions)
+
+    # Build research data dict from the financial model's assumptions
+    a = {item.key: item.value for item in assumptions.assumptions}
+
+    gdp_pc = a.get("per_student_budget", 20000) / 0.8 * 50000 / 25000  # rough reverse
+    if country_profile and country_profile.economy:
+        gdp_pc = country_profile.economy.gdp_per_capita or 30000
+        school_age_pop = country_profile.demographics.school_age_population or 5_000_000
+        avg_tuition = a.get("mid_tuition", a.get("per_student_budget", 15000))
+    else:
+        school_age_pop = max(1_000_000, int(a.get("students_year5", 150000) * 100))
+        avg_tuition = a.get("mid_tuition", a.get("per_student_budget", 15000))
+
+    research_data = {
+        "target": {
+            "name": target,
+            "type": "us_state" if "state" in target.lower() or (country_profile and country_profile.target.type.value == "us_state") else "sovereign_nation",
+            "region": "Unknown",
+        },
+        "demographics": {
+            "total_population": school_age_pop * 5,
+            "school_age_population": school_age_pop,
+        },
+        "economy": {
+            "gdp_per_capita": gdp_pc,
+            "inflation_rate": 3.0,
+            "fx_rate_to_usd": 1.0,
+        },
+        "education": {
+            "avg_private_school_tuition": avg_tuition,
+            "premium_private_tuition": a.get("premium_tuition", avg_tuition * 1.5),
+            "govt_education_spend_per_student": avg_tuition * 0.5,
+            "private_enrollment_pct": 0.15,
+            "total_k12_students": int(school_age_pop * 0.85),
+        },
+        "costs": {
+            "teacher_salary_usd": int(avg_tuition * 2),
+            "construction_cost_per_sqm": 1500,
+            "school_facility_sqm_per_student": 8,
+        },
+        "regulatory": {
+            "foreign_ownership_cap_pct": 1.0,
+            "for_profit_allowed": True,
+            "ppp_framework_exists": True,
+        },
+        "overrides": {},
+    }
+
+    # Add US state data if applicable
+    if research_data["target"]["type"] == "us_state":
+        esa_data = get_esa_data(target)
+        research_data["us_state"] = {
+            "esa_amount": esa_data.get("esa_amount", 8000) if isinstance(esa_data.get("esa_amount"), (int, float)) else 8000,
+            "students_on_vouchers": esa_data.get("students_on_vouchers", 50000),
+            "avg_private_tuition": esa_data.get("avg_private_tuition", 13000),
+            "charter_penetration_pct": 0.12,
+            "homeschool_population": 50000,
+            "total_public_students": 5_000_000,
+        }
+
+    # Determine templates
+    if is_us_state(research_data):
+        template_ids = ["us-state"]
+    else:
+        tier = classify_tier(research_data)
+        if tier == 1:
+            template_ids = ["jv-counterparty", "jv-alpha"]
+        elif tier == 3:
+            template_ids = ["lic-counterparty", "lic-alpha"]
+        else:
+            template_ids = ["jv-counterparty", "jv-alpha"]
+
+    output_dir = os.path.join(OUTPUT_DIR, target.lower().replace(" ", "_"))
+    os.makedirs(output_dir, exist_ok=True)
+
+    generated_files = []
+    for tid in template_ids:
+        try:
+            spec = ib_build_model(research_data, tid)
+
+            # Generate XLSX using openpyxl
+            wb = build_workbook(spec)
+            safe_name = target.replace(" ", "_").replace("/", "_")
+            filename = f"{safe_name}_{tid.replace('-', '_')}_model.xlsx"
+            filepath = os.path.join(output_dir, filename)
+            wb.save(filepath)
+            wb.close()
+            generated_files.append(filepath)
+            logger.info("Generated IB-quality XLSX: %s (%d sheets)", filepath, len(spec["sheets"]))
+        except Exception as exc:
+            logger.error("IB model generation failed for %s: %s", tid, exc)
+            continue
+
+    # Return the first (primary) file path, or fall back to basic
+    if generated_files:
+        return generated_files[0]
+    else:
+        logger.warning("All IB model templates failed, falling back to basic export")
+        return _export_model_xlsx_basic(target, model, assumptions)
+
+
+def _export_model_xlsx_basic(
+    target: str,
+    model: FinancialModel,
+    assumptions: FinancialAssumptions,
+) -> str:
+    """Fallback basic XLSX export using openpyxl (no formulas)."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+
     output_dir = os.path.join(OUTPUT_DIR, target.lower().replace(" ", "_"))
     os.makedirs(output_dir, exist_ok=True)
     path = os.path.join(output_dir, f"{target.replace(' ', '_')}_financial_model.xlsx")
 
-    wb = xlsxwriter.Workbook(path)
+    wb = Workbook()
 
-    # Formats
-    header_fmt = wb.add_format({
-        "bold": True, "bg_color": "#1a1a2e", "font_color": "white",
-        "border": 1, "font_size": 11, "align": "center",
-    })
-    money_fmt = wb.add_format({"num_format": "$#,##0", "border": 1})
-    pct_fmt = wb.add_format({"num_format": "0.0%", "border": 1})
-    num_fmt = wb.add_format({"num_format": "#,##0", "border": 1})
-    label_fmt = wb.add_format({"bold": True, "border": 1, "bg_color": "#f0f0f0"})
-    title_fmt = wb.add_format({
-        "bold": True, "font_size": 14, "font_color": "#1a1a2e",
-    })
+    # Styles
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    header_fill = PatternFill(start_color="1A1A2E", end_color="1A1A2E", fill_type="solid")
+    label_font = Font(bold=True)
+    label_fill = PatternFill(start_color="F0F0F0", end_color="F0F0F0", fill_type="solid")
 
     # --- Assumptions Sheet ---
-    ws = wb.add_worksheet("Assumptions")
-    ws.set_column("A:A", 40)
-    ws.set_column("B:B", 15)
-    ws.set_column("C:D", 12)
-    ws.write(0, 0, f"Financial Model Assumptions — {target}", title_fmt)
-    row = 2
+    ws = wb.active
+    ws.title = "Assumptions"
+    ws.column_dimensions["A"].width = 40
+    ws.column_dimensions["B"].width = 15
+    ws.column_dimensions["C"].width = 12
+    ws.column_dimensions["D"].width = 12
+
+    ws.cell(1, 1, f"Financial Model Assumptions — {target}").font = Font(bold=True, size=14, color="1A1A2E")
+    row = 3
     current_cat = ""
     for a in assumptions.assumptions:
         if a.category != current_cat:
             current_cat = a.category
-            ws.write(row, 0, current_cat.upper(), header_fmt)
-            ws.write(row, 1, "Value", header_fmt)
-            ws.write(row, 2, "Min", header_fmt)
-            ws.write(row, 3, "Max", header_fmt)
+            for col, val in enumerate([current_cat.upper(), "Value", "Min", "Max"], 1):
+                cell = ws.cell(row, col, val)
+                cell.font = header_font
+                cell.fill = header_fill
             row += 1
-        ws.write(row, 0, a.label, label_fmt)
-        fmt = money_fmt if a.unit == "$" else (pct_fmt if a.unit == "%" else num_fmt)
-        ws.write(row, 1, a.value / 100 if a.unit == "%" else a.value, fmt)
-        ws.write(row, 2, a.min_val / 100 if a.unit == "%" else a.min_val, fmt)
-        ws.write(row, 3, a.max_val / 100 if a.unit == "%" else a.max_val, fmt)
+        ws.cell(row, 1, a.label).font = label_font
+        ws.cell(row, 1).fill = label_fill
+        display_val = a.value / 100 if a.unit == "%" else a.value
+        ws.cell(row, 2, display_val)
+        ws.cell(row, 3, a.min_val / 100 if a.unit == "%" else a.min_val)
+        ws.cell(row, 4, a.max_val / 100 if a.unit == "%" else a.max_val)
+        if a.unit == "%":
+            for c in [2, 3, 4]:
+                ws.cell(row, c).number_format = "0.0%"
+        elif a.unit == "$":
+            for c in [2, 3, 4]:
+                ws.cell(row, c).number_format = "$#,##0"
+        else:
+            for c in [2, 3, 4]:
+                ws.cell(row, c).number_format = "#,##0"
         row += 1
 
     # --- P&L Sheet ---
-    ws = wb.add_worksheet("P&L Projection")
-    ws.set_column("A:A", 25)
-    ws.set_column("B:F", 18)
-    ws.write(0, 0, f"5-Year P&L Projection — {target}", title_fmt)
+    ws2 = wb.create_sheet("P&L Projection")
+    ws2.column_dimensions["A"].width = 25
+    for col_letter in "BCDEF":
+        ws2.column_dimensions[col_letter].width = 18
+    ws2.cell(1, 1, f"5-Year P&L Projection — {target}").font = Font(bold=True, size=14, color="1A1A2E")
     headers = ["Metric", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5"]
-    for c, h in enumerate(headers):
-        ws.write(2, c, h, header_fmt)
+    for c, h in enumerate(headers, 1):
+        cell = ws2.cell(3, c, h)
+        cell.font = header_font
+        cell.fill = header_fill
     metrics = [
-        ("Students", "students", num_fmt),
-        ("Schools", "schools", num_fmt),
-        ("Revenue", "revenue", money_fmt),
-        ("COGS", "cogs", money_fmt),
-        ("Gross Margin", "gross_margin", money_fmt),
-        ("OpEx", "opex", money_fmt),
-        ("EBITDA", "ebitda", money_fmt),
-        ("Net Income", "net_income", money_fmt),
-        ("Free Cash Flow", "free_cash_flow", money_fmt),
-        ("Cumulative Cash", "cumulative_cash", money_fmt),
+        ("Students", "students", "#,##0"),
+        ("Schools", "schools", "#,##0"),
+        ("Revenue", "revenue", "$#,##0"),
+        ("COGS", "cogs", "$#,##0"),
+        ("Gross Margin", "gross_margin", "$#,##0"),
+        ("OpEx", "opex", "$#,##0"),
+        ("EBITDA", "ebitda", "$#,##0"),
+        ("Net Income", "net_income", "$#,##0"),
+        ("Free Cash Flow", "free_cash_flow", "$#,##0"),
+        ("Cumulative Cash", "cumulative_cash", "$#,##0"),
     ]
-    for r, (name, key, fmt) in enumerate(metrics, start=3):
-        ws.write(r, 0, name, label_fmt)
-        for c, proj in enumerate(model.pnl_projection, start=1):
-            ws.write(r, c, getattr(proj, key), fmt)
+    for r, (name, key, fmt) in enumerate(metrics, start=4):
+        ws2.cell(r, 1, name).font = label_font
+        ws2.cell(r, 1).fill = label_fill
+        for c, proj in enumerate(model.pnl_projection, start=2):
+            cell = ws2.cell(r, c, getattr(proj, key))
+            cell.number_format = fmt
 
     # --- Unit Economics Sheet ---
-    ws = wb.add_worksheet("Unit Economics")
-    ws.set_column("A:A", 20)
-    ws.set_column("B:E", 18)
-    ws.write(0, 0, "Unit Economics", title_fmt)
+    ws3 = wb.create_sheet("Unit Economics")
+    ws3.cell(1, 1, "Unit Economics").font = Font(bold=True, size=14, color="1A1A2E")
     ue_headers = ["School Type", "Revenue/Student", "Cost/Student", "Margin/Student", "Margin %"]
-    for c, h in enumerate(ue_headers):
-        ws.write(2, c, h, header_fmt)
-    for r, ue in enumerate(model.unit_economics, start=3):
-        ws.write(r, 0, ue.school_type, label_fmt)
-        ws.write(r, 1, ue.per_student_revenue, money_fmt)
-        ws.write(r, 2, ue.per_student_cost, money_fmt)
-        ws.write(r, 3, ue.contribution_margin, money_fmt)
-        ws.write(r, 4, ue.margin_pct / 100, pct_fmt)
+    for c, h in enumerate(ue_headers, 1):
+        cell = ws3.cell(3, c, h)
+        cell.font = header_font
+        cell.fill = header_fill
+    for r, ue in enumerate(model.unit_economics, start=4):
+        ws3.cell(r, 1, ue.school_type).font = label_font
+        ws3.cell(r, 2, ue.per_student_revenue).number_format = "$#,##0"
+        ws3.cell(r, 3, ue.per_student_cost).number_format = "$#,##0"
+        ws3.cell(r, 4, ue.contribution_margin).number_format = "$#,##0"
+        ws3.cell(r, 5, ue.margin_pct / 100).number_format = "0.0%"
 
     # --- Returns Sheet ---
-    ws = wb.add_worksheet("Returns Analysis")
-    ws.set_column("A:A", 30)
-    ws.set_column("B:B", 20)
-    ws.write(0, 0, "Returns Analysis", title_fmt)
+    ws4 = wb.create_sheet("Returns Analysis")
+    ws4.cell(1, 1, "Returns Analysis").font = Font(bold=True, size=14, color="1A1A2E")
     ret_data = [
         ("IRR", f"{model.returns_analysis.irr}%" if model.returns_analysis.irr else "N/A"),
         ("MOIC", f"{model.returns_analysis.moic}x"),
@@ -487,10 +638,11 @@ def export_model_xlsx(
         ("Total Management Fee Revenue (5yr)", f"${model.total_management_fee_revenue:,.0f}"),
         ("Total Timeback License Revenue (5yr)", f"${model.total_timeback_license_revenue:,.0f}"),
     ]
-    for r, (label, val) in enumerate(ret_data, start=2):
-        ws.write(r, 0, label, label_fmt)
-        ws.write(r, 1, val)
+    for r, (label, val) in enumerate(ret_data, start=3):
+        ws4.cell(r, 1, label).font = label_font
+        ws4.cell(r, 2, val)
 
+    wb.save(path)
     wb.close()
     return path
 

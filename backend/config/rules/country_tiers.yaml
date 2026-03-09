@@ -1,0 +1,61 @@
+# Country Tiering System (SPECS.md Section 2A)
+# Every country is automatically classified into one of three tiers based on
+# GDP per capita, population, and private-school market maturity.
+
+tier_1:
+  name: "UAE-Scale"
+  description: "Full joint-venture model. The local entity owns schools; Alpha operates and licenses IP."
+  examples:
+    - "Saudi Arabia"
+    - "Qatar"
+    - "Singapore"
+    - "Switzerland"
+  criteria:
+    gdp_per_capita_min: 30000
+    population_min: 1000000
+  deal_structure:
+    model: "Full joint-venture"
+    upfront_range: [500000000, 1500000000]  # $500M - $1.5B (scaled by school-age population)
+    per_student_budget_range: [20000, 30000]  # $20K - $30K
+    target_students_5yr: [50000, 200000]
+    structure: "Local entity owns schools; Alpha operates & licenses IP"
+    local_ip_layer: "Equivalent of AsasOne - 100% owned by local JV entity"
+  demand_factor: 1.0
+
+tier_2:
+  name: "Mid-Market"
+  description: "Scaled JV or licensing model. Same fee percentages on a lower per-student budget, adjusted for PPP."
+  examples:
+    - "Brazil"
+    - "Mexico"
+    - "UK"
+    - "South Korea"
+  criteria:
+    gdp_per_capita_range: [10000, 30000]
+    # OR: population > 50M with private school market
+    population_alt_min: 50000000
+  deal_structure:
+    model: "Scaled JV or licensing"
+    upfront_range: [100000000, 500000000]  # $100M - $500M (PPP-adjusted)
+    per_student_budget_range: [8000, 20000]  # $8K - $20K (PPP-adjusted)
+    target_students_5yr: [20000, 100000]
+    structure: "JV with local partner or pure licensing"
+  demand_factor: 0.5
+
+tier_3:
+  name: "Emerging / Government"
+  description: "Licensing or government partnership model. Government pays; Alpha provides the system. Scale is potentially massive."
+  examples:
+    - "India"
+    - "Nigeria"
+    - "Kenya"
+  criteria:
+    gdp_per_capita_max: 10000
+  deal_structure:
+    model: "Licensing or government partnership"
+    upfront_range: [25000000, 100000000]  # $25M - $100M (mostly IP licensing + development)
+    per_student_license_fee_range: [50, 200]  # $50 - $200/year per student
+    target_students_5yr: [100000, 1000000]
+    structure: "Government operates schools; Alpha licenses IP + manages"
+    guide_school: "Established locally; trains government teachers as Guides"
+  demand_factor: 0.2
