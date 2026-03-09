@@ -564,7 +564,6 @@ def _build_cohort_model(a: dict) -> FinancialModel:
 
     # Capital deployment
     cap_deploy: list[CapitalDeployment] = []
-    prev_s = 0
     for yr in range(5):
         p = projections[yr]
         ns = max(0, p.schools - (projections[yr - 1].schools if yr > 0 else 0))

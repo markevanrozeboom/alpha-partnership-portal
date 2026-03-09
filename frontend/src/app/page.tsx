@@ -6,22 +6,13 @@ import { createRun } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
 const PRIORITY_MARKETS = [
-  { name: "Saudi Arabia", flag: "🇸🇦", tier: 1 },
-  { name: "Qatar", flag: "🇶🇦", tier: 1 },
-  { name: "Kuwait", flag: "🇰🇼", tier: 1 },
-  { name: "Bahrain", flag: "🇧🇭", tier: 1 },
-  { name: "Singapore", flag: "🇸🇬", tier: 1 },
-  { name: "United Kingdom", flag: "🇬🇧", tier: 1 },
-  { name: "India", flag: "🇮🇳", tier: 1 },
-  { name: "Malaysia", flag: "🇲🇾", tier: 2 },
-  { name: "Indonesia", flag: "🇮🇩", tier: 2 },
-  { name: "South Korea", flag: "🇰🇷", tier: 2 },
-  { name: "Japan", flag: "🇯🇵", tier: 2 },
-  { name: "Mexico", flag: "🇲🇽", tier: 2 },
-  { name: "Brazil", flag: "🇧🇷", tier: 2 },
-  { name: "Nigeria", flag: "🇳🇬", tier: 3 },
-  { name: "Kenya", flag: "🇰🇪", tier: 3 },
-  { name: "Rwanda", flag: "🇷🇼", tier: 3 },
+  { name: "Saudi Arabia", flag: "🇸🇦" },
+  { name: "Qatar", flag: "🇶🇦" },
+  { name: "Kuwait", flag: "🇰🇼" },
+  { name: "Bahrain", flag: "🇧🇭" },
+  { name: "Singapore", flag: "🇸🇬" },
+  { name: "United Kingdom", flag: "🇬🇧" },
+  { name: "India", flag: "🇮🇳" },
 ];
 
 const US_STATES = [
@@ -131,13 +122,6 @@ export default function Home() {
                   >
                     <span>{m.flag}</span>
                     <span>{m.name}</span>
-                    <span className={`text-[10px] rounded px-1 py-0.5 ${
-                      m.tier === 1 ? "bg-emerald-500/20 text-emerald-400" :
-                      m.tier === 2 ? "bg-blue-500/20 text-blue-400" :
-                      "bg-gray-500/20 text-gray-400"
-                    }`}>
-                      T{m.tier}
-                    </span>
                   </button>
                 ))}
               </div>
