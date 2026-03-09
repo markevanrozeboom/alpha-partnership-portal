@@ -32,6 +32,8 @@ from agents.education_research import run_education_research
 from agents.strategy import run_strategy
 from agents.financial import generate_assumptions, build_model, export_model_xlsx
 from agents.document_generation import generate_documents
+from agents.term_sheet import generate_term_sheet
+from agents.state_deck import generate_state_deck
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,7 @@ def _make_initial_state(run_id: str, target: str) -> dict[str, Any]:
         "pptx_path": None,
         "docx_path": None,
         "xlsx_path": None,
+        "term_sheet_docx_path": None,
         "country_report_docx_path": None,
         "education_report_docx_path": None,
         "strategy_report_docx_path": None,
@@ -220,7 +223,12 @@ async def _run_financial_model(state: dict) -> None:
 
 
 async def _run_documents(state: dict) -> None:
-    """Generate documents (deck, proposal, spreadsheet)."""
+    """Generate documents (deck, term sheet, proposal, spreadsheet).
+
+    For US states: generates Oklahoma-style governor pitch deck.
+    For sovereign nations: generates investor deck.
+    Always generates: term sheet, investment memorandum, financial XLSX.
+    """
     target = state["target_input"]
     _log(state, "Generating documents...")
     state["status"] = PipelineStatus.GENERATING_DOCUMENTS.value
@@ -239,16 +247,39 @@ async def _run_documents(state: dict) -> None:
     if dfb and dfb.get("revision_notes"):
         revision_notes = dfb["revision_notes"]
 
-    pptx_path, docx_path, xlsx_path = await generate_documents(
+    is_us_state = country_profile.target.type.value == "us_state"
+
+    # --- Generate deck (route by target type) ---
+    if is_us_state:
+        _log(state, f"Generating Oklahoma-style governor pitch deck for {target}...")
+        pptx_path = await generate_state_deck(
+            target, country_profile, education_analysis,
+            strategy_obj, model, assumptions,
+        )
+    else:
+        # Sovereign nation — investor deck via standard document generation
+        pptx_path = None  # will be set by generate_documents
+
+    # --- Generate term sheet ---
+    _log(state, "Generating term sheet...")
+    _, term_sheet_path = await generate_term_sheet(
+        target, country_profile, education_analysis,
+        strategy_obj, model, assumptions,
+    )
+    state["term_sheet_docx_path"] = term_sheet_path
+
+    # --- Generate investment memorandum + XLSX (and investor deck for sovereign) ---
+    gen_pptx_path, docx_path, xlsx_path = await generate_documents(
         target, country_profile, education_analysis, strategy_obj,
         model, assumptions, audience, revision_notes,
     )
 
-    state["pptx_path"] = pptx_path
+    # For US states, use the state deck; for sovereign nations, use the investor deck
+    state["pptx_path"] = pptx_path if is_us_state else gen_pptx_path
     state["docx_path"] = docx_path
     state["xlsx_path"] = xlsx_path
     state["status"] = PipelineStatus.REVIEW_DOCUMENTS.value
-    _log(state, "All documents generated.")
+    _log(state, "All documents generated (deck, term sheet, memorandum, XLSX).")
 
 
 async def _finalize(state: dict) -> None:

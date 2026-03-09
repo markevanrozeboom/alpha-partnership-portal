@@ -394,6 +394,104 @@ Table of all key assumptions used in this strategy.
 IMPORTANT: Minimum 3,000 words. This completes a document that will be read by heads
 of state and VC managing directors. Every recommendation must be data-backed."""
 
+TIER_23_PROMPT = """You are a senior partner at McKinsey & Company advising Alpha Holdings
+(2hr Learning) on a market entry into **{target}**.
+
+This is a **Tier {tier}** country — NOT a Tier 1 sovereign deal. Alpha's Group CFO has directed
+that for Tier 2/3 countries the strategy should focus on ONE question:
+
+**How many 25,000-student cohorts could the government (or private sector) realistically support?**
+
+Each cohort = 25,000 students at $25K/student budget (PPP-adjusted to ${ppp_adjusted_budget:,.0f}).
+
+## About Alpha / 2hr Learning
+- Timeback: AI compresses core academics into 2 hours/day
+- Three commitments: Children love school | Learn 2x faster | Future-ready skills
+- UAE reference: $1.5B upfront, 200K students (= 8 cohorts of 25K), $25K/student
+- Revenue model: 10% management fee, 20% Timeback license, upfront IP fee
+- Fee floor: $15K/student minimum
+
+## Country Context
+{country_context}
+
+## Education Context
+{education_context}
+
+## Write EXACTLY these sections:
+
+# {target} — Cohort-Based Proposal
+
+## 1. Executive Summary
+- This is a Tier {tier} opportunity with a cohort-based deal structure
+- Each cohort = 25,000 students at ${ppp_adjusted_budget:,.0f}/student (PPP-adjusted)
+- Total commitment = # cohorts × 25,000 × ${ppp_adjusted_budget:,.0f}
+
+## 2. Demand Analysis: How Many 25K Cohorts?
+
+### 2.1 Government-Funded Pathway
+Assess the government's capacity to fund 25K-student cohorts:
+- Current education budget and spend per student
+- Appetite for large-scale education reform
+- Fiscal headroom (% of GDP spent on education vs regional peers)
+- Existing public-private partnership precedent
+- Political will for 2hr Learning model
+
+| Cohort | Funding Source | Students | Per-Student Budget | Total Commitment | Feasibility |
+|--------|--------------|----------|-------------------|-----------------|-------------|
+| Gov Cohort 1 | ... | 25,000 | ... | ... | High/Med/Low |
+| Gov Cohort 2 | ... | 25,000 | ... | ... | High/Med/Low |
+| ... | ... | ... | ... | ... | ... |
+
+### 2.2 Private-Sector Pathway
+Assess the private market's capacity for 25K-student cohorts:
+- Size of affluent / upper-middle-class families
+- Current private school penetration and tuition levels
+- Demand for premium / innovation-driven education
+- Ability for private operators or investors to fund cohorts
+
+| Cohort | Funding Source | Students | Per-Student Budget | Total Commitment | Feasibility |
+|--------|--------------|----------|-------------------|-----------------|-------------|
+| Private Cohort 1 | ... | 25,000 | ... | ... | High/Med/Low |
+| Private Cohort 2 | ... | 25,000 | ... | ... | High/Med/Low |
+| ... | ... | ... | ... | ... | ... |
+
+### 2.3 Combined Proposal
+Total realistic cohorts and deal size:
+
+| Pathway | Cohorts | Students | Commitment | Confidence |
+|---------|---------|----------|-----------|------------|
+| Government | ... | ... | $... | ...% |
+| Private | ... | ... | $... | ...% |
+| **Total** | **...** | **...** | **$...** | ... |
+
+## 3. Deal Structure
+- Entry mode: {entry_recommendation}
+- Partnership: Licensing or lightweight JV (no heavy local entity)
+- Alpha management fee: 10%
+- Timeback license: 20%
+- Upfront IP fee: scaled to # cohorts
+- Phased rollout: 1 cohort in Year 1, scale based on results
+
+## 4. Financial Summary (Per Cohort)
+
+| Metric | Per Cohort | Notes |
+|--------|-----------|-------|
+| Students | 25,000 | Fixed cohort size |
+| Per-Student Budget | ${ppp_adjusted_budget:,.0f} | PPP-adjusted from $25K |
+| Total Revenue | ${cohort_revenue:,.0f} | 25K × budget |
+| Alpha Mgmt Fee (10%) | ${mgmt_fee:,.0f} | Per year |
+| Timeback License (20%) | ${timeback_fee:,.0f} | Per year |
+| Alpha Total Revenue/yr | ${alpha_rev:,.0f} | Combined |
+
+## 5. Key Asks
+List 5-6 specific asks from the government / private partner.
+
+## 6. Risks & Considerations
+Key risks specific to this Tier {tier} market.
+
+IMPORTANT: Be realistic about the number of cohorts. Don't over-promise.
+Data-driven. This will be reviewed by the Group CFO."""
+
 REPORT_REVISION_PROMPT = """You are revising a market-entry strategy based on executive feedback.
 
 Original strategy:
@@ -437,6 +535,10 @@ async def run_strategy(
     if entry_mode:
         strategy.entry_mode = entry_mode
 
+    # --- Determine tier for routing ---
+    tier = country_profile.target.tier if country_profile.target.tier else None
+    is_tier_23 = tier is not None and tier in (2, 3) and country_profile.target.type == TargetType.SOVEREIGN_NATION
+
     # --- Narrative report ---
     if feedback and previous_report:
         report_md = await call_llm_plain(
@@ -445,7 +547,33 @@ async def run_strategy(
             ),
             user_prompt=f"Revise the strategy for {target}.",
         )
+    elif is_tier_23:
+        # Tier 2/3: cohort-based proposal
+        gdp_cap = country_profile.economy.gdp_per_capita or 15_000
+        ppp_adjusted = max(15_000, round(25_000 * max(0.3, min(2.0, gdp_cap / 50_000)) / 500) * 500)
+        cohort_rev = 25_000 * ppp_adjusted
+        mgmt_fee = round(cohort_rev * 0.10)
+        timeback_fee = round(cohort_rev * 0.20)
+        alpha_rev = mgmt_fee + timeback_fee
+        entry_rec = entry_mode.value if entry_mode else "licensing or lightweight JV"
+
+        logger.info("Generating Tier %s cohort-based strategy for %s", tier, target)
+        report_md = await call_llm_plain(
+            system_prompt=TIER_23_PROMPT.format(
+                target=target, tier=tier,
+                ppp_adjusted_budget=ppp_adjusted,
+                cohort_revenue=cohort_rev,
+                mgmt_fee=mgmt_fee,
+                timeback_fee=timeback_fee,
+                alpha_rev=alpha_rev,
+                entry_recommendation=entry_rec,
+                country_context=country_ctx,
+                education_context=education_ctx,
+            ),
+            user_prompt=f"Produce the cohort-based strategy for {target}.",
+        )
     else:
+        # Tier 1 / US State: full strategy
         entry_note = f"\nEntry mode preference: {entry_mode.value}" if entry_mode else ""
 
         logger.info("Generating strategy section 1/3 for %s", target)

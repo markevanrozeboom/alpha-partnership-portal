@@ -43,6 +43,14 @@ def generate_assumptions(
     # Base per-student budget from UAE deal scaled by PPP
     base_per_student = max(15_000, round(25_000 * ppp_factor / 500) * 500)
 
+    # --- Tier 2/3 cohort-based model ---
+    tier = country_profile.target.tier if country_profile.target.tier else None
+    is_tier_23 = tier is not None and tier in (2, 3) and country_profile.target.type.value == "sovereign_nation"
+
+    if is_tier_23:
+        return _generate_cohort_assumptions(target, country_profile, strategy, ppp_factor, base_per_student)
+
+    # --- Tier 1 / US State: Full model ---
     # Tuition ranges
     premium_tuition = max(15_000, round(base_per_student * 1.2 / 500) * 500)
     mid_tuition = max(12_000, round(base_per_student * 0.8 / 500) * 500)
@@ -187,6 +195,112 @@ def generate_assumptions(
     return FinancialAssumptions(assumptions=assumptions)
 
 
+def _generate_cohort_assumptions(
+    target: str,
+    country_profile: CountryProfile,
+    strategy: Strategy,
+    ppp_factor: float,
+    base_per_student: float,
+) -> FinancialAssumptions:
+    """Generate simplified cohort-based assumptions for Tier 2/3 countries.
+
+    Each cohort = 25,000 students. The model asks: how many cohorts can
+    the government (or private sector) realistically support?
+    """
+    cohort_size = 25_000
+    per_student = max(15_000, base_per_student)
+    # Default: 2 cohorts for Tier 2, 1 cohort for Tier 3
+    tier = country_profile.target.tier
+    default_cohorts = 2 if tier == 2 else 1
+
+    assumptions = [
+        FinancialAssumption(
+            key="num_cohorts", label="Number of 25K-Student Cohorts",
+            value=default_cohorts, min_val=1, max_val=8, step=1,
+            unit="cohorts", category="scale",
+            description="Each cohort = 25,000 students. UAE = 8 cohorts.",
+        ),
+        FinancialAssumption(
+            key="cohort_size", label="Students per Cohort",
+            value=cohort_size, min_val=10_000, max_val=50_000, step=5_000,
+            unit="students", category="scale",
+            description="Fixed cohort size (default: 25,000)",
+            locked=True,
+        ),
+        FinancialAssumption(
+            key="per_student_budget", label="Per-Student Budget (PPP-adjusted)",
+            value=per_student, min_val=10_000, max_val=40_000, step=500,
+            unit="$", category="pricing",
+            description=f"PPP-adjusted from $25K (factor: {ppp_factor:.2f})",
+        ),
+        FinancialAssumption(
+            key="cohort_ramp_years", label="Years to Full Cohort Deployment",
+            value=3, min_val=1, max_val=5, step=1,
+            unit="years", category="scale",
+            description="Phased rollout timeline",
+        ),
+        # Alpha fees (locked)
+        FinancialAssumption(
+            key="management_fee_pct", label="Management Fee (% of Revenue)",
+            value=10, min_val=5, max_val=20, step=1,
+            unit="%", category="fees",
+            locked=True,
+        ),
+        FinancialAssumption(
+            key="timeback_license_pct", label="Timeback License (% of Per-Student Budget)",
+            value=20, min_val=10, max_val=30, step=1,
+            unit="%", category="fees",
+            locked=True,
+        ),
+        FinancialAssumption(
+            key="upfront_ip_fee", label="Upfront IP Fee ($M)",
+            value=max(5, round(10 * ppp_factor)),
+            min_val=2, max_val=50, step=1,
+            unit="$M", category="fees",
+        ),
+        # Costs
+        FinancialAssumption(
+            key="cogs_pct", label="COGS (% of Revenue)",
+            value=55, min_val=40, max_val=75, step=1,
+            unit="%", category="costs",
+        ),
+        FinancialAssumption(
+            key="opex_pct", label="OpEx (% of Revenue)",
+            value=22, min_val=10, max_val=35, step=1,
+            unit="%", category="costs",
+        ),
+        FinancialAssumption(
+            key="avg_students_per_school", label="Avg Students per School",
+            value=800, min_val=200, max_val=2000, step=50,
+            unit="students", category="scale",
+        ),
+        FinancialAssumption(
+            key="capex_per_school", label="CapEx per New School ($)",
+            value=round(4_000_000 * ppp_factor / 100_000) * 100_000,
+            min_val=500_000, max_val=15_000_000, step=500_000,
+            unit="$", category="costs",
+        ),
+        # Returns
+        FinancialAssumption(
+            key="exit_ebitda_multiple", label="Exit EBITDA Multiple",
+            value=12, min_val=6, max_val=20, step=1,
+            unit="x", category="returns",
+        ),
+        FinancialAssumption(
+            key="discount_rate", label="Discount Rate (%)",
+            value=14, min_val=8, max_val=25, step=1,
+            unit="%", category="returns",
+        ),
+        FinancialAssumption(
+            key="tax_rate", label="Tax Rate (%)",
+            value=20, min_val=0, max_val=35, step=1,
+            unit="%", category="returns",
+        ),
+    ]
+
+    return FinancialAssumptions(assumptions=assumptions)
+
+
 # ---------------------------------------------------------------------------
 # Phase 2 / Recalculate: Build model from assumptions
 # ---------------------------------------------------------------------------
@@ -198,6 +312,10 @@ def build_model(
 ) -> FinancialModel:
     """Deterministic financial model calculation from assumptions."""
     a = {item.key: item.value for item in assumptions.assumptions}
+
+    # Detect cohort-based model (Tier 2/3)
+    if "num_cohorts" in a:
+        return _build_cohort_model(a)
 
     premium_tuition = a.get("premium_tuition", 25_000)
     mid_tuition = a.get("mid_tuition", 15_000)
@@ -374,6 +492,147 @@ def build_model(
     )
 
 
+def _build_cohort_model(a: dict) -> FinancialModel:
+    """Build a simplified cohort-based model for Tier 2/3 countries."""
+    num_cohorts = int(a.get("num_cohorts", 1))
+    cohort_size = int(a.get("cohort_size", 25_000))
+    per_student = a.get("per_student_budget", 20_000)
+    ramp_years = int(a.get("cohort_ramp_years", 3))
+    cogs_pct = a.get("cogs_pct", 55) / 100
+    opex_pct = a.get("opex_pct", 22) / 100
+    mgmt_fee_pct = a.get("management_fee_pct", 10) / 100
+    timeback_pct = a.get("timeback_license_pct", 20) / 100
+    upfront_ip = a.get("upfront_ip_fee", 10) * 1_000_000
+    avg_per_school = a.get("avg_students_per_school", 800)
+    capex_per_school = a.get("capex_per_school", 4_000_000)
+    exit_multiple = a.get("exit_ebitda_multiple", 12)
+    tax_rate = a.get("tax_rate", 20) / 100
+
+    total_students = num_cohorts * cohort_size
+
+    # Ramp: linear from 1 cohort's worth to full deployment over ramp_years
+    projections: list[YearProjection] = []
+    cumulative_cash = 0.0
+    prev_schools = 0
+    total_mgmt = 0.0
+    total_timeback = 0.0
+
+    for yr in range(1, 6):
+        if yr <= ramp_years:
+            frac = yr / ramp_years
+            students = min(total_students, max(cohort_size, int(total_students * frac)))
+        else:
+            students = total_students
+
+        schools = max(1, math.ceil(students / avg_per_school))
+        new_schools = max(0, schools - prev_schools)
+
+        revenue = students * per_student
+        cogs = revenue * cogs_pct
+        gm = revenue - cogs
+        opex = revenue * opex_pct
+        ebitda = gm - opex
+        net_income = ebitda * (1 - tax_rate)
+        capex = new_schools * capex_per_school + (upfront_ip if yr == 1 else 0)
+        fcf = net_income - capex
+        cumulative_cash += fcf
+
+        mgmt_rev = revenue * mgmt_fee_pct
+        tb_rev = students * per_student * timeback_pct
+        total_mgmt += mgmt_rev
+        total_timeback += tb_rev
+
+        projections.append(YearProjection(
+            year=yr, students=students, schools=schools,
+            revenue=round(revenue), cogs=round(cogs),
+            gross_margin=round(gm), opex=round(opex),
+            ebitda=round(ebitda), net_income=round(net_income),
+            free_cash_flow=round(fcf), cumulative_cash=round(cumulative_cash),
+        ))
+        prev_schools = schools
+
+    # Unit economics (single tier for cohort model)
+    unit_econ = [
+        UnitEconomics(
+            school_type="Cohort (25K students)",
+            per_student_revenue=per_student,
+            per_student_cost=round(per_student * cogs_pct),
+            contribution_margin=round(per_student * (1 - cogs_pct)),
+            margin_pct=round((1 - cogs_pct) * 100, 1),
+        ),
+    ]
+
+    # Capital deployment
+    cap_deploy: list[CapitalDeployment] = []
+    prev_s = 0
+    for yr in range(5):
+        p = projections[yr]
+        ns = max(0, p.schools - (projections[yr - 1].schools if yr > 0 else 0))
+        ip = upfront_ip if yr == 0 else 0
+        launch = ns * capex_per_school
+        cap_deploy.append(CapitalDeployment(
+            year=yr + 1, ip_development=round(ip),
+            management_fees=round(p.revenue * mgmt_fee_pct),
+            launch_capital=round(launch),
+            real_estate=round(launch * 0.6),
+            total=round(ip + launch + p.revenue * mgmt_fee_pct),
+        ))
+
+    # Returns
+    y5_ebitda = projections[4].ebitda
+    ev = y5_ebitda * exit_multiple
+    total_invested = sum(cd.total for cd in cap_deploy)
+    moic = ev / total_invested if total_invested > 0 else 0
+
+    cfs = [-cd.total for cd in cap_deploy]
+    cfs[4] += ev
+    irr = _approx_irr(cfs)
+
+    payback = None
+    for p in projections:
+        if p.cumulative_cash > 0:
+            payback = float(p.year)
+            break
+
+    returns = ReturnsAnalysis(
+        irr=round(irr * 100, 1) if irr else None,
+        moic=round(moic, 2),
+        enterprise_value_at_exit=round(ev),
+        payback_period_years=payback,
+        ebitda_multiple=exit_multiple,
+    )
+
+    sensitivity = [
+        SensitivityScenario(
+            variable="Number of Cohorts",
+            base_case=num_cohorts,
+            downside=max(1, num_cohorts - 1),
+            upside=num_cohorts + 2,
+        ),
+        SensitivityScenario(
+            variable="Per-Student Budget",
+            base_case=per_student,
+            downside=per_student * 0.85,
+            upside=per_student * 1.15,
+        ),
+    ]
+
+    return FinancialModel(
+        pnl_projection=projections,
+        unit_economics=unit_econ,
+        capital_deployment=cap_deploy,
+        returns_analysis=returns,
+        sensitivity=sensitivity,
+        ppp_factor=round(per_student / 25_000, 2),
+        demand_factor=1.0,
+        management_fee_pct=mgmt_fee_pct,
+        timeback_license_pct=timeback_pct,
+        upfront_ip_fee=upfront_ip,
+        total_management_fee_revenue=round(total_mgmt),
+        total_timeback_license_revenue=round(total_timeback),
+    )
+
+
 def recalculate_model(
     current_assumptions: FinancialAssumptions,
     adjustments: dict[str, float],
@@ -430,7 +689,7 @@ def export_model_xlsx(
     gdp_pc = a.get("per_student_budget", 20000) / 0.8 * 50000 / 25000  # rough reverse
     if country_profile and country_profile.economy:
         gdp_pc = country_profile.economy.gdp_per_capita or 30000
-        school_age_pop = country_profile.demographics.school_age_population or 5_000_000
+        school_age_pop = country_profile.demographics.population_0_18 or 5_000_000
         avg_tuition = a.get("mid_tuition", a.get("per_student_budget", 15000))
     else:
         school_age_pop = max(1_000_000, int(a.get("students_year5", 150000) * 100))

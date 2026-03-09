@@ -126,6 +126,7 @@ async def get_run(run_id: str):
     resp.pptx_path = state.get("pptx_path")
     resp.docx_path = state.get("docx_path")
     resp.xlsx_path = state.get("xlsx_path")
+    resp.term_sheet_docx_path = state.get("term_sheet_docx_path")
     resp.country_report_docx_path = state.get("country_report_docx_path")
     resp.education_report_docx_path = state.get("education_report_docx_path")
     resp.strategy_report_docx_path = state.get("strategy_report_docx_path")
@@ -300,6 +301,7 @@ async def download_file(run_id: str, file_type: str):
         "pptx": state.get("pptx_path"),
         "docx": state.get("docx_path"),
         "xlsx": state.get("xlsx_path"),
+        "term_sheet": state.get("term_sheet_docx_path"),
         "country_report": state.get("country_report_docx_path"),
         "education_report": state.get("education_report_docx_path"),
         "strategy_report": state.get("strategy_report_docx_path"),

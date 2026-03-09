@@ -405,6 +405,7 @@ class PipelineState(BaseModel):
     pptx_path: Optional[str] = None
     docx_path: Optional[str] = None
     xlsx_path: Optional[str] = None
+    term_sheet_docx_path: Optional[str] = None
     country_report_docx_path: Optional[str] = None
     education_report_docx_path: Optional[str] = None
     strategy_report_docx_path: Optional[str] = None
@@ -446,6 +447,7 @@ class RunStatusResponse(BaseModel):
     pptx_path: Optional[str] = None
     docx_path: Optional[str] = None
     xlsx_path: Optional[str] = None
+    term_sheet_docx_path: Optional[str] = None
     country_report_docx_path: Optional[str] = None
     education_report_docx_path: Optional[str] = None
     strategy_report_docx_path: Optional[str] = None

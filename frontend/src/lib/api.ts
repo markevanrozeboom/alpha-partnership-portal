@@ -112,6 +112,7 @@ export interface RunStatus {
   pptx_path: string | null;
   docx_path: string | null;
   xlsx_path: string | null;
+  term_sheet_docx_path: string | null;
   country_report_docx_path: string | null;
   education_report_docx_path: string | null;
   strategy_report_docx_path: string | null;

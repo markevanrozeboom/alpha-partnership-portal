@@ -321,7 +321,7 @@ async def generate_documents(
 
     # --- Generate XLSX ---
     from agents.financial import export_model_xlsx
-    xlsx_path = export_model_xlsx(target, financial_model, assumptions)
+    xlsx_path = export_model_xlsx(target, financial_model, assumptions, country_profile)
 
     logger.info("Documents generated: %s, %s, %s", pptx_path, docx_path, xlsx_path)
     return pptx_path, docx_path, xlsx_path

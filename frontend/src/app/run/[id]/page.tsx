@@ -253,7 +253,7 @@ export default function RunPage() {
       case "strategy": return !!data!.strategy_report;
       case "assumptions": return !!data!.financial_assumptions?.assumptions?.length;
       case "model": return !!data!.financial_model;
-      case "documents": return !!(data!.pptx_path || data!.docx_path || data!.xlsx_path);
+      case "documents": return !!(data!.pptx_path || data!.docx_path || data!.xlsx_path || data!.term_sheet_docx_path);
       case "complete": return data!.status === "completed";
       default: return false;
     }
@@ -480,7 +480,7 @@ export default function RunPage() {
                     {data.status === "strategizing" && "Developing comprehensive market-entry strategy... This may take 2-4 minutes."}
                     {data.status === "presenting_assumptions" && "Generating financial model assumptions..."}
                     {data.status === "building_model" && "Building the financial model..."}
-                    {data.status === "generating_documents" && "Generating investor deck, proposal, and spreadsheet... This may take 3-5 minutes."}
+                    {data.status === "generating_documents" && "Generating pitch deck, term sheet, investment memo, and financial model... This may take 3-5 minutes."}
                   </p>
                 </div>
                 <div className="flex justify-center">
@@ -695,11 +695,13 @@ function PnLTable({ model }: { model: FinancialModel }) {
 
 /** Document download grid (reused in documents gate and completed view) */
 function DocumentDownloadGrid({ runId, data }: { runId: string; data: RunStatus }) {
+  const isState = data.target_type === "us_state";
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {[
-        { label: "Investor Deck", type: "pptx", icon: "📊", path: data.pptx_path },
-        { label: "Proposal Document", type: "docx", icon: "📝", path: data.docx_path },
+        { label: isState ? "Governor Pitch Deck" : "Investor Deck", type: "pptx", icon: "📊", path: data.pptx_path },
+        { label: "Term Sheet", type: "term_sheet", icon: "📋", path: data.term_sheet_docx_path },
+        { label: "Investment Memorandum", type: "docx", icon: "📝", path: data.docx_path },
         { label: "Financial Model", type: "xlsx", icon: "📈", path: data.xlsx_path },
       ].map((doc) => (
         <div key={doc.type} className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 text-center space-y-3">
@@ -792,14 +794,42 @@ function CompletedView({ runId, data }: { runId: string; data: RunStatus }) {
         ))}
       </div>
 
-      {/* Final Deliverables */}
+      {/* Primary Deliverables (Term Sheet + Deck) */}
       <div className="space-y-4">
         <h3 className="text-xl font-bold flex items-center gap-2">
-          <span>📦</span> Final Deliverables
+          <span>⭐</span> Primary Deliverables
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <p className="text-sm text-gray-400">These are the two key documents to present to the country/state.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { label: "Investor Deck (PPTX)", type: "pptx", path: data.pptx_path, accent: "from-purple-500 to-blue-500" },
+            { label: data.target_type === "us_state" ? "Governor Pitch Deck (PPTX)" : "Investor Deck (PPTX)", type: "pptx", path: data.pptx_path, accent: "from-purple-500 to-blue-500", icon: "📊" },
+            { label: "Term Sheet (DOCX)", type: "term_sheet", path: data.term_sheet_docx_path, accent: "from-amber-500 to-orange-500", icon: "📋" },
+          ].map((doc) => (
+            <div key={doc.type} className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 text-center space-y-3">
+              <div className="text-4xl">{doc.icon}</div>
+              <div className={`h-1 w-16 mx-auto rounded-full bg-gradient-to-r ${doc.accent}`} />
+              <h4 className="font-semibold text-lg">{doc.label}</h4>
+              {doc.path ? (
+                <a href={getDownloadUrl(runId, doc.type)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#006D77] px-6 py-2.5 text-sm font-medium text-white hover:bg-[#005a63] transition-colors">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
+                </a>
+              ) : <span className="text-gray-500 text-sm">Not available</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Supporting Documents */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-bold flex items-center gap-2">
+          <span>📦</span> Supporting Documents
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[
             { label: "Investment Memorandum (DOCX)", type: "docx", path: data.docx_path, accent: "from-blue-500 to-teal-500" },
             { label: "Financial Model (XLSX)", type: "xlsx", path: data.xlsx_path, accent: "from-emerald-500 to-green-500" },
           ].map((doc) => (
