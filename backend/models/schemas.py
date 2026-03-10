@@ -474,3 +474,11 @@ class RunStatusResponse(BaseModel):
 class RecalculateRequest(BaseModel):
     """Request to recalculate financial model with adjusted assumptions."""
     adjustments: dict[str, float] = Field(default_factory=dict)
+
+
+class RewindRequest(BaseModel):
+    """Request to rewind the pipeline to an earlier review gate for re-editing."""
+    target_stage: str = Field(
+        ...,
+        description="The review gate to rewind to: 'review_assumptions' or 'review_term_sheet_assumptions'",
+    )

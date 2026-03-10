@@ -431,6 +431,53 @@ def finalize_run(run_id: str) -> None:
         _log(state, "Pipeline complete! All deliverables ready.")
 
 
+def rewind_to_stage(run_id: str, target_status: str) -> None:
+    """Rewind the pipeline to an earlier review gate so the user can re-edit.
+
+    Clears downstream artefacts that will be regenerated when the pipeline
+    resumes from the rewound stage.
+
+    Supported targets:
+      - ``review_assumptions``  — re-edit financial assumptions (clears model,
+        term-sheet, and documents).
+      - ``review_term_sheet_assumptions`` — re-edit deal terms (clears documents
+        only; financial model is preserved).
+    """
+    state = _run_states.get(run_id)
+    if not state:
+        raise ValueError(f"Run {run_id} not found")
+
+    valid_targets = {
+        PipelineStatus.REVIEW_ASSUMPTIONS.value,
+        PipelineStatus.REVIEW_TERM_SHEET_ASSUMPTIONS.value,
+    }
+    if target_status not in valid_targets:
+        raise ValueError(f"Cannot rewind to '{target_status}'. Valid targets: {valid_targets}")
+
+    if target_status == PipelineStatus.REVIEW_ASSUMPTIONS.value:
+        # Clear everything downstream of assumptions
+        state["financial_model"] = {}
+        state["model_feedback"] = None
+        state["term_sheet_assumptions"] = {}
+        state["term_sheet_assumptions_feedback"] = None
+        state["document_feedback"] = None
+        state["pptx_path"] = None
+        state["docx_path"] = None
+        state["xlsx_path"] = None
+        state["term_sheet_docx_path"] = None
+
+    elif target_status == PipelineStatus.REVIEW_TERM_SHEET_ASSUMPTIONS.value:
+        # Clear documents only — financial model is preserved
+        state["document_feedback"] = None
+        state["pptx_path"] = None
+        state["docx_path"] = None
+        state["xlsx_path"] = None
+        state["term_sheet_docx_path"] = None
+
+    state["status"] = target_status
+    _log(state, f"Pipeline rewound to {target_status} for re-editing.")
+
+
 def get_run_state(run_id: str) -> dict[str, Any]:
     """Get the current state of a pipeline run."""
     if run_id in _run_states:

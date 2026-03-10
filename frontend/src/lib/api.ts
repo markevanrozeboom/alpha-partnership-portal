@@ -266,6 +266,21 @@ export async function submitDocumentFeedback(
   return res.json();
 }
 
+// --- Pipeline rewind (go back and re-edit) ---
+
+export async function rewindToStage(
+  runId: string,
+  targetStage: "review_assumptions" | "review_term_sheet_assumptions"
+): Promise<{ status: string; new_status: string }> {
+  const res = await fetch(`${API_URL}/api/runs/${runId}/rewind`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target_stage: targetStage }),
+  });
+  if (!res.ok) throw new Error("Failed to rewind pipeline");
+  return res.json();
+}
+
 // --- Real-time recalculation ---
 
 export async function recalculateModel(

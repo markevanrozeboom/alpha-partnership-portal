@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from models.schemas import (
-    CreateRunRequest, RunStatusResponse, RecalculateRequest,
+    CreateRunRequest, RunStatusResponse, RecalculateRequest, RewindRequest,
     ReportFeedback, AssumptionsFeedback, ModelFeedback,
     TermSheetAssumptionsFeedback, DocumentFeedback,
     CountryProfile, EducationAnalysis, Strategy,
@@ -24,6 +24,7 @@ from graph.pipeline import (
     submit_feedback,
     finalize_run,
     get_run_state,
+    rewind_to_stage,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -375,6 +376,25 @@ async def recalculate_term_sheet_impact(run_id: str, req: RecalculateRequest):
         return result
     except Exception as exc:
         raise HTTPException(500, str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Pipeline Rewind (go back and re-edit earlier stages)
+# ---------------------------------------------------------------------------
+
+@app.post("/api/runs/{run_id}/rewind")
+async def rewind_pipeline(run_id: str, req: RewindRequest):
+    """Rewind the pipeline to an earlier review gate for re-editing.
+
+    Supported target_stage values:
+      - ``review_assumptions`` — go back to edit financial assumptions
+      - ``review_term_sheet_assumptions`` — go back to edit deal terms
+    """
+    try:
+        rewind_to_stage(run_id, req.target_stage)
+        return {"status": "ok", "new_status": req.target_stage}
+    except ValueError as e:
+        raise HTTPException(404, str(e))
 
 
 # ---------------------------------------------------------------------------

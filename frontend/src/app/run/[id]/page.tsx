@@ -14,6 +14,7 @@ import {
   recalculateTermSheetImpact,
   submitDocumentFeedback,
   recalculateModel,
+  rewindToStage,
   getDownloadUrl,
   type RunStatus,
   type PipelineStatus,
@@ -250,6 +251,29 @@ export default function RunPage() {
     setLoading(false);
   }, [runId, restartPolling]);
 
+  // --- Rewind handlers (go back and re-edit earlier stages) ---
+
+  const handleRewindToAssumptions = useCallback(async () => {
+    setLoading(true);
+    try {
+      await rewindToStage(runId, "review_assumptions");
+      // Clear local live model/assumptions so they refresh from server
+      setLiveModel(null);
+      setLiveAssumptions(null);
+      restartPolling(); // sets viewingStageKey to null + restarts polling
+    } catch (err) { setError(String(err)); }
+    setLoading(false);
+  }, [runId, restartPolling]);
+
+  const handleRewindToTermSheet = useCallback(async () => {
+    setLoading(true);
+    try {
+      await rewindToStage(runId, "review_term_sheet_assumptions");
+      restartPolling();
+    } catch (err) { setError(String(err)); }
+    setLoading(false);
+  }, [runId, restartPolling]);
+
   // --- Render ---
 
   if (!data) {
@@ -435,11 +459,19 @@ export default function RunPage() {
         )}
 
         {/* ============================================================ */}
-        {/* VIEWING PREVIOUS: Assumptions (read-only summary) */}
+        {/* VIEWING PREVIOUS: Assumptions (with rewind option) */}
         {/* ============================================================ */}
         {isViewingPrevious && viewingStageKey === "assumptions" && data.financial_assumptions?.assumptions && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white">⚙️ Financial Assumptions (Locked)</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-white">⚙️ Financial Assumptions</h2>
+              <RewindButton
+                label="Edit & Re-run from Assumptions"
+                warning="This will clear the financial model, deal terms, and generated documents. The pipeline will re-run from this point."
+                onClick={handleRewindToAssumptions}
+                loading={loading}
+              />
+            </div>
             <div className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 overflow-auto max-h-[70vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {data.financial_assumptions.assumptions.map((a) => (
@@ -458,28 +490,51 @@ export default function RunPage() {
                 ))}
               </div>
             </div>
-            <ReadOnlyBanner stage="Financial Assumptions" />
           </div>
         )}
 
         {/* ============================================================ */}
-        {/* VIEWING PREVIOUS: Financial Model (read-only) */}
+        {/* VIEWING PREVIOUS: Financial Model (with rewind option) */}
         {/* ============================================================ */}
         {isViewingPrevious && viewingStageKey === "model" && data.financial_model && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white">📊 Financial Model (Locked)</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-white">📊 Financial Model</h2>
+              <RewindButton
+                label="Edit Assumptions & Rebuild"
+                warning="This will clear the financial model, deal terms, and generated documents. You'll return to the assumption editor."
+                onClick={handleRewindToAssumptions}
+                loading={loading}
+              />
+            </div>
             <FinancialSummaryCards model={data.financial_model} />
             <PnLTable model={data.financial_model} />
-            <ReadOnlyBanner stage="Financial Model" />
           </div>
         )}
 
         {/* ============================================================ */}
-        {/* VIEWING PREVIOUS: Term Sheet Deal Terms (read-only) */}
+        {/* VIEWING PREVIOUS: Term Sheet Deal Terms (with rewind options) */}
         {/* ============================================================ */}
         {isViewingPrevious && viewingStageKey === "term_sheet" && data.term_sheet_assumptions?.assumptions && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white">📋 Deal Term Assumptions (Locked)</h2>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h2 className="text-2xl font-bold text-white">📋 Deal Term Assumptions</h2>
+              <div className="flex gap-2">
+                <RewindButton
+                  label="Edit Deal Terms & Re-generate"
+                  warning="This will clear the generated documents. The pipeline will re-run from deal terms."
+                  onClick={handleRewindToTermSheet}
+                  loading={loading}
+                />
+                <RewindButton
+                  label="Back to Assumptions"
+                  warning="This will clear the financial model, deal terms, and all documents. You'll return to the assumption editor."
+                  onClick={handleRewindToAssumptions}
+                  loading={loading}
+                  variant="secondary"
+                />
+              </div>
+            </div>
             <div className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 overflow-auto max-h-[70vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {data.term_sheet_assumptions.assumptions.map((a) => (
@@ -499,7 +554,6 @@ export default function RunPage() {
                 ))}
               </div>
             </div>
-            <ReadOnlyBanner stage="Deal Term Assumptions" />
           </div>
         )}
 
@@ -518,7 +572,13 @@ export default function RunPage() {
         {/* VIEWING PREVIOUS: Complete (read-only) */}
         {/* ============================================================ */}
         {isViewingPrevious && viewingStageKey === "complete" && (
-          <CompletedView runId={runId} data={data} />
+          <CompletedView
+            runId={runId}
+            data={data}
+            onRewindToAssumptions={handleRewindToAssumptions}
+            onRewindToTermSheet={handleRewindToTermSheet}
+            loading={loading}
+          />
         )}
 
         {/* ============================================================ */}
@@ -684,6 +744,26 @@ export default function RunPage() {
                   onRequestChanges={handleDocumentsRevise}
                   loading={loading}
                 />
+                {/* Quick rewind options */}
+                <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-gray-400 mb-3">Or go back to an earlier stage to make changes:</p>
+                  <div className="flex flex-wrap gap-2">
+                    <RewindButton
+                      label="Edit Financial Assumptions"
+                      warning="This will clear the financial model, deal terms, and all documents. You'll return to the assumption editor."
+                      onClick={handleRewindToAssumptions}
+                      loading={loading}
+                      variant="secondary"
+                    />
+                    <RewindButton
+                      label="Edit Deal Terms"
+                      warning="This will clear the generated documents. The pipeline will re-run from deal terms."
+                      onClick={handleRewindToTermSheet}
+                      loading={loading}
+                      variant="secondary"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -691,7 +771,13 @@ export default function RunPage() {
             {/* COMPLETED */}
             {/* ============================================================ */}
             {data.status === "completed" && (
-              <CompletedView runId={runId} data={data} />
+              <CompletedView
+                runId={runId}
+                data={data}
+                onRewindToAssumptions={handleRewindToAssumptions}
+                onRewindToTermSheet={handleRewindToTermSheet}
+                loading={loading}
+              />
             )}
           </>
         )}
@@ -713,6 +799,64 @@ function ReadOnlyBanner({ stage }: { stage: string }) {
       </svg>
       This is a read-only view of the approved <strong className="text-white">{stage}</strong> step. Click the stepper above to navigate between steps.
     </div>
+  );
+}
+
+/** Rewind button with confirmation — lets user go back and re-edit */
+function RewindButton({
+  label,
+  warning,
+  onClick,
+  loading,
+  variant = "primary",
+}: {
+  label: string;
+  warning: string;
+  onClick: () => void;
+  loading: boolean;
+  variant?: "primary" | "secondary";
+}) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
+        <svg className="h-4 w-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+        <span className="text-xs text-amber-200 max-w-xs">{warning}</span>
+        <button
+          onClick={() => { setConfirming(false); onClick(); }}
+          disabled={loading}
+          className="rounded-md bg-amber-600 hover:bg-amber-700 px-3 py-1 text-xs font-medium text-white whitespace-nowrap transition-colors disabled:opacity-50"
+        >
+          {loading ? "Rewinding..." : "Confirm"}
+        </button>
+        <button
+          onClick={() => setConfirming(false)}
+          className="text-xs text-gray-400 hover:text-white transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setConfirming(true)}
+      disabled={loading}
+      className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap disabled:opacity-50
+        ${variant === "primary"
+          ? "bg-amber-600/20 text-amber-400 hover:bg-amber-600/30 border border-amber-500/30"
+          : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/10"
+        }`}
+    >
+      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+      </svg>
+      {label}
+    </button>
   );
 }
 
@@ -817,7 +961,19 @@ function DocumentDownloadGrid({ runId, data }: { runId: string; data: RunStatus 
 }
 
 /** Completed view with all downloads */
-function CompletedView({ runId, data }: { runId: string; data: RunStatus }) {
+function CompletedView({
+  runId,
+  data,
+  onRewindToAssumptions,
+  onRewindToTermSheet,
+  loading,
+}: {
+  runId: string;
+  data: RunStatus;
+  onRewindToAssumptions?: () => void;
+  onRewindToTermSheet?: () => void;
+  loading?: boolean;
+}) {
   const [expandedReport, setExpandedReport] = useState<string | null>(null);
 
   return (
@@ -830,6 +986,40 @@ function CompletedView({ runId, data }: { runId: string; data: RunStatus }) {
           and approved. Download your documents below.
         </p>
       </div>
+
+      {/* Rewind options */}
+      {(onRewindToAssumptions || onRewindToTermSheet) && (
+        <div className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <svg className="h-5 w-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+            <h3 className="text-sm font-semibold text-white">Want to make changes?</h3>
+          </div>
+          <p className="text-xs text-gray-400">
+            Go back to an earlier stage to adjust assumptions or deal terms. The pipeline will regenerate
+            all downstream outputs from that point.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {onRewindToAssumptions && (
+              <RewindButton
+                label="Edit Financial Assumptions"
+                warning="This will clear the financial model, deal terms, and all documents. You'll return to the assumption editor."
+                onClick={onRewindToAssumptions}
+                loading={loading || false}
+              />
+            )}
+            {onRewindToTermSheet && (
+              <RewindButton
+                label="Edit Deal Terms"
+                warning="This will clear the generated documents. The pipeline will re-run from deal terms."
+                onClick={onRewindToTermSheet}
+                loading={loading || false}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* All Research Reports with expand/collapse */}
       <div className="space-y-4">
