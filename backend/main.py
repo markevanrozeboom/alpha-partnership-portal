@@ -13,7 +13,8 @@ from fastapi.responses import FileResponse
 
 from models.schemas import (
     CreateRunRequest, RunStatusResponse, RecalculateRequest,
-    ReportFeedback, AssumptionsFeedback, ModelFeedback, DocumentFeedback,
+    ReportFeedback, AssumptionsFeedback, ModelFeedback,
+    TermSheetAssumptionsFeedback, DocumentFeedback,
     CountryProfile, EducationAnalysis, Strategy,
     FinancialAssumptions, FinancialModel, PipelineStatus,
 )
@@ -114,6 +115,14 @@ async def get_run(run_id: str):
     if fm_data and isinstance(fm_data, dict):
         try:
             resp.financial_model = FinancialModel(**fm_data)
+        except Exception:
+            pass
+
+    # Term sheet assumptions
+    tsa_data = state.get("term_sheet_assumptions")
+    if tsa_data and isinstance(tsa_data, dict):
+        try:
+            resp.term_sheet_assumptions = FinancialAssumptions(**tsa_data)
         except Exception:
             pass
 
@@ -220,16 +229,47 @@ async def submit_model_feedback(run_id: str, feedback: ModelFeedback):
             next_status = submit_feedback(
                 run_id, "model_feedback", feedback.model_dump(),
                 approved=True,
-                next_working_status=PipelineStatus.GENERATING_DOCUMENTS.value,
+                next_working_status=PipelineStatus.PRESENTING_TERM_SHEET_ASSUMPTIONS.value,
                 revision_working_status=PipelineStatus.BUILDING_MODEL.value,
             )
         else:
             next_status = submit_feedback(
                 run_id, "model_feedback", feedback.model_dump(),
                 approved=False,
-                next_working_status=PipelineStatus.GENERATING_DOCUMENTS.value,
+                next_working_status=PipelineStatus.PRESENTING_TERM_SHEET_ASSUMPTIONS.value,
                 revision_working_status=PipelineStatus.BUILDING_MODEL.value,
             )
+        asyncio.create_task(execute_step(run_id))
+        return {"status": "ok", "next_status": next_status}
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/api/runs/{run_id}/feedback/term-sheet-assumptions")
+async def submit_term_sheet_assumptions_feedback(
+    run_id: str, feedback: TermSheetAssumptionsFeedback
+):
+    """Submit term sheet assumptions review — accept or adjust deal terms."""
+    try:
+        state = get_run_state(run_id)
+
+        # If user made adjustments, apply them to the term sheet assumptions
+        if feedback.adjustments:
+            tsa_data = state.get("term_sheet_assumptions", {})
+            if tsa_data and isinstance(tsa_data, dict):
+                assumptions_dict = tsa_data.get("assumptions", {})
+                for key, val in feedback.adjustments.items():
+                    if key in assumptions_dict:
+                        assumptions_dict[key] = val
+                tsa_data["assumptions"] = assumptions_dict
+                state["term_sheet_assumptions"] = tsa_data
+
+        next_status = submit_feedback(
+            run_id, "term_sheet_assumptions_feedback", feedback.model_dump(),
+            approved=feedback.approved,
+            next_working_status=PipelineStatus.GENERATING_DOCUMENTS.value,
+            revision_working_status=PipelineStatus.PRESENTING_TERM_SHEET_ASSUMPTIONS.value,
+        )
         asyncio.create_task(execute_step(run_id))
         return {"status": "ok", "next_status": next_status}
     except ValueError as e:
@@ -284,6 +324,55 @@ async def recalculate_financial_model(run_id: str, req: RecalculateRequest):
             "financial_model": updated_model.model_dump(),
             "financial_assumptions": updated_assumptions.model_dump(),
         }
+    except Exception as exc:
+        raise HTTPException(500, str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Recalculate Term Sheet Impact on Financial Model
+# ---------------------------------------------------------------------------
+
+@app.post("/api/runs/{run_id}/recalculate-term-sheet")
+async def recalculate_term_sheet_impact(run_id: str, req: RecalculateRequest):
+    """Check if term sheet assumption changes impact the financial model
+    and recalculate if needed."""
+    state = get_run_state(run_id)
+
+    fa_data = state.get("financial_assumptions")
+    st_data = state.get("strategy")
+    fm_data = state.get("financial_model")
+
+    if not fa_data or not st_data or not fm_data:
+        raise HTTPException(400, "Financial model data not yet available")
+
+    try:
+        from agents.term_sheet import get_financial_model_adjustments
+
+        fin_adjustments = get_financial_model_adjustments(req.adjustments)
+
+        result: dict[str, Any] = {
+            "has_financial_impact": bool(fin_adjustments),
+            "impacted_fields": list(fin_adjustments.keys()),
+        }
+
+        if fin_adjustments:
+            assumptions = FinancialAssumptions(**fa_data)
+            strategy = Strategy(**st_data)
+
+            from agents.financial import recalculate_model
+            updated_assumptions, updated_model = recalculate_model(
+                assumptions, fin_adjustments,
+                state.get("target_input", ""), strategy,
+            )
+
+            # Save updated model back to state
+            state["financial_model"] = updated_model.model_dump()
+            state["financial_assumptions"] = updated_assumptions.model_dump()
+
+            result["financial_model"] = updated_model.model_dump()
+            result["financial_assumptions"] = updated_assumptions.model_dump()
+
+        return result
     except Exception as exc:
         raise HTTPException(500, str(exc))
 

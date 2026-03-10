@@ -83,6 +83,8 @@ export type PipelineStatus =
   | "review_assumptions"
   | "building_model"
   | "review_model"
+  | "presenting_term_sheet_assumptions"
+  | "review_term_sheet_assumptions"
   | "generating_documents"
   | "review_documents"
   | "completed"
@@ -107,6 +109,7 @@ export interface RunStatus {
   strategy: Record<string, unknown> | null;
   financial_assumptions: { assumptions: FinancialAssumption[] } | null;
   financial_model: FinancialModel | null;
+  term_sheet_assumptions: { assumptions: FinancialAssumption[] } | null;
 
   // File paths
   pptx_path: string | null;
@@ -212,6 +215,39 @@ export async function submitModelFeedback(
     body: JSON.stringify({ locked, adjustments, notes }),
   });
   if (!res.ok) throw new Error("Failed to submit model feedback");
+  return res.json();
+}
+
+export async function submitTermSheetAssumptionsFeedback(
+  runId: string,
+  approved: boolean,
+  adjustments: Record<string, number>,
+  notes?: string
+) {
+  const res = await fetch(`${API_URL}/api/runs/${runId}/feedback/term-sheet-assumptions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ approved, adjustments, notes }),
+  });
+  if (!res.ok) throw new Error("Failed to submit term sheet assumptions");
+  return res.json();
+}
+
+export async function recalculateTermSheetImpact(
+  runId: string,
+  adjustments: Record<string, number>
+): Promise<{
+  has_financial_impact: boolean;
+  impacted_fields: string[];
+  financial_model?: FinancialModel;
+  financial_assumptions?: { assumptions: FinancialAssumption[] };
+}> {
+  const res = await fetch(`${API_URL}/api/runs/${runId}/recalculate-term-sheet`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ adjustments }),
+  });
+  if (!res.ok) throw new Error("Failed to check term sheet impact");
   return res.json();
 }
 

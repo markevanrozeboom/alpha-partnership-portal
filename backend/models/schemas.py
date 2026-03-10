@@ -52,6 +52,8 @@ class PipelineStatus(str, Enum):
     REVIEW_ASSUMPTIONS = "review_assumptions"
     BUILDING_MODEL = "building_model"
     REVIEW_MODEL = "review_model"
+    PRESENTING_TERM_SHEET_ASSUMPTIONS = "presenting_term_sheet_assumptions"
+    REVIEW_TERM_SHEET_ASSUMPTIONS = "review_term_sheet_assumptions"
     GENERATING_DOCUMENTS = "generating_documents"
     REVIEW_DOCUMENTS = "review_documents"
     COMPLETED = "completed"
@@ -364,6 +366,13 @@ class ModelFeedback(BaseModel):
     notes: Optional[str] = None
 
 
+class TermSheetAssumptionsFeedback(BaseModel):
+    """User-adjusted term sheet assumptions from the interactive editor."""
+    approved: bool = False
+    adjustments: dict[str, float] = Field(default_factory=dict)
+    notes: Optional[str] = None
+
+
 class DocumentFeedback(BaseModel):
     """Final review of generated documents."""
     approved: bool = False
@@ -393,12 +402,16 @@ class PipelineState(BaseModel):
     education_report: str = ""
     strategy_report: str = ""
 
+    # Term sheet assumptions
+    term_sheet_assumptions: FinancialAssumptions = Field(default_factory=FinancialAssumptions)
+
     # HITL decisions
     country_report_feedback: Optional[ReportFeedback] = None
     education_report_feedback: Optional[ReportFeedback] = None
     strategy_feedback: Optional[ReportFeedback] = None
     assumptions_feedback: Optional[AssumptionsFeedback] = None
     model_feedback: Optional[ModelFeedback] = None
+    term_sheet_assumptions_feedback: Optional[TermSheetAssumptionsFeedback] = None
     document_feedback: Optional[DocumentFeedback] = None
 
     # Output file paths
@@ -437,6 +450,9 @@ class RunStatusResponse(BaseModel):
     strategy: Optional[Strategy] = None
     financial_assumptions: Optional[FinancialAssumptions] = None
     financial_model: Optional[FinancialModel] = None
+
+    # Term sheet assumptions
+    term_sheet_assumptions: Optional[FinancialAssumptions] = None
 
     # Narrative reports (markdown)
     country_report: Optional[str] = None

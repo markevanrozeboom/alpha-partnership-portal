@@ -10,6 +10,8 @@ import {
   submitStrategyFeedback,
   submitAssumptionsFeedback,
   submitModelFeedback,
+  submitTermSheetAssumptionsFeedback,
+  recalculateTermSheetImpact,
   submitDocumentFeedback,
   recalculateModel,
   getDownloadUrl,
@@ -40,6 +42,7 @@ const STAGES: Stage[] = [
   { key: "strategy", label: "Strategy", statuses: ["strategizing", "review_strategy"], icon: "🎯" },
   { key: "assumptions", label: "Assumptions", statuses: ["presenting_assumptions", "review_assumptions"], icon: "⚙️" },
   { key: "model", label: "Financial Model", statuses: ["building_model", "review_model"], icon: "📊" },
+  { key: "term_sheet", label: "Deal Terms", statuses: ["presenting_term_sheet_assumptions", "review_term_sheet_assumptions"], icon: "📋" },
   { key: "documents", label: "Documents", statuses: ["generating_documents", "review_documents"], icon: "📄" },
   { key: "complete", label: "Complete", statuses: ["completed"], icon: "✅" },
 ];
@@ -54,7 +57,8 @@ function getActiveStageIndex(status: PipelineStatus): number {
 function isWorkingStatus(status: PipelineStatus): boolean {
   return [
     "researching_country", "researching_education", "strategizing",
-    "presenting_assumptions", "building_model", "generating_documents",
+    "presenting_assumptions", "building_model",
+    "presenting_term_sheet_assumptions", "generating_documents",
   ].includes(status);
 }
 
@@ -80,6 +84,9 @@ export default function RunPage() {
   // For interactive model recalculation
   const [liveModel, setLiveModel] = useState<FinancialModel | null>(null);
   const [liveAssumptions, setLiveAssumptions] = useState<FinancialAssumption[] | null>(null);
+
+  // For term sheet deal terms recalculation
+  const [termSheetImpactWarning, setTermSheetImpactWarning] = useState<string[] | null>(null);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -200,6 +207,31 @@ export default function RunPage() {
     setLoading(false);
   }, [runId, restartPolling]);
 
+  const handleTermSheetAssumptionsConfirm = useCallback(async (adjustments: Record<string, number>) => {
+    setLoading(true);
+    try {
+      // First check if changes impact the financial model
+      if (Object.keys(adjustments).length > 0) {
+        const impact = await recalculateTermSheetImpact(runId, adjustments);
+        if (impact.has_financial_impact) {
+          setTermSheetImpactWarning(impact.impacted_fields);
+          // Update live model if it was recalculated
+          if (impact.financial_model) {
+            setLiveModel(impact.financial_model);
+          }
+          if (impact.financial_assumptions?.assumptions) {
+            setLiveAssumptions(impact.financial_assumptions.assumptions);
+          }
+        }
+      }
+      // Submit the term sheet assumptions feedback
+      await submitTermSheetAssumptionsFeedback(runId, true, adjustments);
+      setTermSheetImpactWarning(null);
+      restartPolling();
+    } catch (err) { setError(String(err)); }
+    setLoading(false);
+  }, [runId, restartPolling]);
+
   const handleDocumentsApprove = useCallback(async () => {
     setLoading(true);
     try {
@@ -253,6 +285,7 @@ export default function RunPage() {
       case "strategy": return !!data!.strategy_report;
       case "assumptions": return !!data!.financial_assumptions?.assumptions?.length;
       case "model": return !!data!.financial_model;
+      case "term_sheet": return !!data!.term_sheet_assumptions?.assumptions?.length;
       case "documents": return !!(data!.pptx_path || data!.docx_path || data!.xlsx_path || data!.term_sheet_docx_path);
       case "complete": return data!.status === "completed";
       default: return false;
@@ -442,6 +475,35 @@ export default function RunPage() {
         )}
 
         {/* ============================================================ */}
+        {/* VIEWING PREVIOUS: Term Sheet Deal Terms (read-only) */}
+        {/* ============================================================ */}
+        {isViewingPrevious && viewingStageKey === "term_sheet" && data.term_sheet_assumptions?.assumptions && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">📋 Deal Term Assumptions (Locked)</h2>
+            <div className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 overflow-auto max-h-[70vh]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {data.term_sheet_assumptions.assumptions.map((a) => (
+                  <div key={a.key} className="flex items-center justify-between rounded-lg bg-white/5 px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-white">{a.label}</div>
+                      <div className="text-xs text-gray-500">{a.category}</div>
+                    </div>
+                    <div className="text-sm font-semibold text-[#00d4aa]">
+                      {a.unit === "$" ? `$${a.value.toLocaleString()}` :
+                       a.unit === "$M" ? `$${a.value}M` :
+                       a.unit === "%" ? `${a.value}%` :
+                       a.unit === "x" ? `${a.value}x` :
+                       `${a.value.toLocaleString()} ${a.unit}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <ReadOnlyBanner stage="Deal Term Assumptions" />
+          </div>
+        )}
+
+        {/* ============================================================ */}
         {/* VIEWING PREVIOUS: Documents (read-only downloads) */}
         {/* ============================================================ */}
         {isViewingPrevious && viewingStageKey === "documents" && (
@@ -480,6 +542,7 @@ export default function RunPage() {
                     {data.status === "strategizing" && "Developing comprehensive market-entry strategy... This may take 2-4 minutes."}
                     {data.status === "presenting_assumptions" && "Generating financial model assumptions..."}
                     {data.status === "building_model" && "Building the financial model..."}
+                    {data.status === "presenting_term_sheet_assumptions" && "Preparing deal term assumptions for your review..."}
                     {data.status === "generating_documents" && "Generating pitch deck, term sheet, investment memo, and financial model... This may take 3-5 minutes."}
                   </p>
                 </div>
@@ -581,7 +644,34 @@ export default function RunPage() {
             )}
 
             {/* ============================================================ */}
-            {/* GATE 6: Document Review */}
+            {/* GATE 6: Term Sheet Deal Assumptions Review */}
+            {/* ============================================================ */}
+            {data.status === "review_term_sheet_assumptions" && data.term_sheet_assumptions?.assumptions && (
+              <div className="space-y-6">
+                {termSheetImpactWarning && (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                    <div className="flex items-center gap-2 text-amber-400 font-medium mb-2">
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      Financial Model Impact Detected
+                    </div>
+                    <p className="text-sm text-gray-300">
+                      Your deal term changes affect the financial model. The following fields were recalculated:
+                      <span className="font-mono text-amber-300 ml-1">{termSheetImpactWarning.join(", ")}</span>
+                    </p>
+                  </div>
+                )}
+                <TermSheetAssumptionEditor
+                  assumptions={data.term_sheet_assumptions.assumptions}
+                  onConfirm={handleTermSheetAssumptionsConfirm}
+                  loading={loading}
+                />
+              </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* GATE 7: Document Review */}
             {/* ============================================================ */}
             {data.status === "review_documents" && (
               <div className="space-y-6">
@@ -876,6 +966,8 @@ function StatusBadge({ status }: { status: PipelineStatus }) {
     review_assumptions: { bg: "bg-amber-500/20", text: "text-amber-400", label: "Validate Assumptions" },
     building_model: { bg: "bg-blue-500/20", text: "text-blue-400", label: "Building Model..." },
     review_model: { bg: "bg-amber-500/20", text: "text-amber-400", label: "Review Model" },
+    presenting_term_sheet_assumptions: { bg: "bg-blue-500/20", text: "text-blue-400", label: "Loading Deal Terms..." },
+    review_term_sheet_assumptions: { bg: "bg-amber-500/20", text: "text-amber-400", label: "Review Deal Terms" },
     generating_documents: { bg: "bg-blue-500/20", text: "text-blue-400", label: "Generating..." },
     review_documents: { bg: "bg-amber-500/20", text: "text-amber-400", label: "Review Documents" },
     completed: { bg: "bg-emerald-500/20", text: "text-emerald-400", label: "Complete" },
@@ -884,7 +976,8 @@ function StatusBadge({ status }: { status: PipelineStatus }) {
 
   const c = config[status] || config.pending;
   const isWorking = ["researching_country", "researching_education", "strategizing",
-    "presenting_assumptions", "building_model", "generating_documents"].includes(status);
+    "presenting_assumptions", "building_model",
+    "presenting_term_sheet_assumptions", "generating_documents"].includes(status);
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${c.bg} ${c.text}`}>
@@ -912,6 +1005,171 @@ function AgentLog({ logs }: { logs: string[] }) {
         ))}
       </div>
     </details>
+  );
+}
+
+/** Term Sheet Assumption Editor — similar to financial assumptions but for deal terms */
+function TermSheetAssumptionEditor({
+  assumptions,
+  onConfirm,
+  loading,
+}: {
+  assumptions: FinancialAssumption[];
+  onConfirm: (adjustments: Record<string, number>) => void;
+  loading: boolean;
+}) {
+  const [values, setValues] = useState<Record<string, number>>(() => {
+    const v: Record<string, number> = {};
+    assumptions.forEach((a) => { v[a.key] = a.value; });
+    return v;
+  });
+
+  const handleChange = useCallback((key: string, val: number) => {
+    setValues((prev) => ({ ...prev, [key]: val }));
+  }, []);
+
+  const adjustments = (() => {
+    const adj: Record<string, number> = {};
+    assumptions.forEach((a) => {
+      if (values[a.key] !== a.value) adj[a.key] = values[a.key];
+    });
+    return adj;
+  })();
+
+  const grouped = (() => {
+    const g: Record<string, FinancialAssumption[]> = {};
+    assumptions.forEach((a) => {
+      if (!g[a.category]) g[a.category] = [];
+      g[a.category].push(a);
+    });
+    return g;
+  })();
+
+  const DEAL_CATEGORY_LABELS: Record<string, string> = {
+    deal_structure: "🤝 Deal Structure",
+    ip_fees: "💎 IP & Licensing Fees",
+    revenue_share: "💰 Revenue Sharing",
+    commitments: "📋 Country Commitments",
+    timeline: "📅 Timeline & Milestones",
+    pricing: "💰 Pricing",
+    scale: "📈 Scale & Growth",
+    costs: "🏗️ Cost Structure",
+    fees: "🤝 Alpha Fee Structure",
+    returns: "📊 Returns & Valuation",
+  };
+
+  const categoryOrder = Object.keys(grouped);
+  const hasChanges = Object.keys(adjustments).length > 0;
+
+  function formatValue(value: number, unit: string): string {
+    if (unit === "$M") return `$${value.toLocaleString()}M`;
+    if (unit === "$") return `$${value.toLocaleString()}`;
+    if (unit === "%") return `${value}%`;
+    if (unit === "x") return `${value}x`;
+    if (unit === "students") return value.toLocaleString();
+    if (unit === "years") return `${value} yrs`;
+    return value.toLocaleString();
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">📋 Deal Term Assumptions</h2>
+          <p className="text-sm text-gray-400 mt-1">
+            Review and adjust the key deal terms for the Heads of Terms / Term Sheet.
+            Changes to financial terms will automatically recalculate the financial model.
+          </p>
+        </div>
+        {hasChanges && (
+          <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-medium text-amber-400">
+            {Object.keys(adjustments).length} changed
+          </span>
+        )}
+      </div>
+
+      {categoryOrder.map((cat) => {
+        const items = grouped[cat];
+        if (!items || items.length === 0) return null;
+        return (
+          <div key={cat} className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-5 space-y-4">
+            <h3 className="text-lg font-semibold text-white">
+              {DEAL_CATEGORY_LABELS[cat] || cat}
+            </h3>
+            <div className="space-y-5">
+              {items.map((a) => {
+                const isChanged = values[a.key] !== a.value;
+                return (
+                  <div key={a.key} className={`rounded-lg p-3 transition-colors ${isChanged ? "bg-amber-500/5 ring-1 ring-amber-500/20" : ""}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-200">{a.label}</span>
+                        {a.locked && (
+                          <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-bold text-red-400 uppercase tracking-wider">
+                            locked
+                          </span>
+                        )}
+                        {isChanged && (
+                          <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-400">
+                            modified
+                          </span>
+                        )}
+                      </div>
+                      <span className={`text-lg font-bold tabular-nums ${isChanged ? "text-amber-400" : "text-white"}`}>
+                        {formatValue(values[a.key], a.unit)}
+                      </span>
+                    </div>
+                    {a.description && (
+                      <p className="text-xs text-gray-500 mb-2">{a.description}</p>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 w-16 text-right tabular-nums">
+                        {formatValue(a.min_val, a.unit)}
+                      </span>
+                      <input
+                        type="range"
+                        value={values[a.key]}
+                        onChange={(e) => !a.locked && handleChange(a.key, Number(e.target.value))}
+                        min={a.min_val}
+                        max={a.max_val}
+                        step={a.step}
+                        disabled={a.locked}
+                        className={`flex-1 accent-[#006D77] ${a.locked ? "opacity-50" : ""}`}
+                      />
+                      <span className="text-xs text-gray-500 w-16 tabular-nums">
+                        {formatValue(a.max_val, a.unit)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => onConfirm(adjustments)}
+          disabled={loading}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {loading ? "Processing Deal Terms..." : "Confirm Deal Terms & Generate Documents"}
+        </button>
+        {hasChanges && (
+          <button
+            onClick={() => {
+              const reset: Record<string, number> = {};
+              assumptions.forEach((a) => { reset[a.key] = a.value; });
+              setValues(reset);
+            }}
+            className="border border-white/20 text-gray-400 hover:text-white px-4 py-2.5 rounded-lg transition-colors"
+          >
+            Reset to Defaults
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

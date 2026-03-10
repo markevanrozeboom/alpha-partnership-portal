@@ -5,13 +5,14 @@ dict-based state store and direct agent calls.  Much more reliable than
 the checkpoint-based approach for deployed environments.
 
 Flow:
-  1. country_research  → review_country_report  (HITL)
-  2. education_research → review_education_report (HITL)
-  3. strategy           → review_strategy         (HITL)
-  4. assumptions        → review_assumptions       (HITL)
-  5. financial_model    → review_model             (HITL)
-  6. documents          → review_documents         (HITL)
-  7. finalize           → completed
+  1. country_research          → review_country_report          (HITL)
+  2. education_research        → review_education_report        (HITL)
+  3. strategy                  → review_strategy                (HITL)
+  4. assumptions               → review_assumptions             (HITL)
+  5. financial_model           → review_model                   (HITL)
+  6. term_sheet_assumptions    → review_term_sheet_assumptions  (HITL)
+  7. documents                 → review_documents               (HITL)
+  8. finalize                  → completed
 """
 
 from __future__ import annotations
@@ -30,9 +31,12 @@ from models.schemas import (
 from agents.country_research import run_country_research
 from agents.education_research import run_education_research
 from agents.strategy import run_strategy
-from agents.financial import generate_assumptions, build_model, export_model_xlsx
+from agents.financial import generate_assumptions, build_model, recalculate_model, export_model_xlsx
 from agents.document_generation import generate_documents
-from agents.term_sheet import generate_term_sheet
+from agents.term_sheet import (
+    generate_term_sheet, generate_term_sheet_assumptions,
+    get_financial_model_adjustments,
+)
 from agents.state_deck import generate_state_deck
 
 logger = logging.getLogger(__name__)
@@ -62,6 +66,8 @@ def _make_initial_state(run_id: str, target: str) -> dict[str, Any]:
         "strategy_feedback": None,
         "assumptions_feedback": None,
         "model_feedback": None,
+        "term_sheet_assumptions": {},
+        "term_sheet_assumptions_feedback": None,
         "document_feedback": None,
         "pptx_path": None,
         "docx_path": None,
@@ -222,6 +228,49 @@ async def _run_financial_model(state: dict) -> None:
     ))
 
 
+async def _run_term_sheet_assumptions(state: dict) -> None:
+    """Generate term sheet assumptions for HITL review.
+
+    If user has provided adjustments that overlap with the financial model,
+    recalculate the financial model first, then generate/update assumptions.
+    """
+    target = state["target_input"]
+    _log(state, "Generating term sheet deal assumptions...")
+    state["status"] = PipelineStatus.PRESENTING_TERM_SHEET_ASSUMPTIONS.value
+
+    country_profile = CountryProfile(**state["country_profile"])
+    strategy_obj = Strategy(**state["strategy"])
+    model = FinancialModel(**state["financial_model"])
+    fin_assumptions = FinancialAssumptions(**state["financial_assumptions"])
+
+    # Check if user adjusted term sheet assumptions that impact the financial model
+    ts_fb = state.get("term_sheet_assumptions_feedback")
+    if ts_fb and ts_fb.get("adjustments"):
+        fm_adjustments = get_financial_model_adjustments(ts_fb["adjustments"])
+        if fm_adjustments:
+            _log(state, f"Term sheet changes impact financial model — recalculating ({list(fm_adjustments.keys())})...")
+            fin_assumptions, model = recalculate_model(
+                fin_assumptions, fm_adjustments, target, strategy_obj
+            )
+            state["financial_model"] = model.model_dump()
+            state["financial_assumptions"] = fin_assumptions.model_dump()
+            _log(state, "Financial model recalculated with updated deal terms.")
+
+    ts_assumptions = generate_term_sheet_assumptions(
+        target, country_profile, strategy_obj, model, fin_assumptions,
+    )
+
+    # Apply any prior user adjustments to the generated assumptions
+    if ts_fb and ts_fb.get("adjustments"):
+        for item in ts_assumptions.assumptions:
+            if item.key in ts_fb["adjustments"] and not item.locked:
+                item.value = ts_fb["adjustments"][item.key]
+
+    state["term_sheet_assumptions"] = ts_assumptions.model_dump()
+    state["status"] = PipelineStatus.REVIEW_TERM_SHEET_ASSUMPTIONS.value
+    _log(state, f"{len(ts_assumptions.assumptions)} term sheet assumptions generated for review.")
+
+
 async def _run_documents(state: dict) -> None:
     """Generate documents (deck, term sheet, proposal, spreadsheet).
 
@@ -262,9 +311,12 @@ async def _run_documents(state: dict) -> None:
 
     # --- Generate term sheet ---
     _log(state, "Generating term sheet...")
+    ts_data = state.get("term_sheet_assumptions")
+    ts_assumptions = FinancialAssumptions(**ts_data) if ts_data and isinstance(ts_data, dict) and ts_data.get("assumptions") else None
     _, term_sheet_path = await generate_term_sheet(
         target, country_profile, education_analysis,
         strategy_obj, model, assumptions,
+        term_sheet_assumptions=ts_assumptions,
     )
     state["term_sheet_docx_path"] = term_sheet_path
 
@@ -326,6 +378,8 @@ async def execute_step(run_id: str) -> None:
             await _run_assumptions(state)
         elif status == PipelineStatus.BUILDING_MODEL.value:
             await _run_financial_model(state)
+        elif status == PipelineStatus.PRESENTING_TERM_SHEET_ASSUMPTIONS.value:
+            await _run_term_sheet_assumptions(state)
         elif status == PipelineStatus.GENERATING_DOCUMENTS.value:
             await _run_documents(state)
         else:
