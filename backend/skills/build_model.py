@@ -125,9 +125,10 @@ def compute_scaling(data: dict, tier: int) -> dict:
     demand_factor = overrides.get("demand_factor", demand_factors.get(tier, 0.5))
 
     ppp_factor = min(1.0, gdp_pc / 30000)
-    upfront_ask = max(25_000_000, school_age_pop * 2 * ppp_factor)
     student_target_5yr = max(5000, int(school_age_pop * 0.01 * demand_factor))
     per_student_budget = max(5000, min(30000, avg_tuition * 0.8))
+    # Upfront Ask: Students_Y5 × Per-Student Budget × 30% (mgmt + timeback) + $25M IP — SPECS 2D
+    upfront_ask = student_target_5yr * per_student_budget * 0.30 + 25_000_000
 
     return {
         "tier": tier,
@@ -410,6 +411,7 @@ def build_assumptions_sheet(template_id: str, scaling: dict, data: dict,
         f"B{AM['ppp_factor']}":       f"=MIN(1,B{AM['gdp_per_capita']}/30000)",
         f"B{AM['student_target']}":    f"=MAX(5000,B{AM['school_age_pop']}*0.01*B{AM['demand_factor']})",
         f"B{AM['per_student_budget']}": f"=MAX(5000,MIN(30000,B{AM['avg_tuition']}*0.8))",
+        f"B{AM['upfront_ip_fee']}":    f"=B{AM['student_target']}*B{AM['per_student_budget']}*0.30+25000000",
     }
 
     # --- IB Color Coding ---

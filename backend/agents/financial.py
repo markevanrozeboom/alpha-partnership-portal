@@ -38,10 +38,12 @@ def generate_assumptions(
     """Generate a set of configurable financial assumptions based on the strategy."""
 
     gdp_cap = country_profile.economy.gdp_per_capita or 30_000
-    ppp_factor = max(0.3, min(2.0, gdp_cap / 50_000))
+    # PPP Factor: min(1.0, GDP_per_capita / $30,000) — SPECS 2D
+    ppp_factor = min(1.0, gdp_cap / 30_000)
 
-    # Base per-student budget from UAE deal scaled by PPP
-    base_per_student = max(15_000, round(25_000 * ppp_factor / 500) * 500)
+    # Per-Student Budget: max($5K, min($30K, private_school_avg_tuition × 0.8)) — SPECS 2D
+    avg_private_tuition = country_profile.education.avg_private_tuition or round(25_000 * ppp_factor)
+    base_per_student = max(5_000, min(30_000, round(avg_private_tuition * 0.8 / 500) * 500))
 
     # --- Tier 2/3 cohort-based model ---
     tier = country_profile.target.tier if country_profile.target.tier else None
@@ -68,9 +70,12 @@ def generate_assumptions(
             premium_tuition = 25_000
             mid_tuition = 15_000
 
-    # Target students from strategy or default
-    target_students_y5 = strategy.target_student_count_year5 or round(200_000 * ppp_factor / 10_000) * 10_000
-    target_students_y5 = max(10_000, target_students_y5)
+    # Student Target (5yr): max(5,000, school_age_pop × 0.01 × demand_factor) — SPECS 2D
+    school_age_pop = country_profile.demographics.population_0_18 or country_profile.education.k12_enrolled or 500_000
+    # Demand factor: Tier 1 = 1.0, Tier 2 = 0.5, Tier 3 = 0.2
+    demand_factors = {1: 1.0, 2: 0.5, 3: 0.2}
+    demand_factor = demand_factors.get(tier or 1, 1.0)
+    target_students_y5 = strategy.target_student_count_year5 or max(5_000, int(school_age_pop * 0.01 * demand_factor))
 
     assumptions = [
         # --- Pricing ---
@@ -88,9 +93,9 @@ def generate_assumptions(
         ),
         FinancialAssumption(
             key="per_student_budget", label="Per-Student Delivery Budget",
-            value=base_per_student, min_val=10_000, max_val=40_000, step=500,
+            value=base_per_student, min_val=5_000, max_val=30_000, step=500,
             unit="$", category="pricing",
-            description="Total operating cost per student per year"
+            description="max($5K, min($30K, avg_private_tuition × 0.8))"
         ),
 
         # --- Scale ---
@@ -163,9 +168,11 @@ def generate_assumptions(
         ),
         FinancialAssumption(
             key="upfront_ip_fee", label="Upfront IP/Development Fee ($M)",
-            value=max(10, round(25 * ppp_factor)),
-            min_val=5, max_val=100, step=1,
+            # Upfront Ask: Students_Y5 × Per-Student Budget × 30% (mgmt + timeback) + $25M IP — SPECS 2D
+            value=max(25, round((target_students_y5 * base_per_student * 0.30 + 25_000_000) / 1_000_000)),
+            min_val=25, max_val=500, step=5,
             unit="$M", category="fees",
+            description="Students×Budget×30% fees + $25M IP license",
         ),
         FinancialAssumption(
             key="guide_school_fee", label="Guide School Training Fee (per teacher, $)",
@@ -208,10 +215,11 @@ def _generate_cohort_assumptions(
     the government (or private sector) realistically support?
     """
     cohort_size = 25_000
-    per_student = max(15_000, base_per_student)
+    per_student = max(5_000, base_per_student)
     # Default: 2 cohorts for Tier 2, 1 cohort for Tier 3
     tier = country_profile.target.tier
     default_cohorts = 2 if tier == 2 else 1
+    total_students = default_cohorts * cohort_size
 
     assumptions = [
         FinancialAssumption(
@@ -229,9 +237,9 @@ def _generate_cohort_assumptions(
         ),
         FinancialAssumption(
             key="per_student_budget", label="Per-Student Budget (PPP-adjusted)",
-            value=per_student, min_val=10_000, max_val=40_000, step=500,
+            value=per_student, min_val=5_000, max_val=30_000, step=500,
             unit="$", category="pricing",
-            description=f"PPP-adjusted from $25K (factor: {ppp_factor:.2f})",
+            description=f"max($5K, min($30K, tuition×0.8)) — PPP factor: {ppp_factor:.2f}",
         ),
         FinancialAssumption(
             key="cohort_ramp_years", label="Years to Full Cohort Deployment",
@@ -254,9 +262,11 @@ def _generate_cohort_assumptions(
         ),
         FinancialAssumption(
             key="upfront_ip_fee", label="Upfront IP Fee ($M)",
-            value=max(5, round(10 * ppp_factor)),
-            min_val=2, max_val=50, step=1,
+            # Upfront Ask: total_students × per_student × 30% + $25M IP — SPECS 2D
+            value=max(25, round((total_students * per_student * 0.30 + 25_000_000) / 1_000_000)),
+            min_val=25, max_val=500, step=5,
             unit="$M", category="fees",
+            description="Students×Budget×30% fees + $25M IP license",
         ),
         # Costs
         FinancialAssumption(
