@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from typing import Any
 
 import httpx
 
-from config import GAMMA_API_KEY
+from config import GAMMA_API_KEY, OUTPUT_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -220,3 +221,30 @@ async def generate_and_wait(
         raise ValueError(f"No generationId in Gamma response: {gen_result}")
 
     return await poll_generation(generation_id)
+
+
+async def download_export(export_url: str, target: str, label: str = "deck") -> str | None:
+    """Download a PPTX from a Gamma export URL and save it locally.
+
+    Returns the local file path, or None if download fails.
+    """
+    if not export_url:
+        return None
+    try:
+        safe_target = target.lower().replace(" ", "_")
+        out_dir = os.path.join(OUTPUT_DIR, safe_target)
+        os.makedirs(out_dir, exist_ok=True)
+        filename = f"{safe_target}_{label}.pptx"
+        local_path = os.path.join(out_dir, filename)
+
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+            resp = await client.get(export_url)
+            resp.raise_for_status()
+            with open(local_path, "wb") as f:
+                f.write(resp.content)
+
+        logger.info("Downloaded Gamma PPTX to %s (%d bytes)", local_path, len(resp.content))
+        return local_path
+    except Exception:
+        logger.exception("Failed to download Gamma export from %s", export_url)
+        return None

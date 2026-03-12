@@ -38,6 +38,7 @@ from agents.term_sheet import (
     get_financial_model_adjustments,
 )
 from agents.state_deck import generate_state_deck
+from services.gamma import download_export
 
 logger = logging.getLogger(__name__)
 
@@ -332,7 +333,12 @@ async def _run_documents(state: dict) -> None:
     # For US states, use the state deck Gamma URLs; for sovereign nations, use the investor deck ones
     state["gamma_url"] = gamma_url if is_us_state else gen_gamma_url
     state["gamma_export_url"] = gamma_export_url if is_us_state else gen_export_url
-    state["pptx_path"] = None  # No longer generating local PPTX files
+
+    # Download PPTX locally so the download link never expires
+    export_url = state["gamma_export_url"]
+    deck_label = "governor_pitch_deck" if is_us_state else "investor_deck"
+    pptx_path = await download_export(export_url, target, label=deck_label) if export_url else None
+    state["pptx_path"] = pptx_path
     state["docx_path"] = docx_path
     state["xlsx_path"] = xlsx_path
     state["status"] = PipelineStatus.REVIEW_DOCUMENTS.value
