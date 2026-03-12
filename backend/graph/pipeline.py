@@ -336,7 +336,9 @@ async def _run_documents(state: dict) -> None:
     state["docx_path"] = docx_path
     state["xlsx_path"] = xlsx_path
     state["status"] = PipelineStatus.REVIEW_DOCUMENTS.value
-    _log(state, "All documents generated (Gamma deck, term sheet, memorandum, XLSX).")
+    has_gamma = state.get("gamma_url") is not None
+    _log(state, "All documents generated (Gamma deck, term sheet, memorandum, XLSX)." if has_gamma
+         else "Documents generated (term sheet, memorandum, XLSX). Gamma slide deck unavailable — check API key.")
 
 
 async def _finalize(state: dict) -> None:

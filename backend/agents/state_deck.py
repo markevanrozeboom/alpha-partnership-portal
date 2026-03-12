@@ -293,18 +293,22 @@ async def generate_state_deck(
     )
 
     # Generate via Gamma API
-    result = await generate_and_wait(
-        input_text,
-        num_cards=11,
-        text_mode="preserve",
-        card_split="inputTextBreaks",
-        additional_instructions=(
-            f"This is a governor pitch deck for {state}. "
-            "Use a professional, data-driven tone. The audience is a state governor. "
-            "Keep slides clean with clear hierarchy. Emphasise outcomes and proof points."
-        ),
-        export_as="pptx",
-    )
+    try:
+        result = await generate_and_wait(
+            input_text,
+            num_cards=11,
+            text_mode="preserve",
+            card_split="inputTextBreaks",
+            additional_instructions=(
+                f"This is a governor pitch deck for {state}. "
+                "Use a professional, data-driven tone. The audience is a state governor. "
+                "Keep slides clean with clear hierarchy. Emphasise outcomes and proof points."
+            ),
+            export_as="pptx",
+        )
+    except Exception as exc:
+        logger.warning("Gamma API unavailable, skipping state deck: %s", exc)
+        return None, None
 
     gamma_url = result.get("gammaUrl") or result.get("url")
     export_url = result.get("exportUrl") or result.get("pptxUrl")
