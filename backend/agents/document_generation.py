@@ -1020,18 +1020,22 @@ async def _build_investor_deck_gamma(
     """
     input_text = _build_gamma_investor_input(target, strategy, model, outline, audience)
 
-    result = await generate_and_wait(
-        input_text,
-        num_cards=14,
-        text_mode="preserve",
-        card_split="inputTextBreaks",
-        additional_instructions=(
-            f"This is a strategic partnership proposal / investor deck for {target}. "
-            "The audience is C-suite / head-of-state level. "
-            "Use a professional, data-driven tone. Keep slides clean with clear hierarchy."
-        ),
-        export_as="pptx",
-    )
+    try:
+        result = await generate_and_wait(
+            input_text,
+            num_cards=14,
+            text_mode="preserve",
+            card_split="inputTextBreaks",
+            additional_instructions=(
+                f"This is a strategic partnership proposal / investor deck for {target}. "
+                "The audience is C-suite / head-of-state level. "
+                "Use a professional, data-driven tone. Keep slides clean with clear hierarchy."
+            ),
+            export_as="pptx",
+        )
+    except Exception as exc:
+        logger.warning("Gamma API unavailable, skipping investor deck: %s", exc)
+        return None, None
 
     gamma_url = result.get("gammaUrl") or result.get("url")
     export_url = result.get("exportUrl") or result.get("pptxUrl")
