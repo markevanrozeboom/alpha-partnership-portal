@@ -953,9 +953,9 @@ function DocumentDownloadGrid({ runId, data }: { runId: string; data: RunStatus 
           ) : (
             <span className="text-gray-500 text-sm">Not available</span>
           )}
-          {data.gamma_export_url && (
+          {(data.pptx_path || data.gamma_export_url) && (
             <a
-              href={data.gamma_export_url}
+              href={data.pptx_path ? getDownloadUrl(runId, "pptx") : data.gamma_export_url!}
               className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-white/5"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1133,8 +1133,8 @@ function CompletedView({
                   View in Gamma
                 </a>
               ) : <span className="text-gray-500 text-sm">Not available</span>}
-              {data.gamma_export_url && (
-                <a href={data.gamma_export_url}
+              {(data.pptx_path || data.gamma_export_url) && (
+                <a href={data.pptx_path ? getDownloadUrl(runId, "pptx") : data.gamma_export_url!}
                   className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-xs font-medium text-gray-300 hover:bg-white/5 transition-colors">
                   <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
