@@ -1,22 +1,18 @@
 """Document Generation Agent — produces executive-quality investor deck and
 investment memorandum (proposal document).
 
-Generates PPTX and DOCX with appendices, formatted for C-suite / head-of-state audiences.
-The DOCX proposal is structured as a full investment memorandum modelled after
-Goldman Sachs / Morgan Stanley deal books.
+Generates slide decks via Gamma API and DOCX with appendices, formatted for
+C-suite / head-of-state audiences.  The DOCX proposal is structured as a full
+investment memorandum modelled after Goldman Sachs / Morgan Stanley deal books.
 """
 
 from __future__ import annotations
 
 import logging
 import os
-from io import BytesIO
 from datetime import datetime
 
-from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
-from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from services.gamma import generate_and_wait
 
 from docx import Document as DocxDocument
 from docx.shared import Pt as DocxPt, RGBColor as DocxRGB, Inches as DocxInches, Cm
@@ -32,11 +28,6 @@ from config import OUTPUT_DIR
 
 logger = logging.getLogger(__name__)
 
-# Colour palette
-DARK = RGBColor(0x1a, 0x1a, 0x2e)
-ACCENT = RGBColor(0x00, 0x6D, 0x77)
-WHITE = RGBColor(0xFF, 0xFF, 0xFF)
-LIGHT = RGBColor(0xF0, 0xF0, 0xF0)
 
 
 # ---------------------------------------------------------------------------
@@ -271,10 +262,10 @@ async def generate_documents(
     assumptions: FinancialAssumptions,
     audience: AudienceType = AudienceType.INVESTOR,
     revision_notes: str | None = None,
-) -> tuple[str, str, str]:
-    """Generate presentation deck, investment memorandum, and spreadsheet.
+) -> tuple[str | None, str | None, str, str]:
+    """Generate presentation deck (via Gamma), investment memorandum, and spreadsheet.
 
-    Returns (pptx_path, docx_path, xlsx_path).
+    Returns (gamma_url, export_url, docx_path, xlsx_path).
     """
     logger.info("Generating documents for %s (audience: %s)", target, audience.value)
 
@@ -308,8 +299,10 @@ async def generate_documents(
         ),
     )
 
-    # --- Generate PPTX ---
-    pptx_path = _build_pptx(target, strategy, financial_model, deck_outline, audience, output_dir)
+    # --- Generate investor deck via Gamma ---
+    gamma_url, export_url = await _build_investor_deck_gamma(
+        target, strategy, financial_model, deck_outline, audience,
+    )
 
     # --- Generate DOCX investment memorandum (multi-section) ---
     docx_path = await _build_investment_memorandum(
@@ -323,8 +316,8 @@ async def generate_documents(
     from agents.financial import export_model_xlsx
     xlsx_path = export_model_xlsx(target, financial_model, assumptions, country_profile)
 
-    logger.info("Documents generated: %s, %s, %s", pptx_path, docx_path, xlsx_path)
-    return pptx_path, docx_path, xlsx_path
+    logger.info("Documents generated: gamma=%s, docx=%s, xlsx=%s", gamma_url, docx_path, xlsx_path)
+    return gamma_url, export_url, docx_path, xlsx_path
 
 
 # ---------------------------------------------------------------------------
@@ -859,195 +852,125 @@ For each slide provide: title, key bullet points (4-6), data callouts, and speak
 """
 
 
-def _build_pptx(
+def _build_gamma_investor_input(
     target: str,
     strategy: Strategy,
     model: FinancialModel,
     outline: str,
     audience: AudienceType,
-    output_dir: str,
 ) -> str:
-    """Build a professional PPTX presentation."""
-    prs = Presentation()
-    prs.slide_width = Inches(13.33)
-    prs.slide_height = Inches(7.5)
-
-    # Helper to add a styled slide
-    def add_slide(title: str, bullets: list[str], subtitle: str = ""):
-        slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-        bg = slide.background
-        fill = bg.fill
-        fill.solid()
-        fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-
-        # Title bar
-        left = Inches(0)
-        top = Inches(0)
-        width = prs.slide_width
-        height = Inches(1.2)
-        shape = slide.shapes.add_shape(1, left, top, width, height)
-        shape.fill.solid()
-        shape.fill.fore_color.rgb = DARK
-        shape.line.fill.background()
-        tf = shape.text_frame
-        tf.word_wrap = True
-        p = tf.paragraphs[0]
-        p.text = title
-        p.font.size = Pt(28)
-        p.font.color.rgb = WHITE
-        p.font.bold = True
-        p.alignment = PP_ALIGN.LEFT
-
-        if subtitle:
-            p2 = tf.add_paragraph()
-            p2.text = subtitle
-            p2.font.size = Pt(14)
-            p2.font.color.rgb = RGBColor(0xAA, 0xAA, 0xAA)
-
-        # Content
-        content_top = Inches(1.5)
-        content_left = Inches(0.8)
-        content_width = Inches(11.5)
-        content_height = Inches(5.5)
-        txBox = slide.shapes.add_textbox(content_left, content_top, content_width, content_height)
-        tf2 = txBox.text_frame
-        tf2.word_wrap = True
-
-        for i, bullet in enumerate(bullets[:8]):
-            p = tf2.paragraphs[0] if i == 0 else tf2.add_paragraph()
-            p.text = bullet
-            p.font.size = Pt(16)
-            p.font.color.rgb = RGBColor(0x33, 0x33, 0x33)
-            p.space_after = Pt(8)
-
-        # Footer
-        footer = slide.shapes.add_textbox(Inches(0.5), Inches(7.0), Inches(12), Inches(0.4))
-        fp = footer.text_frame.paragraphs[0]
-        fp.text = f"CONFIDENTIAL — 2hr Learning (Alpha) | {target}"
-        fp.font.size = Pt(9)
-        fp.font.color.rgb = RGBColor(0x99, 0x99, 0x99)
-
-        return slide
+    """Build Gamma inputText for the investor deck with slide separators."""
+    slides: list[str] = []
 
     # --- Slide 1: Title ---
-    title_slide = prs.slides.add_slide(prs.slide_layouts[6])
-    bg = title_slide.background
-    bg.fill.solid()
-    bg.fill.fore_color.rgb = DARK
-    center_box = title_slide.shapes.add_textbox(Inches(1), Inches(2), Inches(11), Inches(3))
-    tf = center_box.text_frame
-    tf.word_wrap = True
-    p = tf.paragraphs[0]
-    p.text = f"2hr Learning × {target}"
-    p.font.size = Pt(44)
-    p.font.color.rgb = WHITE
-    p.font.bold = True
-    p.alignment = PP_ALIGN.CENTER
-    p2 = tf.add_paragraph()
-    p2.text = "Strategic Partnership Proposal"
-    p2.font.size = Pt(24)
-    p2.font.color.rgb = ACCENT
-    p2.alignment = PP_ALIGN.CENTER
-    p3 = tf.add_paragraph()
-    p3.text = "CONFIDENTIAL"
-    p3.font.size = Pt(14)
-    p3.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
-    p3.alignment = PP_ALIGN.CENTER
+    slides.append(
+        f"# 2hr Learning × {target}\n\n"
+        f"Strategic Partnership Proposal\n\n"
+        f"CONFIDENTIAL"
+    )
 
     # --- Slide 2: Executive Summary ---
     jv = strategy.brand.jv_name_suggestion or f"Alpha × {target}"
-    exec_bullets = [
-        f"Opportunity: Transform K-12 education in {target} through AI-powered learning",
-        f"Partnership: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} structure with local entity",
-        f"Scale: {model.pnl_projection[-1].students:,} students across {model.pnl_projection[-1].schools} schools by Year 5" if model.pnl_projection else "Scale details in financial model",
-        f"Investment: Year 5 revenue of ${model.pnl_projection[-1].revenue:,.0f}" if model.pnl_projection else "",
-        f"Returns: {model.returns_analysis.irr}% IRR, {model.returns_analysis.moic}x MOIC" if model.returns_analysis.irr else "",
-        "Proven model: UAE deal ($1.5B, 200K students) as reference",
+    exec_lines = [
+        f"- Opportunity: Transform K-12 education in {target} through AI-powered learning",
+        f"- Partnership: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} structure with local entity",
     ]
-    add_slide("Executive Summary", [b for b in exec_bullets if b])
+    if model.pnl_projection:
+        exec_lines.append(f"- Scale: {model.pnl_projection[-1].students:,} students across {model.pnl_projection[-1].schools} schools by Year 5")
+        exec_lines.append(f"- Investment: Year 5 revenue of ${model.pnl_projection[-1].revenue:,.0f}")
+    if model.returns_analysis.irr:
+        exec_lines.append(f"- Returns: {model.returns_analysis.irr}% IRR, {model.returns_analysis.moic}x MOIC")
+    exec_lines.append("- Proven model: UAE deal ($1.5B, 200K students) as reference")
+    slides.append("# Executive Summary\n\n" + "\n".join(exec_lines))
 
     # --- Slide 3: The Alpha Model ---
-    add_slide("The 2hr Learning Model", [
-        "Timeback: AI compresses core academics into 2 hours/day",
-        "Remaining time: STEM, sports, arts, entrepreneurship, life skills",
-        "AlphaCore: Curriculum OS managing the full student journey",
-        "Guide School: 12-month program transforming teachers into Guides",
-        "Incept eduLLM: Custom AI adapted to local curriculum & culture",
-        "Three commitments: Love school | Learn 2x faster | Future-ready skills",
-    ])
+    slides.append(
+        "# The 2hr Learning Model\n\n"
+        "- Timeback: AI compresses core academics into 2 hours/day\n"
+        "- Remaining time: STEM, sports, arts, entrepreneurship, life skills\n"
+        "- AlphaCore: Curriculum OS managing the full student journey\n"
+        "- Guide School: 12-month program transforming teachers into Guides\n"
+        "- Incept eduLLM: Custom AI adapted to local curriculum & culture\n"
+        "- Three commitments: Love school | Learn 2x faster | Future-ready skills"
+    )
 
     # --- Slide 4: Market Opportunity ---
-    add_slide(f"Market Opportunity: {target}", [
-        f"School-age population: significant K-12 cohort",
-        "Education sector undergoing reform and modernisation",
-        "Growing demand for premium, innovation-driven education",
-        "Gap between aspirations and current system performance",
-        "Government appetite for public-private partnerships",
-        "Alpha's model addresses the core pain points",
-    ])
+    slides.append(
+        f"# Market Opportunity: {target}\n\n"
+        f"- School-age population: significant K-12 cohort\n"
+        f"- Education sector undergoing reform and modernisation\n"
+        f"- Growing demand for premium, innovation-driven education\n"
+        f"- Gap between aspirations and current system performance\n"
+        f"- Government appetite for public-private partnerships\n"
+        f"- Alpha's model addresses the core pain points"
+    )
 
     # --- Slide 5: Financial Overview ---
     if model.pnl_projection:
         y1 = model.pnl_projection[0]
         y5 = model.pnl_projection[-1]
-        add_slide("5-Year Financial Summary", [
-            f"Year 1: {y1.students:,} students → ${y1.revenue:,.0f} revenue → ${y1.ebitda:,.0f} EBITDA",
-            f"Year 5: {y5.students:,} students → ${y5.revenue:,.0f} revenue → ${y5.ebitda:,.0f} EBITDA",
-            f"IRR: {model.returns_analysis.irr}%" if model.returns_analysis.irr else "",
-            f"MOIC: {model.returns_analysis.moic}x" if model.returns_analysis.moic else "",
-            f"Management fee revenue (5yr): ${model.total_management_fee_revenue:,.0f}",
-            f"Timeback license revenue (5yr): ${model.total_timeback_license_revenue:,.0f}",
-        ])
+        fin_lines = [
+            f"- Year 1: {y1.students:,} students → ${y1.revenue:,.0f} revenue → ${y1.ebitda:,.0f} EBITDA",
+            f"- Year 5: {y5.students:,} students → ${y5.revenue:,.0f} revenue → ${y5.ebitda:,.0f} EBITDA",
+        ]
+        if model.returns_analysis.irr:
+            fin_lines.append(f"- IRR: {model.returns_analysis.irr}%")
+        if model.returns_analysis.moic:
+            fin_lines.append(f"- MOIC: {model.returns_analysis.moic}x")
+        fin_lines.append(f"- Management fee revenue (5yr): ${model.total_management_fee_revenue:,.0f}")
+        fin_lines.append(f"- Timeback license revenue (5yr): ${model.total_timeback_license_revenue:,.0f}")
+        slides.append("# 5-Year Financial Summary\n\n" + "\n".join(fin_lines))
     else:
-        add_slide("Financial Overview", ["Financial model pending"])
+        slides.append("# Financial Overview\n\n- Financial model pending")
 
     # --- Slide 6: Deal Structure ---
-    add_slide("Proposed Deal Structure", [
-        f"Structure: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} with local partner",
-        f"Ownership: {strategy.partnership_structure.ownership_split or '51/49 local-majority'}",
-        f"Upfront IP fee: ${model.upfront_ip_fee:,.0f}",
-        f"Management fee: {model.management_fee_pct*100:.0f}% of school revenue",
-        f"Timeback license: {model.timeback_license_pct*100:.0f}% of per-student budget",
-        "Local entity manages cultural IP layer, national identity integration",
-    ])
+    slides.append(
+        f"# Proposed Deal Structure\n\n"
+        f"- Structure: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} with local partner\n"
+        f"- Ownership: {strategy.partnership_structure.ownership_split or '51/49 local-majority'}\n"
+        f"- Upfront IP fee: ${model.upfront_ip_fee:,.0f}\n"
+        f"- Management fee: {model.management_fee_pct*100:.0f}% of school revenue\n"
+        f"- Timeback license: {model.timeback_license_pct*100:.0f}% of per-student budget\n"
+        f"- Local entity manages cultural IP layer, national identity integration"
+    )
 
     # --- Slide 7: School Portfolio ---
     if strategy.school_types:
-        school_bullets = []
-        for st in strategy.school_types[:4]:
-            school_bullets.append(f"{st.name}: {st.focus or ''} — {st.tuition or ''}")
-        add_slide("School Type Portfolio", school_bullets or ["School types to be defined"])
+        school_lines = [f"- {st.name}: {st.focus or ''} — {st.tuition or ''}" for st in strategy.school_types[:4]]
+        slides.append("# School Type Portfolio\n\n" + "\n".join(school_lines))
     else:
-        add_slide("School Type Portfolio", ["Premium, Mid-Market, and Specialised school types"])
+        slides.append("# School Type Portfolio\n\n- Premium, Mid-Market, and Specialised school types")
 
     # --- Slide 8: Rollout Plan ---
     if strategy.phased_rollout:
-        rollout_bullets = [
-            f"{ph.phase}: {ph.timeline} — {ph.student_count:,} students" if ph.student_count
-            else f"{ph.phase}: {ph.timeline}"
-            for ph in strategy.phased_rollout[:5]
-        ]
-        add_slide("5-Year Rollout Plan", rollout_bullets)
+        rollout_lines = []
+        for ph in strategy.phased_rollout[:5]:
+            if ph.student_count:
+                rollout_lines.append(f"- {ph.phase}: {ph.timeline} — {ph.student_count:,} students")
+            else:
+                rollout_lines.append(f"- {ph.phase}: {ph.timeline}")
+        slides.append("# 5-Year Rollout Plan\n\n" + "\n".join(rollout_lines))
     else:
-        add_slide("5-Year Rollout Plan", ["Phased rollout details in strategy report"])
+        slides.append("# 5-Year Rollout Plan\n\n- Phased rollout details in strategy report")
 
     # --- Slide 9: Unit Economics ---
-    ue_bullets = [
-        f"{ue.school_type}: ${ue.per_student_revenue:,.0f}/student revenue, "
+    ue_lines = [
+        f"- {ue.school_type}: ${ue.per_student_revenue:,.0f}/student revenue, "
         f"${ue.contribution_margin:,.0f} margin ({ue.margin_pct}%)"
         for ue in model.unit_economics[:4]
     ]
-    add_slide("Unit Economics", ue_bullets or ["Unit economics in financial model"])
+    slides.append("# Unit Economics\n\n" + ("\n".join(ue_lines) if ue_lines else "- Unit economics in financial model"))
 
     # --- Slide 10: Risk Mitigation ---
-    add_slide("Risk Mitigation", [
-        "Regulatory risk: Proactive government engagement and compliance",
-        "Execution risk: Phased rollout with decision gates",
-        "Cultural risk: Local IP layer and cultural advisory board",
-        "FX risk: Local currency revenue with USD hedging strategy",
-        "Competitive risk: Proprietary AI and outcomes data as moat",
-        "Political risk: Multi-stakeholder alignment strategy",
-    ])
+    slides.append(
+        "# Risk Mitigation\n\n"
+        "- Regulatory risk: Proactive government engagement and compliance\n"
+        "- Execution risk: Phased rollout with decision gates\n"
+        "- Cultural risk: Local IP layer and cultural advisory board\n"
+        "- FX risk: Local currency revenue with USD hedging strategy\n"
+        "- Competitive risk: Proprietary AI and outcomes data as moat\n"
+        "- Political risk: Multi-stakeholder alignment strategy"
+    )
 
     # --- Slide 11: Key Asks ---
     asks = strategy.key_asks[:6] if strategy.key_asks else [
@@ -1056,45 +979,62 @@ def _build_pptx(
         "Infrastructure/real estate support",
         "Cultural IP development partnership",
     ]
-    add_slide("Key Asks & Next Steps", asks)
+    slides.append("# Key Asks & Next Steps\n\n" + "\n".join(f"- {a}" for a in asks))
 
     # --- Slide 12: Appendix - P&L ---
     if model.pnl_projection:
-        pnl_bullets = []
-        for p in model.pnl_projection:
-            pnl_bullets.append(
-                f"Y{p.year}: {p.students:,} students | ${p.revenue:,.0f} rev | ${p.ebitda:,.0f} EBITDA | ${p.free_cash_flow:,.0f} FCF"
-            )
-        add_slide("Appendix: Detailed P&L Projection", pnl_bullets, "APPENDIX")
+        pnl_lines = [
+            f"- Y{p.year}: {p.students:,} students | ${p.revenue:,.0f} rev | ${p.ebitda:,.0f} EBITDA | ${p.free_cash_flow:,.0f} FCF"
+            for p in model.pnl_projection
+        ]
+        slides.append("# Appendix: Detailed P&L Projection\n\n" + "\n".join(pnl_lines))
 
     # --- Slide 13: Appendix - Capital Deployment ---
     if model.capital_deployment:
-        cap_bullets = [
-            f"Year {cd.year}: ${cd.total:,.0f} total ({f'${cd.ip_development:,.0f} IP' if cd.ip_development else ''}"
+        cap_lines = [
+            f"- Year {cd.year}: ${cd.total:,.0f} total ({f'${cd.ip_development:,.0f} IP' if cd.ip_development else ''}"
             f" + ${cd.launch_capital:,.0f} launch + ${cd.real_estate:,.0f} RE)"
             for cd in model.capital_deployment
         ]
-        add_slide("Appendix: Capital Deployment", cap_bullets, "APPENDIX")
+        slides.append("# Appendix: Capital Deployment\n\n" + "\n".join(cap_lines))
 
     # --- Slide 14: Thank You ---
-    ty_slide = prs.slides.add_slide(prs.slide_layouts[6])
-    bg = ty_slide.background
-    bg.fill.solid()
-    bg.fill.fore_color.rgb = DARK
-    ty_box = ty_slide.shapes.add_textbox(Inches(1), Inches(2.5), Inches(11), Inches(2))
-    tf = ty_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = "Thank You"
-    p.font.size = Pt(48)
-    p.font.color.rgb = WHITE
-    p.font.bold = True
-    p.alignment = PP_ALIGN.CENTER
-    p2 = tf.add_paragraph()
-    p2.text = "2hr Learning — Transforming Education Globally"
-    p2.font.size = Pt(20)
-    p2.font.color.rgb = ACCENT
-    p2.alignment = PP_ALIGN.CENTER
+    slides.append(
+        "# Thank You\n\n"
+        "2hr Learning — Transforming Education Globally"
+    )
 
-    path = os.path.join(output_dir, f"{target.replace(' ', '_')}_investor_deck.pptx")
-    prs.save(path)
-    return path
+    return "\n---\n".join(slides)
+
+
+async def _build_investor_deck_gamma(
+    target: str,
+    strategy: Strategy,
+    model: FinancialModel,
+    outline: str,
+    audience: AudienceType,
+) -> tuple[str | None, str | None]:
+    """Build the investor deck via Gamma API.
+
+    Returns (gamma_url, export_url).
+    """
+    input_text = _build_gamma_investor_input(target, strategy, model, outline, audience)
+
+    result = await generate_and_wait(
+        input_text,
+        num_cards=14,
+        text_mode="preserve",
+        card_split="inputTextBreaks",
+        additional_instructions=(
+            f"This is a strategic partnership proposal / investor deck for {target}. "
+            "The audience is C-suite / head-of-state level. "
+            "Use a professional, data-driven tone. Keep slides clean with clear hierarchy."
+        ),
+        export_as="pptx",
+    )
+
+    gamma_url = result.get("gammaUrl") or result.get("url")
+    export_url = result.get("exportUrl") or result.get("pptxUrl")
+
+    logger.info("Investor deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
+    return gamma_url, export_url

@@ -132,6 +132,10 @@ async def get_run(run_id: str):
     resp.education_report = state.get("education_report") or None
     resp.strategy_report = state.get("strategy_report") or None
 
+    # Gamma slide deck URLs
+    resp.gamma_url = state.get("gamma_url")
+    resp.gamma_export_url = state.get("gamma_export_url")
+
     # File paths
     resp.pptx_path = state.get("pptx_path")
     resp.docx_path = state.get("docx_path")
