@@ -13,6 +13,7 @@ load_dotenv()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
+GAMMA_API_KEY = os.getenv("GAMMA_API_KEY", "")
 
 # LLM Settings
 PRIMARY_MODEL = "claude-sonnet-4-20250514"

@@ -1,6 +1,8 @@
-"""State Pitch Deck Generator — Oklahoma-style governor pitch.
+"""State Pitch Deck Generator — Oklahoma-style governor pitch via Gamma.
 
-Produces a 10-slide PPTX deck tailored for US state governors.
+Produces a 10-slide deck tailored for US state governors, generated through
+Gamma's API using the "Alpha School" theme.
+
 Format: Problem → Results → Live Pilot → How It Works → The Deal →
 Economics → What Each Side Provides → Gated Roadmap → The Ask.
 
@@ -11,28 +13,17 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime
-
-from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
-from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 
 from models.schemas import (
     CountryProfile, EducationAnalysis, Strategy,
     FinancialModel, FinancialAssumptions,
 )
 from services.llm import call_llm_plain
+from services.gamma import generate_and_wait
 from config import OUTPUT_DIR
 from config.rules_loader import get_esa_data
 
 logger = logging.getLogger(__name__)
-
-# Colour palette
-DARK = RGBColor(0x1a, 0x1a, 0x2e)
-ACCENT = RGBColor(0x00, 0x6D, 0x77)
-WHITE = RGBColor(0xFF, 0xFF, 0xFF)
-RED = RGBColor(0xCC, 0x33, 0x33)
 
 # ---------------------------------------------------------------------------
 # Alpha reference data (confirmed by CFO)
@@ -89,6 +80,153 @@ Return as structured markdown with ## headers for each section.
 """
 
 
+def _build_gamma_input(
+    state: str,
+    per_pupil: float,
+    k12_students: float,
+    timeback_cost: int,
+    esa_data: dict | None,
+    llm_content: str,
+) -> str:
+    """Build the Gamma inputText with slide separators (\\n---\\n).
+
+    Each section between separators becomes one slide/card in Gamma.
+    """
+    slides: list[str] = []
+
+    # --- Slide 1: Title ---
+    slides.append(
+        f"# Alpha: AI-Powered Education for {state}\n\n"
+        f"Better outcomes. Lower cost. Proven at scale.\n\n"
+        f"CONFIDENTIAL"
+    )
+
+    # --- Slide 2: The Problem ---
+    slides.append(
+        f"# The Problem — {state} Needs a New Model\n\n"
+        f"- {state} K-12 system: {k12_students:,.0f} students across the state\n"
+        f"- Per-pupil spending: ${per_pupil:,.0f}/student\n"
+        f"- This isn't a funding problem — it's a model problem\n"
+        f"- The traditional classroom model hasn't delivered results\n"
+        f"- More money into the same system won't change outcomes"
+    )
+
+    # --- Slide 3: We've Solved This ---
+    slides.append(
+        f"# We've Solved This — And We Can Prove It\n\n"
+        f"- Alpha students: {ALPHA_RESULTS['avg_growth']} average growth (vs 1x expected)\n"
+        f"- Students 2 years behind: {ALPHA_RESULTS['behind_growth']} growth\n"
+        f"- {ALPHA_RESULTS['love_school']} of students love school (voted to keep school open over summer)\n"
+        f"- Avg SAT: {ALPHA_RESULTS['avg_sat']} vs 1063 national\n"
+        f"- Lipscomb Academy (Nashville): {ALPHA_RESULTS['lipscomb']}\n"
+        f"- Intervention pilots: ELA {ALPHA_RESULTS['intervention_ela']}, Math {ALPHA_RESULTS['intervention_math']}"
+    )
+
+    # --- Slide 4: Live in Houston ---
+    slides.append(
+        "# Live in Houston — America's Largest Public School Pilot\n\n"
+        "- HISD pilot: America's largest public school pilot\n"
+        "- Partnership with Superintendent Miles\n"
+        "- 2 campuses, 400 students, grades 3-8\n"
+        "- Alpha owns students >50% of the day\n"
+        "- Alpha investing $150k/campus + 5 guides per campus\n"
+        "- This proves it works in PUBLIC schools, not just private"
+    )
+
+    # --- Slide 5: How It Works ---
+    slides.append(
+        "# How It Works — The Reinvented School Day\n\n"
+        "- Children can master academics in 2 hours/day (Bloom's 2-Sigma)\n"
+        "- AI makes 1:1 tutoring possible at scale for the first time\n"
+        "- The freed time goes to life skills that parents actually want\n"
+        "- Traditional: 6 hrs classroom instruction\n"
+        "- Alpha Model: 2 hrs academic mastery + 4 hrs life skills\n"
+        "- Teachers become coaches/mentors — AI handles instruction"
+    )
+
+    # --- Slide 6: The Deal ---
+    slides.append(
+        f"# The Deal — We Prove It, You Scale It\n\n"
+        f"Our commitment: We take the pilot risk. Outcomes-based. You pay nothing unless targets hit.\n\n"
+        f"Your commitment: When we hit numbers, you roll it out. Pre-agreed triggers.\n\n"
+        f"- INTERVENTION: ${PRICING['intervention']:,}/student/yr — 1-hr AI tutoring block\n"
+        f"  - Trigger: 60%+ NWEA MAP Growth → expand to all low-performing schools\n"
+        f"- MARK ROBER SCIENCE: ${PRICING['mark_rober_science']:,}/student/yr — 1-hr science block\n"
+        f"  - Trigger: hit targets → available to every public school\n"
+        f"- FULL TRANSFORMATION: ~${timeback_cost:,}/student/yr (20% of per-pupil)\n"
+        f"  - Trigger: hit targets → aggressive expansion statewide"
+    )
+
+    # --- Slide 7: The Economics ---
+    econ_text = (
+        f"# The Economics — What It Costs\n\n"
+        f"{state} spends ${per_pupil:,.0f}/student. Here's what Alpha costs:\n\n"
+        f"- Intervention & Mark Rober Science: $2,000/student/year (outcomes-based)\n"
+        f"  - {round(2000/per_pupil*100)}% of current per-pupil spend for transformational outcomes\n"
+        f"- Full School Transformation: ~${timeback_cost:,}/student (20% of per-pupil)\n"
+        f"  - Remaining 80% (${per_pupil - timeback_cost:,.0f}) covers guides, life skills, facility, ops\n"
+        f"  - Same total budget. World-class outcomes."
+    )
+    if esa_data and esa_data.get("esa_amount"):
+        esa_amt = esa_data["esa_amount"]
+        econ_text += f"\n\n- ESA/Voucher: ${esa_amt:,}/student covers Alpha programs directly"
+    slides.append(econ_text)
+
+    # --- Slide 8: What Each Side Gets ---
+    slides.append(
+        f"# What {state} Gets\n\n"
+        f"**What Alpha Provides:**\n"
+        f"- Timeback AI platform\n"
+        f"- AlphaCore life-skills curriculum\n"
+        f"- Guide training (teacher coaching)\n"
+        f"- Ongoing management + support\n"
+        f"- Outcomes guarantee (intervention tier)\n\n"
+        f"**What {state.upper()} Provides:**\n"
+        f"- Access to schools/districts\n"
+        f"- Existing per-pupil funding\n"
+        f"- Teachers willing to adopt the model\n"
+        f"- Political support for innovation\n"
+        f"- Adherence to daily model"
+    )
+
+    # --- Slide 9: Gated Expansion Roadmap ---
+    slides.append(
+        "# The Roadmap — Gated Expansion\n\n"
+        "**Phase 1 — PROVE (SY 2026-27):**\n"
+        "Pilot in low-performing schools | Alpha takes the risk | Outcomes-based\n"
+        "Trigger: 60%+ NWEA MAP Growth, third-party verified\n\n"
+        "**Phase 2 — EXPAND (SY 2027-28):**\n"
+        "All low-performing schools + willing districts | Existing per-pupil funding\n"
+        "Trigger: Results hold across pilot cohort\n\n"
+        "**Phase 3 — TRANSFORM (SY 2028-29+):**\n"
+        "Full school re-inventions statewide | Per-pupil + facility investment\n"
+        "Contract signed before pilot starts. Triggers pre-agreed."
+    )
+
+    # --- Slide 10: The Ask ---
+    slides.append(
+        f"# The Ask\n\n"
+        f"We'll prove it works, at our financial risk.\n"
+        f"You commit now that when we hit targets, it scales — fast.\n\n"
+        f"**What We Need from {state.upper()}:**\n"
+        f"1. Access to low-performing schools for fall 2026 pilot\n"
+        f"2. A signed expansion commitment: hit triggers → statewide rollout\n"
+        f"3. A champion in the governor's office to clear blockers\n\n"
+        f"**What You Get:**\n"
+        f"- Zero financial risk on the pilot\n"
+        f"- Third-party verified results before any state money moves\n"
+        f"- {state} leads the nation in education innovation — that's the headline"
+    )
+
+    # --- Slide 11: Closing ---
+    slides.append(
+        "# AI is transforming every industry.\n\n"
+        "Education is last. The governor who moves first wins."
+    )
+
+    return "\n---\n".join(slides)
+
+
 async def generate_state_deck(
     state: str,
     country_profile: CountryProfile,
@@ -96,12 +234,14 @@ async def generate_state_deck(
     strategy: Strategy,
     financial_model: FinancialModel,
     assumptions: FinancialAssumptions,
-) -> str:
-    """Generate an Oklahoma-style state pitch deck (PPTX).
+) -> tuple[str | None, str | None]:
+    """Generate an Oklahoma-style state pitch deck via Gamma.
 
-    Returns the path to the saved PPTX file.
+    Returns (gamma_url, export_url) — the Gamma viewer URL and the PPTX
+    export download URL.  Either may be None if the Gamma API doesn't
+    return them.
     """
-    logger.info("Generating state pitch deck for %s", state)
+    logger.info("Generating state pitch deck for %s via Gamma", state)
 
     # Get state-specific data
     esa_data = get_esa_data(state)
@@ -135,7 +275,7 @@ async def generate_state_deck(
     if strategy.key_asks:
         strategy_parts.append("Key asks: " + "; ".join(strategy.key_asks[:5]))
 
-    # Get LLM to synthesize state-specific content
+    # Get LLM to synthesize state-specific content (used for context)
     llm_content = await call_llm_plain(
         system_prompt=STATE_DECK_PROMPT.format(
             state=state,
@@ -147,255 +287,27 @@ async def generate_state_deck(
         user_prompt=f"Produce the state-specific data for the {state} governor pitch deck.",
     )
 
-    # Build the PPTX
-    prs = Presentation()
-    prs.slide_width = Inches(13.33)
-    prs.slide_height = Inches(7.5)
+    # Build the Gamma input text
+    input_text = _build_gamma_input(
+        state, per_pupil, k12_students, timeback_cost, esa_data, llm_content,
+    )
 
-    # --- Slide 1: Title ---
-    _add_title_slide(prs, state)
+    # Generate via Gamma API
+    result = await generate_and_wait(
+        input_text,
+        num_cards=11,
+        text_mode="preserve",
+        card_split="inputTextBreaks",
+        additional_instructions=(
+            f"This is a governor pitch deck for {state}. "
+            "Use a professional, data-driven tone. The audience is a state governor. "
+            "Keep slides clean with clear hierarchy. Emphasise outcomes and proof points."
+        ),
+        export_as="pptx",
+    )
 
-    # --- Slide 2: The Problem ---
-    problem_bullets = [
-        f"{state} K-12 system: {k12_students:,.0f} students across the state",
-        f"Per-pupil spending: ${per_pupil:,.0f}/student",
-        "This isn't a funding problem — it's a model problem",
-        "The traditional classroom model hasn't delivered results",
-        "More money into the same system won't change outcomes",
-    ]
-    _add_content_slide(prs, state, f"The Problem — {state} Needs a New Model", problem_bullets)
+    gamma_url = result.get("gammaUrl") or result.get("url")
+    export_url = result.get("exportUrl") or result.get("pptxUrl")
 
-    # --- Slide 3: We've Solved This ---
-    results_bullets = [
-        f"Alpha students: {ALPHA_RESULTS['avg_growth']} average growth (vs 1x expected)",
-        f"Students 2 years behind: {ALPHA_RESULTS['behind_growth']} growth",
-        f"{ALPHA_RESULTS['love_school']} of students love school (voted to keep school open over summer)",
-        f"Avg SAT: {ALPHA_RESULTS['avg_sat']} vs 1063 national",
-        f"Lipscomb Academy (Nashville): {ALPHA_RESULTS['lipscomb']}",
-        f"Intervention pilots: ELA {ALPHA_RESULTS['intervention_ela']}, Math {ALPHA_RESULTS['intervention_math']}",
-    ]
-    _add_content_slide(prs, state, "We've Solved This — And We Can Prove It", results_bullets)
-
-    # --- Slide 4: Live in Houston ---
-    hisd_bullets = [
-        "HISD pilot: America's largest public school pilot",
-        "Partnership with Superintendent Miles",
-        "2 campuses, 400 students, grades 3-8",
-        "Alpha owns students >50% of the day",
-        "Alpha investing $150k/campus + 5 guides per campus",
-        "This proves it works in PUBLIC schools, not just private",
-    ]
-    _add_content_slide(prs, state, "Live in Houston — America's Largest Public School Pilot", hisd_bullets)
-
-    # --- Slide 5: How It Works ---
-    model_bullets = [
-        "Children can master academics in 2 hours/day (Bloom's 2-Sigma)",
-        "AI makes 1:1 tutoring possible at scale for the first time",
-        "The freed time goes to life skills that parents actually want",
-        "Traditional: 6 hrs classroom instruction",
-        "Alpha Model: 2 hrs academic mastery + 4 hrs life skills",
-        "Teachers become coaches/mentors — AI handles instruction",
-    ]
-    _add_content_slide(prs, state, "How It Works — The Reinvented School Day", model_bullets)
-
-    # --- Slide 6: The Deal ---
-    deal_bullets = [
-        "Our commitment: We take the pilot risk. Outcomes-based. You pay nothing unless targets hit.",
-        "Your commitment: When we hit numbers, you roll it out. Pre-agreed triggers.",
-        "",
-        f"INTERVENTION: ${PRICING['intervention']:,}/student/yr — 1-hr AI tutoring block",
-        f"  → Trigger: 60%+ NWEA MAP Growth → expand to all low-performing schools",
-        f"MARK ROBER SCIENCE: ${PRICING['mark_rober_science']:,}/student/yr — 1-hr science block",
-        f"  → Trigger: hit targets → available to every public school",
-        f"FULL TRANSFORMATION: ~${timeback_cost:,}/student/yr (20% of per-pupil)",
-        f"  → Trigger: hit targets → aggressive expansion statewide",
-    ]
-    _add_content_slide(prs, state, "The Deal — We Prove It, You Scale It", deal_bullets)
-
-    # --- Slide 7: The Economics ---
-    econ_bullets = [
-        f"{state} spends ${per_pupil:,.0f}/student. Here's what Alpha costs:",
-        "",
-        f"Intervention & Mark Rober Science: $2,000/student/year (outcomes-based)",
-        f"  → {round(2000/per_pupil*100)}% of current per-pupil spend for transformational outcomes",
-        f"Full School Transformation: ~${timeback_cost:,}/student (20% of per-pupil)",
-        f"  → Remaining 80% (${per_pupil - timeback_cost:,.0f}) covers guides, life skills, facility, ops",
-        f"  → Same total budget. World-class outcomes.",
-    ]
-    if esa_data and esa_data.get("esa_amount"):
-        esa_amt = esa_data["esa_amount"]
-        econ_bullets.append(f"")
-        econ_bullets.append(f"ESA/Voucher: ${esa_amt:,}/student covers Alpha programs directly")
-    _add_content_slide(prs, state, "The Economics — What It Costs", econ_bullets)
-
-    # --- Slide 8: What Each Side Gets ---
-    provides_bullets = [
-        "WHAT ALPHA PROVIDES:",
-        "  • Timeback AI platform",
-        "  • AlphaCore life-skills curriculum",
-        "  • Guide training (teacher coaching)",
-        "  • Ongoing management + support",
-        "  • Outcomes guarantee (intervention tier)",
-        "",
-        f"WHAT {state.upper()} PROVIDES:",
-        "  • Access to schools/districts",
-        "  • Existing per-pupil funding",
-        "  • Teachers willing to adopt the model",
-        "  • Political support for innovation",
-        "  • Adherence to daily model",
-    ]
-    _add_content_slide(prs, state, f"What {state} Gets", provides_bullets)
-
-    # --- Slide 9: Gated Expansion Roadmap ---
-    roadmap_bullets = [
-        "PHASE 1 — PROVE (SY 2026-27):",
-        "  Pilot in low-performing schools | Alpha takes the risk | Outcomes-based",
-        "  Trigger: 60%+ NWEA MAP Growth, third-party verified",
-        "",
-        "PHASE 2 — EXPAND (SY 2027-28):",
-        "  All low-performing schools + willing districts | Existing per-pupil funding",
-        "  Trigger: Results hold across pilot cohort",
-        "",
-        "PHASE 3 — TRANSFORM (SY 2028-29+):",
-        "  Full school re-inventions statewide | Per-pupil + facility investment",
-        "  Contract signed before pilot starts. Triggers pre-agreed.",
-    ]
-    _add_content_slide(prs, state, "The Roadmap — Gated Expansion", roadmap_bullets)
-
-    # --- Slide 10: The Ask ---
-    ask_bullets = [
-        "We'll prove it works, at our financial risk",
-        "You commit now that when we hit targets, it scales — fast",
-        "",
-        f"WHAT WE NEED FROM {state.upper()}:",
-        "  1. Access to low-performing schools for fall 2026 pilot",
-        "  2. A signed expansion commitment: hit triggers → statewide rollout",
-        "  3. A champion in the governor's office to clear blockers",
-        "",
-        "WHAT YOU GET:",
-        "  • Zero financial risk on the pilot",
-        "  • Third-party verified results before any state money moves",
-        f"  • {state} leads the nation in education innovation — that's the headline",
-    ]
-    _add_content_slide(prs, state, "The Ask", ask_bullets)
-
-    # --- Final slide ---
-    _add_closing_slide(prs, state)
-
-    # Save
-    output_dir = os.path.join(OUTPUT_DIR, state.lower().replace(" ", "_"))
-    os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, f"{state.replace(' ', '_')}_governor_pitch.pptx")
-    prs.save(path)
-    logger.info("State deck saved: %s", path)
-    return path
-
-
-# ---------------------------------------------------------------------------
-# Slide helpers
-# ---------------------------------------------------------------------------
-
-def _add_title_slide(prs: Presentation, state: str) -> None:
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    bg = slide.background
-    bg.fill.solid()
-    bg.fill.fore_color.rgb = DARK
-
-    box = slide.shapes.add_textbox(Inches(1), Inches(2), Inches(11), Inches(3))
-    tf = box.text_frame
-    tf.word_wrap = True
-
-    p = tf.paragraphs[0]
-    p.text = f"Alpha: AI-Powered Education for {state}"
-    p.font.size = Pt(40)
-    p.font.color.rgb = WHITE
-    p.font.bold = True
-    p.alignment = PP_ALIGN.CENTER
-
-    p2 = tf.add_paragraph()
-    p2.text = "Better outcomes. Lower cost. Proven at scale."
-    p2.font.size = Pt(20)
-    p2.font.color.rgb = ACCENT
-    p2.alignment = PP_ALIGN.CENTER
-
-    p3 = tf.add_paragraph()
-    p3.text = "CONFIDENTIAL"
-    p3.font.size = Pt(12)
-    p3.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
-    p3.alignment = PP_ALIGN.CENTER
-
-
-def _add_content_slide(prs: Presentation, state: str, title: str, bullets: list[str]) -> None:
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    bg = slide.background
-    fill = bg.fill
-    fill.solid()
-    fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-
-    # Title bar
-    shape = slide.shapes.add_shape(1, Inches(0), Inches(0), prs.slide_width, Inches(1.2))
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = DARK
-    shape.line.fill.background()
-    tf = shape.text_frame
-    tf.word_wrap = True
-    p = tf.paragraphs[0]
-    p.text = title
-    p.font.size = Pt(26)
-    p.font.color.rgb = WHITE
-    p.font.bold = True
-    p.alignment = PP_ALIGN.LEFT
-
-    # Content
-    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.5), Inches(11.5), Inches(5.5))
-    tf2 = txBox.text_frame
-    tf2.word_wrap = True
-
-    for i, bullet in enumerate(bullets[:12]):
-        p = tf2.paragraphs[0] if i == 0 else tf2.add_paragraph()
-        p.text = bullet
-        # Emphasize section headers (ALL CAPS lines)
-        if bullet and bullet == bullet.upper() and len(bullet) > 3 and not bullet.startswith("  "):
-            p.font.size = Pt(15)
-            p.font.bold = True
-            p.font.color.rgb = ACCENT
-        elif bullet.startswith("  →") or bullet.startswith("  •"):
-            p.font.size = Pt(14)
-            p.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
-        elif bullet.startswith("  "):
-            p.font.size = Pt(14)
-            p.font.color.rgb = RGBColor(0x44, 0x44, 0x44)
-        else:
-            p.font.size = Pt(15)
-            p.font.color.rgb = RGBColor(0x33, 0x33, 0x33)
-        p.space_after = Pt(5)
-
-    # Footer
-    footer = slide.shapes.add_textbox(Inches(0.5), Inches(7.0), Inches(12), Inches(0.4))
-    fp = footer.text_frame.paragraphs[0]
-    fp.text = f"CONFIDENTIAL — Alpha | {state}"
-    fp.font.size = Pt(9)
-    fp.font.color.rgb = RGBColor(0x99, 0x99, 0x99)
-
-
-def _add_closing_slide(prs: Presentation, state: str) -> None:
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    bg = slide.background
-    bg.fill.solid()
-    bg.fill.fore_color.rgb = DARK
-
-    box = slide.shapes.add_textbox(Inches(1), Inches(2.5), Inches(11), Inches(2))
-    tf = box.text_frame
-    p = tf.paragraphs[0]
-    p.text = "AI is transforming every industry."
-    p.font.size = Pt(32)
-    p.font.color.rgb = WHITE
-    p.font.bold = True
-    p.alignment = PP_ALIGN.CENTER
-
-    p2 = tf.add_paragraph()
-    p2.text = "Education is last. The governor who moves first wins."
-    p2.font.size = Pt(28)
-    p2.font.color.rgb = ACCENT
-    p2.bold = True
-    p2.alignment = PP_ALIGN.CENTER
+    logger.info("State deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
+    return gamma_url, export_url

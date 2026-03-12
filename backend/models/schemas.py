@@ -459,6 +459,10 @@ class RunStatusResponse(BaseModel):
     education_report: Optional[str] = None
     strategy_report: Optional[str] = None
 
+    # Gamma slide deck URLs
+    gamma_url: Optional[str] = None
+    gamma_export_url: Optional[str] = None
+
     # File paths
     pptx_path: Optional[str] = None
     docx_path: Optional[str] = None

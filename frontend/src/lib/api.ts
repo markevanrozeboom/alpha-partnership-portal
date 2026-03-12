@@ -111,6 +111,10 @@ export interface RunStatus {
   financial_model: FinancialModel | null;
   term_sheet_assumptions: { assumptions: FinancialAssumption[] } | null;
 
+  // Gamma slide deck URLs
+  gamma_url: string | null;
+  gamma_export_url: string | null;
+
   // File paths
   pptx_path: string | null;
   docx_path: string | null;
