@@ -1007,7 +1007,7 @@ def _build_pptx(
     _add_title(s, "Proposed Deal Structure")
     _add_body(s, [
         f"• Structure: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} with local partner",
-        f"• Ownership: {strategy.partnership_structure.ownership_split or '51/49 local-majority'}",
+        f"• Ownership: {strategy.partnership_structure.ownership_split or '0/100 — Alpha operates, local entity owns'}",
         f"• Upfront IP fee: ${model.upfront_ip_fee:,.0f}",
         f"• Management fee: {model.management_fee_pct * 100:.0f}% of school revenue",
         f"• Timeback license: {model.timeback_license_pct * 100:.0f}% of per-student budget",
@@ -1182,7 +1182,7 @@ def _build_gamma_investor_input(
     slides.append(
         f"# Proposed Deal Structure\n\n"
         f"- Structure: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} with local partner\n"
-        f"- Ownership: {strategy.partnership_structure.ownership_split or '51/49 local-majority'}\n"
+        f"- Ownership: {strategy.partnership_structure.ownership_split or '0/100 — Alpha operates, local entity owns'}\n"
         f"- Upfront IP fee: ${model.upfront_ip_fee:,.0f}\n"
         f"- Management fee: {model.management_fee_pct*100:.0f}% of school revenue\n"
         f"- Timeback license: {model.timeback_license_pct*100:.0f}% of per-student budget\n"

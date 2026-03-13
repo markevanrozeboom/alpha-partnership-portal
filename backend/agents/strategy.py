@@ -42,6 +42,7 @@ institutional investors.
 - **Incept eduLLM**: Custom education AI adapted to local curriculum and culture
 - **Three commitments**: Children love school | Learn 2x faster | Future-ready skills
 - **UAE deal (Ed71/Next71)**: $1.5B upfront, 200K students over 5 years, $25K/student budget,
+  Alpha holds 0% equity — serves as exclusive operator & licensor; local entity (Next71) owns 100%,
   JV with AsasOne (local cultural IP layer), Emirati Guide cohort
 - **Revenue model**: Management fees (10% school revenue), Timeback License (20% per-student
   budget), upfront IP fee ($25M+), Guide School fees
@@ -109,7 +110,7 @@ Create scenarios table:
 | Student Commitment | 200K | ... | ... | ... |
 | Per-Student Budget | $25K | ... | PPP-adjusted | ... |
 | Upfront Commitment | $1.5B | ... | ... | ... |
-| JV Structure | 51/49 | ... | ... | ... |
+| JV Structure | 0/100 (Alpha operates, local owns) | ... | ... | ... |
 
 Write 5-6 paragraphs on market sizing methodology, key assumptions, and why the numbers
 are achievable based on the country research.
@@ -169,7 +170,7 @@ Based on the AsasOne model from the UAE deal:
 | Structural Element | UAE (AsasOne) | {target} (Proposed) | Rationale |
 |-------------------|---------------|-------------------|-----------|
 | Entity Name | Ed71 / Next71 | ... (suggest 2-3 options) | ... |
-| Ownership Split | Alpha 49% / Local 51% | ... | ... |
+| Ownership Split | Alpha 0% equity (Operator & Licensor) / Local 100% | ... | ... |
 | Board Composition | ... | ... | ... |
 | IP Ownership | Alpha retains core IP | ... | ... |
 | Cultural IP Layer | AsasOne | ... | ... |
@@ -372,7 +373,7 @@ dealbreakers — address them head-on.
 | IP Development Fee | $25M | $... | ... |
 | Management Fee | 10% | 10% | Non-negotiable |
 | Timeback License | 20% | 20% | Non-negotiable |
-| JV Ownership | 49/51 | ... | ... |
+| JV Ownership | 0/100 (Alpha operates, local entity owns) | ... | ... |
 | Exclusivity | UAE | {target} + ... | ... |
 | Duration | 10 years | ... | ... |
 | Performance Guarantees | ... | ... | ... |

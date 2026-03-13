@@ -189,10 +189,10 @@ def generate_term_sheet_assumptions(
         FinancialAssumption(
             key="ts_alpha_ownership_pct",
             label="Alpha Ownership / Control (%)",
-            value=49 if not is_us_state else 100,
-            min_val=10, max_val=100, step=1,
+            value=0 if not is_us_state else 100,
+            min_val=0, max_val=100, step=1,
             unit="%", category="deal",
-            description="Alpha's equity stake in the JV (100% for direct)",
+            description="Alpha's equity stake in the JV. 0% = Operator & Licensor model (UAE structure). 100% for direct.",
         ),
         FinancialAssumption(
             key="ts_term_years",

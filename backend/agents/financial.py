@@ -70,12 +70,13 @@ def generate_assumptions(
             premium_tuition = 25_000
             mid_tuition = 15_000
 
-    # Student Target (5yr): max(5,000, school_age_pop × 0.01 × demand_factor) — SPECS 2D
+    # Student Target (5yr): must be ≥ 10% of school-age population (market size)
     school_age_pop = country_profile.demographics.population_0_18 or country_profile.education.k12_enrolled or 500_000
-    # Demand factor: Tier 1 = 1.0, Tier 2 = 0.5, Tier 3 = 0.2
-    demand_factors = {1: 1.0, 2: 0.5, 3: 0.2}
-    demand_factor = demand_factors.get(tier or 1, 1.0)
-    target_students_y5 = strategy.target_student_count_year5 or max(5_000, int(school_age_pop * 0.01 * demand_factor))
+    # Floor: 10% of market size (school-age population)
+    min_y5_from_market = int(school_age_pop * 0.10)
+    target_students_y5 = strategy.target_student_count_year5 or max(5_000, min_y5_from_market)
+    # Enforce 10% floor even if strategy suggested a lower number
+    target_students_y5 = max(target_students_y5, min_y5_from_market)
 
     assumptions = [
         # --- Pricing ---
