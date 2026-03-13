@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import unicodedata
 from datetime import datetime
 
 from docx import Document as DocxDocument
@@ -28,21 +29,105 @@ TEXT_COLOR = (51, 51, 51)     # #333333
 RED = (204, 0, 0)
 
 
+def _clean_text(text: str) -> str:
+    """Clean text for PDF rendering — handle encoding issues.
+
+    The built-in Helvetica font in fpdf2 only supports latin-1 characters.
+    This function aggressively normalises all Unicode so no unsupported
+    character ever reaches the PDF renderer.
+    """
+    if not text:
+        return text
+
+    # Replace common problematic characters explicitly
+    replacements: dict[str, str] = {
+        "\u2018": "'",   # left single quote
+        "\u2019": "'",   # right single quote
+        "\u201a": "'",   # single low-9 quote
+        "\u201c": '"',   # left double quote
+        "\u201d": '"',   # right double quote
+        "\u201e": '"',   # double low-9 quote
+        "\u2013": "-",   # en dash
+        "\u2014": "-",   # em dash
+        "\u2015": "-",   # horizontal bar
+        "\u2012": "-",   # figure dash
+        "\u2026": "...", # ellipsis
+        "\u00a0": " ",   # non-breaking space
+        "\u2002": " ",   # en space
+        "\u2003": " ",   # em space
+        "\u2009": " ",   # thin space
+        "\u200a": " ",   # hair space
+        "\u200b": "",    # zero-width space
+        "\u200c": "",    # zero-width non-joiner
+        "\u200d": "",    # zero-width joiner
+        "\ufeff": "",    # BOM / zero-width no-break space
+        "\u2022": "-",   # bullet
+        "\u2023": ">",   # triangular bullet
+        "\u25aa": "-",   # black small square
+        "\u25cb": "o",   # white circle
+        "\u00b7": "-",   # middle dot
+        "\u2010": "-",   # hyphen
+        "\u2011": "-",   # non-breaking hyphen
+        "\u00ab": '"',   # left guillemet
+        "\u00bb": '"',   # right guillemet
+        "\u2039": "'",   # single left angle quote
+        "\u203a": "'",   # single right angle quote
+        "\u2032": "'",   # prime
+        "\u2033": '"',   # double prime
+        "\u00ad": "",    # soft hyphen
+        "\u00d7": "x",   # multiplication sign
+        "\u2192": "->",  # rightwards arrow
+        "\u2190": "<-",  # leftwards arrow
+        "\u2194": "<->", # left right arrow
+        "\u2713": "[x]", # check mark
+        "\u2717": "[ ]", # ballot x
+        "\u20ac": "EUR", # euro sign
+        "\u00a3": "GBP", # pound sign
+        "\u00a5": "JPY", # yen sign
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    # Normalise remaining Unicode via NFKD decomposition — this converts
+    # accented chars into base + combining mark, then we keep only the
+    # characters that survive latin-1 encoding.
+    text = unicodedata.normalize("NFKD", text)
+
+    # Final fallback: encode to latin-1, replacing anything still unsupported
+    return text.encode("latin-1", errors="replace").decode("latin-1")
+
+
 class AlphaPDF(FPDF):
-    """Custom FPDF subclass with Alpha branding."""
+    """Custom FPDF subclass with Alpha branding.
+
+    All text output methods are wrapped so every string is automatically
+    cleaned via ``_clean_text`` before reaching the PDF renderer.
+    """
 
     def __init__(self, title: str = "", subtitle: str = ""):
         super().__init__()
-        self.doc_title = title
-        self.doc_subtitle = subtitle
+        self.doc_title = _clean_text(title)
+        self.doc_subtitle = _clean_text(subtitle)
         self.set_auto_page_break(auto=True, margin=20)
+
+    # --- Wrap cell / multi_cell so callers never need to remember to clean ---
+
+    def cell(self, w=None, h=None, text="", *args, **kwargs):
+        return super().cell(w, h, _clean_text(str(text)), *args, **kwargs)
+
+    def multi_cell(self, w=None, h=None, text="", *args, **kwargs):
+        return super().multi_cell(w, h, _clean_text(str(text)), *args, **kwargs)
+
+    # --- Branded header / footer ---
 
     def header(self):
         if self.page_no() == 1:
             return  # Skip header on cover page
         self.set_font("Helvetica", "I", 8)
         self.set_text_color(*MID_GRAY)
-        self.cell(0, 8, f"CONFIDENTIAL — 2hr Learning (Alpha) | {self.doc_subtitle}", align="L")
+        super().cell(0, 8, _clean_text(
+            f"CONFIDENTIAL - 2hr Learning (Alpha) | {self.doc_subtitle}"
+        ), align="L")
         self.ln(4)
         # Thin accent line
         self.set_draw_color(*ACCENT)
@@ -54,7 +139,7 @@ class AlphaPDF(FPDF):
         self.set_y(-15)
         self.set_font("Helvetica", "I", 8)
         self.set_text_color(*MID_GRAY)
-        self.cell(0, 10, f"Page {self.page_no()}/{{nb}}", align="C")
+        super().cell(0, 10, f"Page {self.page_no()}/{{nb}}", align="C")
 
     def add_cover_page(self, title: str, subtitle: str, target: str):
         """Add a professional cover page."""
@@ -97,25 +182,7 @@ class AlphaPDF(FPDF):
         self.ln(12)
         self.set_font("Helvetica", "", 10)
         self.set_text_color(150, 150, 150)
-        self.multi_cell(0, 8, "Prepared by 2hr Learning — Alpha Division", align="C")
-
-
-def _clean_text(text: str) -> str:
-    """Clean text for PDF rendering — handle encoding issues."""
-    # Replace common problematic characters
-    text = text.replace("\u2019", "'")   # right single quote
-    text = text.replace("\u2018", "'")   # left single quote
-    text = text.replace("\u201c", '"')   # left double quote
-    text = text.replace("\u201d", '"')   # right double quote
-    text = text.replace("\u2013", "-")   # en dash
-    text = text.replace("\u2014", "-")   # em dash
-    text = text.replace("\u2026", "...")  # ellipsis
-    text = text.replace("\u00a0", " ")   # non-breaking space
-    text = text.replace("\u2022", "-")   # bullet
-    text = text.replace("\u00b7", "-")   # middle dot
-    text = text.replace("\u200b", "")    # zero-width space
-    # Encode to latin-1 with replacement for anything else
-    return text.encode("latin-1", errors="replace").decode("latin-1")
+        self.multi_cell(0, 8, "Prepared by 2hr Learning - Alpha Division", align="C")
 
 
 def convert_docx_to_pdf(docx_path: str) -> str:
