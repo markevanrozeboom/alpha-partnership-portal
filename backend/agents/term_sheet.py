@@ -736,16 +736,24 @@ def _build_term_sheet_docx(target: str, markdown: str) -> str:
     doc.add_page_break()
 
     # --- Render markdown body ---
-    for line in markdown.split("\n"):
-        stripped = line.strip()
+    lines = markdown.split("\n")
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].strip()
+
         if not stripped:
+            i += 1
             continue
+
         if stripped.startswith("### "):
             doc.add_heading(stripped[4:], level=3)
+
         elif stripped.startswith("## "):
             doc.add_heading(stripped[3:], level=2)
+
         elif stripped.startswith("# "):
             doc.add_heading(stripped[2:], level=1)
+
         elif stripped.startswith("- "):
             text = stripped[2:]
             if text.startswith("**") and "**" in text[2:]:
@@ -758,6 +766,7 @@ def _build_term_sheet_docx(target: str, markdown: str) -> str:
                 p.add_run(rest)
             else:
                 doc.add_paragraph(text, style="List Bullet")
+
         elif stripped.startswith("*") and stripped.endswith("*"):
             # Italic disclaimer
             p = doc.add_paragraph()
@@ -765,17 +774,28 @@ def _build_term_sheet_docx(target: str, markdown: str) -> str:
             run.italic = True
             run.font.size = DocxPt(9)
             run.font.color.rgb = DocxRGB(0x99, 0x99, 0x99)
+
         elif stripped.startswith("|"):
-            # Simple table row — render as plain text for term sheets
-            doc.add_paragraph(stripped)
+            # --- Collect and parse a full markdown table ---
+            table_lines: list[str] = []
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                table_lines.append(lines[i].strip())
+                i += 1
+            i -= 1  # will be incremented at end of loop
+
+            _add_markdown_table(doc, table_lines)
+
         elif stripped == "---":
             p = doc.add_paragraph()
             p.paragraph_format.space_before = DocxPt(8)
             p.paragraph_format.space_after = DocxPt(8)
+
         else:
             p = doc.add_paragraph()
             # Handle inline bold
             _add_formatted_text(p, stripped)
+
+        i += 1
 
     # Save
     output_dir = os.path.join(OUTPUT_DIR, target.lower().replace(" ", "_"))
@@ -784,6 +804,119 @@ def _build_term_sheet_docx(target: str, markdown: str) -> str:
     doc.save(path)
     logger.info("Term sheet DOCX saved: %s", path)
     return path
+
+
+def _add_markdown_table(doc: DocxDocument, table_lines: list[str]) -> None:
+    """Parse markdown table lines and add a proper DOCX table.
+
+    Handles header rows, separator rows (|---|---|), and data rows.
+    Bold text within cells (e.g. **Total**) is rendered as bold runs.
+    """
+    import re as _re
+
+    # Parse rows — split on | and strip whitespace
+    rows: list[list[str]] = []
+    for line in table_lines:
+        # Skip separator rows like |---|---|---|
+        if _re.match(r"^\|[\s\-:]+\|$", line.replace(" ", "")):
+            continue
+        cells = [c.strip() for c in line.split("|")]
+        # Remove empty first/last entries from leading/trailing |
+        if cells and cells[0] == "":
+            cells = cells[1:]
+        if cells and cells[-1] == "":
+            cells = cells[:-1]
+        if cells:
+            rows.append(cells)
+
+    if not rows:
+        return
+
+    # Determine column count from the header row
+    num_cols = max(len(row) for row in rows)
+
+    # Create DOCX table
+    table = doc.add_table(rows=len(rows), cols=num_cols)
+    table.style = "Table Grid"
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+    # Set column widths — distribute evenly
+    total_width = DocxInches(6.5)
+    col_width = DocxInches(6.5 / num_cols)
+
+    for ri, row_data in enumerate(rows):
+        row_cells = table.rows[ri].cells
+        for ci in range(num_cols):
+            cell_text = row_data[ci] if ci < len(row_data) else ""
+            cell = row_cells[ci]
+            cell.width = col_width
+
+            # Clear default paragraph
+            if cell.paragraphs:
+                p = cell.paragraphs[0]
+            else:
+                p = cell.add_paragraph()
+
+            p.paragraph_format.space_before = DocxPt(2)
+            p.paragraph_format.space_after = DocxPt(2)
+
+            # Header row styling (first row)
+            if ri == 0:
+                # Dark background for header
+                from docx.oxml.ns import qn
+                shading = p._element.get_or_add_pPr()
+                tc = cell._element
+                tc_pr = tc.get_or_add_tcPr()
+                shading_el = tc_pr.makeelement(qn("w:shd"), {
+                    qn("w:fill"): "006D77",
+                    qn("w:val"): "clear",
+                })
+                tc_pr.append(shading_el)
+
+                _add_cell_text(p, cell_text, bold=True, font_size=DocxPt(9),
+                               color=DocxRGB(0xFF, 0xFF, 0xFF))
+            else:
+                # Alternate row shading
+                if ri % 2 == 0:
+                    from docx.oxml.ns import qn
+                    tc = cell._element
+                    tc_pr = tc.get_or_add_tcPr()
+                    shading_el = tc_pr.makeelement(qn("w:shd"), {
+                        qn("w:fill"): "F0F0F0",
+                        qn("w:val"): "clear",
+                    })
+                    tc_pr.append(shading_el)
+
+                _add_cell_text(p, cell_text, bold=False, font_size=DocxPt(9),
+                               color=DocxRGB(0x33, 0x33, 0x33))
+
+    doc.add_paragraph("")  # Spacer after table
+
+
+def _add_cell_text(paragraph, text: str, bold: bool = False,
+                   font_size=None, color=None) -> None:
+    """Add text to a table cell paragraph, handling **bold** inline markup."""
+    import re as _re
+
+    # Remove existing runs
+    for run in paragraph.runs:
+        run.text = ""
+
+    # Parse **bold** segments
+    parts = _re.split(r"(\*\*.*?\*\*)", text)
+    for part in parts:
+        if part.startswith("**") and part.endswith("**"):
+            run = paragraph.add_run(part[2:-2])
+            run.bold = True
+        else:
+            run = paragraph.add_run(part)
+            run.bold = bold
+
+        run.font.name = "Calibri"
+        if font_size:
+            run.font.size = font_size
+        if color:
+            run.font.color.rgb = color
 
 
 def _add_formatted_text(paragraph, text: str) -> None:

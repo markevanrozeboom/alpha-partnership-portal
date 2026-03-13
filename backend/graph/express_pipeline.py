@@ -61,6 +61,8 @@ def _make_express_state(run_id: str, target: str) -> dict[str, Any]:
         "step_label": "Researching market...",
         "term_sheet_pdf_path": None,
         "proposal_pdf_path": None,
+        "proposal_pptx_path": None,   # Direct PPTX download (Gamma or local)
+        "gamma_url": None,             # Gamma viewer URL for online viewing
         "error_message": None,
         "created_at": datetime.now().isoformat(),
     }
@@ -178,13 +180,26 @@ async def run_express_pipeline(run_id: str) -> None:
         if not final_pptx_path and local_pptx_fallback:
             final_pptx_path = local_pptx_fallback
 
+        # Store Gamma URL for online viewing
+        final_gamma_url = gamma_url if is_us_state else gen_gamma_url
+        state["gamma_url"] = final_gamma_url
+
         # ---------------------------------------------------------------
         # Step 6: Convert to PDF
         # ---------------------------------------------------------------
         _update(state, 5, "Creating PDF documents...")
 
+        # Term Sheet — convert our DOCX to PDF
         term_sheet_pdf = convert_docx_to_pdf(term_sheet_docx_path)
-        proposal_pdf = convert_docx_to_pdf(docx_path)
+
+        # Proposal Deck — use the actual deck PPTX, NOT the memorandum
+        if final_pptx_path:
+            proposal_pdf = convert_pptx_to_pdf(final_pptx_path)
+            state["proposal_pptx_path"] = final_pptx_path
+        else:
+            # Fallback: if no deck was generated, use the memorandum
+            logger.warning("No deck PPTX available for %s — falling back to memorandum DOCX", target)
+            proposal_pdf = convert_docx_to_pdf(docx_path)
 
         state["term_sheet_pdf_path"] = term_sheet_pdf
         state["proposal_pdf_path"] = proposal_pdf

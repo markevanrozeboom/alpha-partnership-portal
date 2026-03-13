@@ -327,6 +327,8 @@ export interface ExpressRunStatus {
   step_label: string;
   term_sheet_pdf_path: string | null;
   proposal_pdf_path: string | null;
+  proposal_pptx_path: string | null;
+  gamma_url: string | null;
   error_message: string | null;
   created_at: string;
 }
@@ -347,6 +349,6 @@ export async function getExpressRunStatus(runId: string): Promise<ExpressRunStat
   return res.json();
 }
 
-export function getExpressDownloadUrl(runId: string, fileType: "term_sheet" | "proposal"): string {
+export function getExpressDownloadUrl(runId: string, fileType: "term_sheet" | "proposal" | "proposal_pptx"): string {
   return `${API_URL}/api/portal/runs/${runId}/download/${fileType}`;
 }

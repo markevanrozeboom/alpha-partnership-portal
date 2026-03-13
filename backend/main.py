@@ -467,9 +467,9 @@ async def get_express_run_status(run_id: str):
 
 @app.get("/api/portal/runs/{run_id}/download/{file_type}")
 async def download_express_file(run_id: str, file_type: str):
-    """Download a PDF from an express pipeline run.
+    """Download a file from an express pipeline run.
 
-    file_type: 'term_sheet' or 'proposal'
+    file_type: 'term_sheet' | 'proposal' (PDFs) | 'proposal_pptx' (deck PPTX)
     """
     state = get_express_state(run_id)
 
@@ -479,16 +479,24 @@ async def download_express_file(run_id: str, file_type: str):
     file_map = {
         "term_sheet": state.get("term_sheet_pdf_path"),
         "proposal": state.get("proposal_pdf_path"),
+        "proposal_pptx": state.get("proposal_pptx_path"),
     }
 
     path = file_map.get(file_type)
     if not path or not os.path.exists(path):
         raise HTTPException(404, f"File not found: {file_type}")
 
+    # Determine media type
+    media_types = {
+        "term_sheet": "application/pdf",
+        "proposal": "application/pdf",
+        "proposal_pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    }
+
     return FileResponse(
         path,
         filename=os.path.basename(path),
-        media_type="application/pdf",
+        media_type=media_types.get(file_type, "application/octet-stream"),
     )
 
 

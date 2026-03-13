@@ -236,10 +236,7 @@ export default function PortalRunPage() {
                 </a>
 
                 {/* Proposal Deck */}
-                <a
-                  href={getExpressDownloadUrl(runId, "proposal")}
-                  className="group rounded-2xl border border-white/10 bg-[#1a1a2e] p-6 space-y-4 hover:border-[#006D77]/50 hover:bg-[#1a1a2e]/80 transition-all duration-200 block"
-                >
+                <div className="rounded-2xl border border-white/10 bg-[#1a1a2e] p-6 space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -248,24 +245,62 @@ export default function PortalRunPage() {
                       </svg>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-white group-hover:text-[#00d4aa] transition-colors">
+                      <h3 className="font-semibold text-white">
                         Proposal Deck
                       </h3>
-                      <p className="text-xs text-gray-500">PDF Document</p>
+                      <p className="text-xs text-gray-500">Investor / Partnership Deck</p>
                     </div>
                   </div>
                   <p className="text-sm text-gray-400">
-                    Investment memorandum with market analysis, financials, and implementation roadmap.
+                    Strategic partnership proposal with market analysis, financials, and implementation roadmap.
                   </p>
-                  <div className="flex items-center gap-2 text-[#006D77] text-sm font-medium group-hover:text-[#00d4aa] transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Download PDF
+
+                  {/* Gamma "View Online" link — best experience */}
+                  {data?.gamma_url && (
+                    <a
+                      href={data.gamma_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-[#00d4aa] text-sm font-medium hover:text-white transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                      View Interactive Deck Online
+                    </a>
+                  )}
+
+                  <div className="flex flex-wrap gap-3">
+                    {/* PPTX download — full fidelity */}
+                    {data?.proposal_pptx_path && (
+                      <a
+                        href={getExpressDownloadUrl(runId, "proposal_pptx")}
+                        className="flex items-center gap-2 text-[#006D77] text-sm font-medium hover:text-[#00d4aa] transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Download PPTX
+                      </a>
+                    )}
+                    {/* PDF download */}
+                    <a
+                      href={getExpressDownloadUrl(runId, "proposal")}
+                      className="flex items-center gap-2 text-[#006D77] text-sm font-medium hover:text-[#00d4aa] transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Download PDF
+                    </a>
                   </div>
-                </a>
+                </div>
               </div>
 
               {/* Generate Another */}
