@@ -14,22 +14,22 @@ formulas:
     components:
       alphacore_license:
         tier_1: 250000000
-        tier_2: 50000000
-        tier_3: 33000000
+        tier_2: 150000000
+        tier_3: 100000000
       app_content_rd:
         tier_1: 250000000
-        tier_2: 50000000
-        tier_3: 33000000
+        tier_2: 150000000
+        tier_3: 100000000
       lifeskills_rd:
         tier_1: 250000000
-        tier_2: 50000000
-        tier_3: 34000000
+        tier_2: 150000000
+        tier_3: 100000000
       management_fee_upfront: "student_target_5yr * per_student_budget * 0.10"
       timeback_upfront: "student_target_5yr * per_student_budget * 0.20"
     fixed_dev_costs:
-      tier_1: 750000000  # $750M
-      tier_2: 150000000  # $150M
-      tier_3: 100000000  # $100M
+      tier_1: 750000000  # $250M × 3
+      tier_2: 450000000  # $150M × 3
+      tier_3: 300000000  # $100M × 3
     minimum: 25000000  # $25M floor
 
   student_target_5yr:

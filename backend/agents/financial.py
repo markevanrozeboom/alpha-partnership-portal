@@ -260,8 +260,10 @@ def _generate_cohort_assumptions(
     default_cohorts = 2 if tier == 2 else 1
     total_students = default_cohorts * cohort_size
 
-    # Fixed development costs by tier ($M): Tier 2 = $150M, Tier 3 = $100M
-    tier_dev_cost = 150 if tier == 2 else 100
+    # Fixed development cost per line item ($M): Tier 2 = $150M each, Tier 3 = $100M each
+    # (AlphaCore License, App Content R&D, LifeSkills R&D — 3 items)
+    tier_item_cost = 150 if tier == 2 else 100
+    tier_dev_cost = tier_item_cost * 3  # total fixed: T2=$450M, T3=$300M
 
     assumptions = [
         FinancialAssumption(
@@ -306,7 +308,7 @@ def _generate_cohort_assumptions(
         # Alpha Holdings receipts (upfront)
         FinancialAssumption(
             key="upfront_alphacore_license", label="AlphaCore License ($M)",
-            value=tier_dev_cost // 3, min_val=10, max_val=500, step=5,
+            value=tier_item_cost, min_val=10, max_val=500, step=5,
             unit="$M", category="fees",
             description="AlphaCore curriculum OS & LMS license — paid to Alpha Holdings",
         ),
@@ -327,13 +329,13 @@ def _generate_cohort_assumptions(
         # Local expenses (counterparty cost, shown for deal sizing)
         FinancialAssumption(
             key="upfront_app_content_rd", label="Customized Country-Specific App Content R&D ($M)",
-            value=tier_dev_cost // 3, min_val=10, max_val=500, step=5,
+            value=tier_item_cost, min_val=10, max_val=500, step=5,
             unit="$M", category="fees",
             description="Local expense — country-specific EdTech app content R&D (owned by local entity)",
         ),
         FinancialAssumption(
             key="upfront_lifeskills_rd", label="Customized Country-Specific LifeSkills R&D ($M)",
-            value=tier_dev_cost - 2 * (tier_dev_cost // 3), min_val=10, max_val=500, step=5,
+            value=tier_item_cost, min_val=10, max_val=500, step=5,
             unit="$M", category="fees",
             description="Local expense — country-specific life skills curriculum R&D (owned by local entity)",
         ),
@@ -720,9 +722,9 @@ def _build_cohort_model(a: dict) -> FinancialModel:
         management_fee_pct=mgmt_fee_pct,
         timeback_license_pct=timeback_pct,
         upfront_ip_fee=upfront_ip,
-        upfront_alphacore_license=a.get("upfront_alphacore_license", 50) * 1_000_000,
-        upfront_app_content_rd=a.get("upfront_app_content_rd", 50) * 1_000_000,
-        upfront_lifeskills_rd=a.get("upfront_lifeskills_rd", 50) * 1_000_000,
+        upfront_alphacore_license=a.get("upfront_alphacore_license", 100) * 1_000_000,
+        upfront_app_content_rd=a.get("upfront_app_content_rd", 100) * 1_000_000,
+        upfront_lifeskills_rd=a.get("upfront_lifeskills_rd", 100) * 1_000_000,
         upfront_mgmt_fee=a.get("upfront_mgmt_fee", 0) * 1_000_000,
         upfront_timeback_fee=a.get("upfront_timeback_fee", 0) * 1_000_000,
         total_management_fee_revenue=round(total_mgmt),

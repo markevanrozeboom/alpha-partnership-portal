@@ -67,6 +67,11 @@ export interface FinancialModel {
   management_fee_pct: number;
   timeback_license_pct: number;
   upfront_ip_fee: number;
+  upfront_alphacore_license: number;
+  upfront_app_content_rd: number;
+  upfront_lifeskills_rd: number;
+  upfront_mgmt_fee: number;
+  upfront_timeback_fee: number;
   total_management_fee_revenue: number;
   total_timeback_license_revenue: number;
 }

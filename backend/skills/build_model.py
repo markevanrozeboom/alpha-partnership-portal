@@ -127,13 +127,14 @@ def compute_scaling(data: dict, tier: int) -> dict:
     ppp_factor = min(1.0, gdp_pc / 30000)
     student_target_5yr = max(5000, int(school_age_pop * 0.01 * demand_factor))
     per_student_budget = max(5000, min(30000, avg_tuition * 0.8))
-    # Fixed development costs by tier ($M): Tier 1 = $750M, Tier 2 = $150M, Tier 3 = $100M
-    tier_dev_costs = {1: 750_000_000, 2: 150_000_000, 3: 100_000_000}
-    fixed_dev_cost = tier_dev_costs.get(tier, 750_000_000)
+    # Fixed development cost per line item: Tier 1 = $250M, Tier 2 = $150M, Tier 3 = $100M (×3 items each)
+    tier_item_costs = {1: 250_000_000, 2: 150_000_000, 3: 100_000_000}
+    item_cost = tier_item_costs.get(tier, 250_000_000)
+    fixed_dev_cost = item_cost * 3  # total: T1=$750M, T2=$450M, T3=$300M
     # AlphaCore License (Alpha Holdings), App Content R&D + LifeSkills R&D (local expense)
-    alphacore_license = fixed_dev_cost // 3
-    app_content_rd = fixed_dev_cost // 3
-    lifeskills_rd = fixed_dev_cost - 2 * (fixed_dev_cost // 3)
+    alphacore_license = item_cost
+    app_content_rd = item_cost
+    lifeskills_rd = item_cost
     # Variable upfront: Mgmt Fee = students × budget × 10%, Timeback = students × budget × 20%
     upfront_mgmt_fee = student_target_5yr * per_student_budget * 0.10
     upfront_timeback_fee = student_target_5yr * per_student_budget * 0.20
