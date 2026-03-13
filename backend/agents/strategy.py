@@ -42,6 +42,7 @@ institutional investors.
 - **Incept eduLLM**: Custom education AI adapted to local curriculum and culture
 - **Three commitments**: Children love school | Learn 2x faster | Future-ready skills
 - **UAE deal (Ed71/Next71)**: $1.5B upfront, 200K students over 5 years, $25K/student budget,
+  Alpha holds 0% equity — serves as exclusive operator & licensor; local entity (Next71) owns 100%,
   JV with AsasOne (local cultural IP layer), Emirati Guide cohort
 - **Revenue model**: Management fees (10% school revenue), Timeback License (20% per-student
   budget), upfront IP fee ($25M+), Guide School fees
@@ -109,7 +110,7 @@ Create scenarios table:
 | Student Commitment | 200K | ... | ... | ... |
 | Per-Student Budget | $25K | ... | PPP-adjusted | ... |
 | Upfront Commitment | $1.5B | ... | ... | ... |
-| JV Structure | 51/49 | ... | ... | ... |
+| JV Structure | 0/100 (Alpha operates, local owns) | ... | ... | ... |
 
 Write 5-6 paragraphs on market sizing methodology, key assumptions, and why the numbers
 are achievable based on the country research.
@@ -169,7 +170,7 @@ Based on the AsasOne model from the UAE deal:
 | Structural Element | UAE (AsasOne) | {target} (Proposed) | Rationale |
 |-------------------|---------------|-------------------|-----------|
 | Entity Name | Ed71 / Next71 | ... (suggest 2-3 options) | ... |
-| Ownership Split | Alpha 49% / Local 51% | ... | ... |
+| Ownership Split | Alpha 0% equity (Operator & Licensor) / Local 100% | ... | ... |
 | Board Composition | ... | ... | ... |
 | IP Ownership | Alpha retains core IP | ... | ... |
 | Cultural IP Layer | AsasOne | ... | ... |
@@ -372,7 +373,7 @@ dealbreakers — address them head-on.
 | IP Development Fee | $25M | $... | ... |
 | Management Fee | 10% | 10% | Non-negotiable |
 | Timeback License | 20% | 20% | Non-negotiable |
-| JV Ownership | 49/51 | ... | ... |
+| JV Ownership | 0/100 (Alpha operates, local entity owns) | ... | ... |
 | Exclusivity | UAE | {target} + ... | ... |
 | Duration | 10 years | ... | ... |
 | Performance Guarantees | ... | ... | ... |
@@ -518,10 +519,36 @@ async def run_strategy(
     country_ctx = _build_country_context(country_profile)
     education_ctx = _build_education_context(education_analysis)
 
+    # --- Detect US state ---
+    is_us_state = country_profile.target.type == TargetType.US_STATE
+
+    # --- Compute minimum Y5 student target (10% of school-age population) ---
+    school_age_pop = (
+        country_profile.demographics.population_0_18
+        or country_profile.education.k12_enrolled
+        or 500_000
+    )
+    min_y5_students = max(5_000, int(school_age_pop * 0.10))
+
     # --- Structured strategy ---
+    structured_prompt = (
+        "You are a senior VC/McKinsey strategist advising Alpha Holdings (2hr Learning) "
+        "on a market-entry deal.\n\n"
+        "CRITICAL DEAL PARAMETERS (non-negotiable):\n"
+        "- Alpha holds 0% equity in the local entity. Alpha is the exclusive operator & licensor. "
+        "The local entity owns 100% of equity. This is the UAE (Ed71/Next71) model.\n"
+        f"- The Year 5 student target must be AT LEAST {min_y5_students:,} "
+        f"(≥ 10% of the school-age population of {school_age_pop:,}).\n"
+        "- Management fee: 10% of school revenue (non-negotiable)\n"
+        "- Timeback license: 20% of per-student budget (non-negotiable)\n"
+        "- Minimum per-student budget: $15,000\n\n"
+        "Set partnership_structure.ownership_split to "
+        "'0/100 — Alpha operates as exclusive operator & licensor; local entity owns 100%'.\n\n"
+        "Produce a structured strategy."
+    )
     try:
         strategy: Strategy = await call_llm(
-            system_prompt="You are a VC/McKinsey strategist. Produce a structured strategy.",
+            system_prompt=structured_prompt,
             user_prompt=(
                 f"Target: {target}\nCountry: {country_ctx}\nEducation: {education_ctx}\n"
                 f"Entry mode preference: {entry_mode.value if entry_mode else 'not specified'}"
@@ -534,6 +561,21 @@ async def run_strategy(
 
     if entry_mode:
         strategy.entry_mode = entry_mode
+
+    # --- Enforce non-negotiable deal parameters on the structured object ---
+    if not is_us_state:
+        strategy.partnership_structure.ownership_split = (
+            "0/100 — Alpha operates as exclusive operator & licensor; local entity owns 100%"
+        )
+    # Enforce Y5 student floor
+    if strategy.target_student_count_year5 and strategy.target_student_count_year5 < min_y5_students:
+        logger.info(
+            "Overriding Y5 student target from %s to %s (10%% floor)",
+            strategy.target_student_count_year5, min_y5_students,
+        )
+        strategy.target_student_count_year5 = min_y5_students
+    elif not strategy.target_student_count_year5:
+        strategy.target_student_count_year5 = min_y5_students
 
     # --- Determine tier for routing ---
     tier = country_profile.target.tier if country_profile.target.tier else None

@@ -12,12 +12,17 @@ import logging
 import os
 from datetime import datetime
 
-from services.gamma import generate_and_wait
+from services.gamma import generate_and_wait, _extract_gamma_url, _extract_export_url
 
 from docx import Document as DocxDocument
 from docx.shared import Pt as DocxPt, RGBColor as DocxRGB, Inches as DocxInches, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
+
+from pptx import Presentation as PptxPresentation
+from pptx.util import Inches as PptxInches, Pt as PptxPt
+from pptx.dml.color import RGBColor as PptxRGB
+from pptx.enum.text import PP_ALIGN
 
 from models.schemas import (
     CountryProfile, EducationAnalysis, Strategy,
@@ -262,10 +267,14 @@ async def generate_documents(
     assumptions: FinancialAssumptions,
     audience: AudienceType = AudienceType.INVESTOR,
     revision_notes: str | None = None,
-) -> tuple[str | None, str | None, str, str]:
-    """Generate presentation deck (via Gamma), investment memorandum, and spreadsheet.
+    export_as: str = "pptx",
+) -> tuple[str | None, str | None, str, str, str | None, str]:
+    """Generate presentation deck (via Gamma with local fallback), investment memorandum, and spreadsheet.
 
-    Returns (gamma_url, export_url, docx_path, xlsx_path).
+    Returns (gamma_url, export_url, docx_path, xlsx_path, local_pptx_path, deck_input_text).
+    ``local_pptx_path`` is a locally-generated PPTX fallback produced when
+    the Gamma API is unavailable.  ``deck_input_text`` is the raw content
+    sent to Gamma, enabling callers to request additional export formats.
     """
     logger.info("Generating documents for %s (audience: %s)", target, audience.value)
 
@@ -299,10 +308,30 @@ async def generate_documents(
         ),
     )
 
-    # --- Generate investor deck via Gamma ---
-    gamma_url, export_url = await _build_investor_deck_gamma(
+    # --- Always generate local PPTX first (guaranteed fallback) ---
+    local_pptx_path = None
+    try:
+        local_pptx_path = _build_pptx(
+            target, strategy, financial_model, deck_outline, audience, output_dir,
+        )
+        logger.info("Local PPTX generated: %s", local_pptx_path)
+    except Exception as exc:
+        logger.error("Local PPTX generation failed for %s: %s", target, exc)
+
+    # --- Generate investor deck via Gamma (enhanced version) ---
+    gamma_url, export_url, deck_input_text = await _build_investor_deck_gamma(
         target, strategy, financial_model, deck_outline, audience,
+        export_as=export_as,
     )
+
+    # If Gamma succeeded, log it; otherwise the local PPTX is our backup
+    if gamma_url or export_url:
+        logger.info("Gamma deck generated successfully for %s", target)
+    else:
+        logger.warning(
+            "Gamma unavailable for %s — local PPTX %s will be used as fallback",
+            target, "is available" if local_pptx_path else "ALSO FAILED",
+        )
 
     # --- Generate DOCX investment memorandum (multi-section) ---
     docx_path = await _build_investment_memorandum(
@@ -316,8 +345,9 @@ async def generate_documents(
     from agents.financial import export_model_xlsx
     xlsx_path = export_model_xlsx(target, financial_model, assumptions, country_profile)
 
-    logger.info("Documents generated: gamma=%s, docx=%s, xlsx=%s", gamma_url, docx_path, xlsx_path)
-    return gamma_url, export_url, docx_path, xlsx_path
+    logger.info("Documents generated: gamma=%s, local_pptx=%s, docx=%s, xlsx=%s",
+                gamma_url, local_pptx_path, docx_path, xlsx_path)
+    return gamma_url, export_url, docx_path, xlsx_path, local_pptx_path, deck_input_text
 
 
 # ---------------------------------------------------------------------------
@@ -852,6 +882,238 @@ For each slide provide: title, key bullet points (4-6), data callouts, and speak
 """
 
 
+def _build_pptx(
+    target: str,
+    strategy: Strategy,
+    model: FinancialModel,
+    outline: str,
+    audience: AudienceType,
+    output_dir: str,
+) -> str:
+    """Build a local PPTX investor deck as a fallback when the Gamma API is
+    unavailable.  Returns the absolute path to the generated ``.pptx`` file.
+
+    The deck mirrors the same content structure used by ``_build_gamma_investor_input``.
+    """
+
+    prs = PptxPresentation()
+    prs.slide_width = PptxInches(13.333)
+    prs.slide_height = PptxInches(7.5)
+
+    # Branding colours
+    DARK_BG = PptxRGB(0x0A, 0x0F, 0x1A)
+    ACCENT = PptxRGB(0x00, 0x6D, 0x77)
+    WHITE = PptxRGB(0xFF, 0xFF, 0xFF)
+    LIGHT_GRAY = PptxRGB(0xCC, 0xCC, 0xCC)
+
+    def _add_slide() -> "pptx.slide.Slide":
+        layout = prs.slide_layouts[6]  # blank layout
+        slide = prs.slides.add_slide(layout)
+        # dark background
+        bg = slide.background
+        fill = bg.fill
+        fill.solid()
+        fill.fore_color.rgb = DARK_BG
+        return slide
+
+    def _add_title(slide, text: str, top: float = 0.4):
+        from pptx.util import Emu
+        txBox = slide.shapes.add_textbox(
+            PptxInches(0.8), PptxInches(top), PptxInches(11.7), PptxInches(0.9),
+        )
+        tf = txBox.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        p.text = text
+        p.font.size = PptxPt(32)
+        p.font.bold = True
+        p.font.color.rgb = WHITE
+        p.alignment = PP_ALIGN.LEFT
+
+    def _add_body(slide, lines: list[str], top: float = 1.5):
+        txBox = slide.shapes.add_textbox(
+            PptxInches(0.8), PptxInches(top), PptxInches(11.7), PptxInches(5.0),
+        )
+        tf = txBox.text_frame
+        tf.word_wrap = True
+        for i, line in enumerate(lines):
+            p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+            p.text = line
+            p.font.size = PptxPt(18)
+            p.font.color.rgb = LIGHT_GRAY
+            p.space_after = PptxPt(8)
+
+    # ── Slide 1: Title ─────────────────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, f"2hr Learning × {target}", top=2.0)
+    _add_body(s, ["Strategic Partnership Proposal", "", "CONFIDENTIAL"], top=3.2)
+
+    # ── Slide 2: Executive Summary ─────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, "Executive Summary")
+    jv = strategy.brand.jv_name_suggestion or f"Alpha × {target}"
+    exec_lines = [
+        f"Opportunity: Transform K-12 education in {target} through AI-powered learning",
+        f"Partnership: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} structure with local entity",
+    ]
+    if model.pnl_projection:
+        y5 = model.pnl_projection[-1]
+        exec_lines.append(f"Scale: {y5.students:,} students across {y5.schools} schools by Year 5")
+        exec_lines.append(f"Investment: Year 5 revenue of ${y5.revenue:,.0f}")
+    if model.returns_analysis.irr:
+        exec_lines.append(f"Returns: {model.returns_analysis.irr}% IRR, {model.returns_analysis.moic}x MOIC")
+    exec_lines.append("Proven model: UAE deal ($1.5B, 200K students) as reference")
+    _add_body(s, [f"• {l}" for l in exec_lines])
+
+    # ── Slide 3: The Alpha Model ───────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, "The 2hr Learning Model")
+    _add_body(s, [
+        "• Timeback: AI compresses core academics into 2 hours/day",
+        "• Remaining time: STEM, sports, arts, entrepreneurship, life skills",
+        "• AlphaCore: Curriculum OS managing the full student journey",
+        "• Guide School: 12-month program transforming teachers into Guides",
+        "• Incept eduLLM: Custom AI adapted to local curriculum & culture",
+        "• Three commitments: Love school | Learn 2x faster | Future-ready skills",
+    ])
+
+    # ── Slide 4: Market Opportunity ────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, f"Market Opportunity: {target}")
+    _add_body(s, [
+        "• School-age population: significant K-12 cohort",
+        "• Education sector undergoing reform and modernisation",
+        "• Growing demand for premium, innovation-driven education",
+        "• Gap between aspirations and current system performance",
+        "• Government appetite for public-private partnerships",
+        "• Alpha's model addresses the core pain points",
+    ])
+
+    # ── Slide 5: Financial Overview ────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, "5-Year Financial Summary")
+    if model.pnl_projection:
+        y1 = model.pnl_projection[0]
+        y5 = model.pnl_projection[-1]
+        fin_lines = [
+            f"• Year 1: {y1.students:,} students → ${y1.revenue:,.0f} revenue → ${y1.ebitda:,.0f} EBITDA",
+            f"• Year 5: {y5.students:,} students → ${y5.revenue:,.0f} revenue → ${y5.ebitda:,.0f} EBITDA",
+        ]
+        if model.returns_analysis.irr:
+            fin_lines.append(f"• IRR: {model.returns_analysis.irr}%")
+        if model.returns_analysis.moic:
+            fin_lines.append(f"• MOIC: {model.returns_analysis.moic}x")
+        fin_lines.append(f"• Management fee revenue (5yr): ${model.total_management_fee_revenue:,.0f}")
+        fin_lines.append(f"• Timeback license revenue (5yr): ${model.total_timeback_license_revenue:,.0f}")
+        _add_body(s, fin_lines)
+    else:
+        _add_body(s, ["• Financial model pending"])
+
+    # ── Slide 6: Deal Structure ────────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, "Proposed Deal Structure")
+    _add_body(s, [
+        f"• Structure: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} with local partner",
+        f"• Ownership: {strategy.partnership_structure.ownership_split or '0/100 — Alpha operates, local entity owns'}",
+        f"• Upfront IP fee: ${model.upfront_ip_fee:,.0f}",
+        f"• Management fee: {model.management_fee_pct * 100:.0f}% of school revenue",
+        f"• Timeback license: {model.timeback_license_pct * 100:.0f}% of per-student budget",
+        "• Local entity manages cultural IP layer, national identity integration",
+    ])
+
+    # ── Slide 7: School Portfolio ──────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, "School Type Portfolio")
+    if strategy.school_types:
+        lines = [f"• {st.name}: {st.focus or ''} — {st.tuition or ''}" for st in strategy.school_types[:4]]
+    else:
+        lines = ["• Premium, Mid-Market, and Specialised school types"]
+    _add_body(s, lines)
+
+    # ── Slide 8: Rollout Plan ──────────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, "5-Year Rollout Plan")
+    if strategy.phased_rollout:
+        rollout_lines = []
+        for ph in strategy.phased_rollout[:5]:
+            if ph.student_count:
+                rollout_lines.append(f"• {ph.phase}: {ph.timeline} — {ph.student_count:,} students")
+            else:
+                rollout_lines.append(f"• {ph.phase}: {ph.timeline}")
+        _add_body(s, rollout_lines)
+    else:
+        _add_body(s, ["• Phased rollout details in strategy report"])
+
+    # ── Slide 9: Unit Economics ────────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, "Unit Economics")
+    ue_lines = [
+        f"• {ue.school_type}: ${ue.per_student_revenue:,.0f}/student revenue, "
+        f"${ue.contribution_margin:,.0f} margin ({ue.margin_pct}%)"
+        for ue in model.unit_economics[:4]
+    ]
+    _add_body(s, ue_lines if ue_lines else ["• Unit economics in financial model"])
+
+    # ── Slide 10: Risk Mitigation ──────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, "Risk Mitigation")
+    _add_body(s, [
+        "• Regulatory risk: Proactive government engagement and compliance",
+        "• Execution risk: Phased rollout with decision gates",
+        "• Cultural risk: Local IP layer and cultural advisory board",
+        "• FX risk: Local currency revenue with USD hedging strategy",
+        "• Competitive risk: Proprietary AI and outcomes data as moat",
+        "• Political risk: Multi-stakeholder alignment strategy",
+    ])
+
+    # ── Slide 11: Key Asks ─────────────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, "Key Asks & Next Steps")
+    asks = strategy.key_asks[:6] if strategy.key_asks else [
+        "Sovereign commitment to student volume targets",
+        "Regulatory fast-track for school licensing",
+        "Infrastructure/real estate support",
+        "Cultural IP development partnership",
+    ]
+    _add_body(s, [f"• {a}" for a in asks])
+
+    # ── Slide 12: Appendix – P&L ──────────────────────────────────────
+    if model.pnl_projection:
+        s = _add_slide()
+        _add_title(s, "Appendix: Detailed P&L Projection")
+        pnl_lines = [
+            f"• Y{p.year}: {p.students:,} students | ${p.revenue:,.0f} rev | "
+            f"${p.ebitda:,.0f} EBITDA | ${p.free_cash_flow:,.0f} FCF"
+            for p in model.pnl_projection
+        ]
+        _add_body(s, pnl_lines)
+
+    # ── Slide 13: Appendix – Capital Deployment ───────────────────────
+    if model.capital_deployment:
+        s = _add_slide()
+        _add_title(s, "Appendix: Capital Deployment")
+        cap_lines = [
+            f"• Year {cd.year}: ${cd.total:,.0f} total "
+            f"({'${:,.0f} IP'.format(cd.ip_development) if cd.ip_development else ''}"
+            f" + ${cd.launch_capital:,.0f} launch + ${cd.real_estate:,.0f} RE)"
+            for cd in model.capital_deployment
+        ]
+        _add_body(s, cap_lines)
+
+    # ── Slide 14: Thank You ───────────────────────────────────────────
+    s = _add_slide()
+    _add_title(s, "Thank You", top=2.5)
+    _add_body(s, ["2hr Learning — Transforming Education Globally"], top=3.8)
+
+    # Save
+    safe_name = target.lower().replace(" ", "_")
+    filename = f"{safe_name}_investor_deck.pptx"
+    pptx_path = os.path.join(output_dir, filename)
+    prs.save(pptx_path)
+    logger.info("Local PPTX saved: %s", pptx_path)
+    return pptx_path
+
+
 def _build_gamma_investor_input(
     target: str,
     strategy: Strategy,
@@ -927,7 +1189,7 @@ def _build_gamma_investor_input(
     slides.append(
         f"# Proposed Deal Structure\n\n"
         f"- Structure: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} with local partner\n"
-        f"- Ownership: {strategy.partnership_structure.ownership_split or '51/49 local-majority'}\n"
+        f"- Ownership: {strategy.partnership_structure.ownership_split or '0/100 — Alpha operates, local entity owns'}\n"
         f"- Upfront IP fee: ${model.upfront_ip_fee:,.0f}\n"
         f"- Management fee: {model.management_fee_pct*100:.0f}% of school revenue\n"
         f"- Timeback license: {model.timeback_license_pct*100:.0f}% of per-student budget\n"
@@ -1013,10 +1275,16 @@ async def _build_investor_deck_gamma(
     model: FinancialModel,
     outline: str,
     audience: AudienceType,
-) -> tuple[str | None, str | None]:
+    export_as: str = "pptx",
+) -> tuple[str | None, str | None, str]:
     """Build the investor deck via Gamma API.
 
-    Returns (gamma_url, export_url).
+    Returns (gamma_url, export_url, deck_input_text).
+    The deck_input_text is returned so callers can request additional
+    export formats (e.g. PDF) from Gamma if needed.
+
+    Args:
+        export_as: 'pptx' or 'pdf' — controls the format of the export URL.
     """
     input_text = _build_gamma_investor_input(target, strategy, model, outline, audience)
 
@@ -1034,14 +1302,23 @@ async def _build_investor_deck_gamma(
                 "Use the markdown headings (# Title) as card titles. "
                 "Preserve all financial figures, percentages, and data points exactly as provided."
             ),
-            export_as="pptx",
+            export_as=export_as,
         )
     except Exception as exc:
-        logger.warning("Gamma API unavailable, skipping investor deck: %s", exc)
-        return None, None
+        logger.error("Gamma API failed after retries for investor deck (%s): %s", target, exc)
+        return None, None, input_text
 
-    gamma_url = result.get("gammaUrl") or result.get("url")
-    export_url = result.get("exportUrl") or result.get("pptxUrl")
+    # Use robust URL extraction (handles multiple key name variations)
+    gamma_url = _extract_gamma_url(result)
+    export_url = _extract_export_url(result)
 
-    logger.info("Investor deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
-    return gamma_url, export_url
+    if not gamma_url and not export_url:
+        logger.error(
+            "Gamma generation completed for %s but NO URLs found in response. "
+            "Keys present: %s. Full response: %s",
+            target, list(result.keys()), result,
+        )
+    else:
+        logger.info("Investor deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
+
+    return gamma_url, export_url, input_text

@@ -233,53 +233,157 @@ async def generate_and_wait(
     text_amount: str = "extensive",
     additional_instructions: str = "",
     export_as: str = "pptx",
+    max_retries: int = 3,
 ) -> dict[str, Any]:
     """Generate a presentation and wait for it to complete.
 
     Returns the final generation object with:
     - ``gammaUrl``: URL to view/edit the presentation in Gamma
     - ``exportUrl``: URL to download the PPTX/PDF export
+
+    Retries the full generate→poll cycle up to ``max_retries`` times on
+    transient failures (network, timeout, 5xx).
     """
-    gen_result = await generate_presentation(
-        input_text,
-        num_cards=num_cards,
-        theme_id=theme_id,
-        text_mode=text_mode,
-        card_split=card_split,
-        text_amount=text_amount,
-        additional_instructions=additional_instructions,
-        export_as=export_as,
-    )
+    last_exc: Exception | None = None
 
-    generation_id = gen_result.get("generationId") or gen_result.get("id")
-    if not generation_id:
-        raise ValueError(f"No generationId in Gamma response: {gen_result}")
+    for attempt in range(1, max_retries + 1):
+        try:
+            gen_result = await generate_presentation(
+                input_text,
+                num_cards=num_cards,
+                theme_id=theme_id,
+                text_mode=text_mode,
+                card_split=card_split,
+                text_amount=text_amount,
+                additional_instructions=additional_instructions,
+                export_as=export_as,
+            )
 
-    return await poll_generation(generation_id)
+            generation_id = gen_result.get("generationId") or gen_result.get("id")
+            if not generation_id:
+                raise ValueError(f"No generationId in Gamma response: {gen_result}")
+
+            result = await poll_generation(generation_id)
+
+            # Log all response keys so we can debug export URL discovery
+            logger.info(
+                "Gamma generation %s completed (attempt %d) — response keys: %s",
+                generation_id, attempt, list(result.keys()),
+            )
+
+            # Extract URLs with comprehensive key lookup
+            gamma_url = _extract_gamma_url(result)
+            export_url = _extract_export_url(result)
+
+            logger.info(
+                "Gamma generation %s — gammaUrl=%s, exportUrl=%s",
+                generation_id, gamma_url, export_url,
+            )
+
+            # If we got a completed response but no URLs, log the full
+            # response for debugging (but don't retry — Gamma finished,
+            # URLs may just be named differently).
+            if not gamma_url and not export_url:
+                logger.warning(
+                    "Gamma generation completed but no URLs found. Full response: %s",
+                    result,
+                )
+
+            return result
+
+        except Exception as exc:
+            last_exc = exc
+            logger.warning(
+                "Gamma generate_and_wait attempt %d/%d failed: %s",
+                attempt, max_retries, exc,
+            )
+            if attempt < max_retries:
+                wait = 5 * attempt  # 5s, 10s backoff
+                logger.info("Retrying Gamma in %ds...", wait)
+                await asyncio.sleep(wait)
+
+    # All retries exhausted
+    raise last_exc or RuntimeError("Gamma generation failed after all retries")
 
 
-async def download_export(export_url: str, target: str, label: str = "deck") -> str | None:
-    """Download a PPTX from a Gamma export URL and save it locally.
+def _extract_gamma_url(result: dict[str, Any]) -> str | None:
+    """Extract the Gamma viewer URL from a generation result.
+
+    Gamma's API has used different key names across versions.
+    """
+    for key in ("gammaUrl", "url", "gamma_url", "viewUrl", "view_url",
+                "presentationUrl", "presentation_url", "cardUrl"):
+        val = result.get(key)
+        if val and isinstance(val, str) and val.startswith("http"):
+            return val
+    return None
+
+
+def _extract_export_url(result: dict[str, Any]) -> str | None:
+    """Extract the export download URL from a generation result.
+
+    Gamma's API has used different key names across versions.
+    """
+    for key in ("exportUrl", "export_url", "pptxUrl", "pptx_url",
+                "pdfUrl", "pdf_url", "downloadUrl", "download_url",
+                "fileUrl", "file_url"):
+        val = result.get(key)
+        if val and isinstance(val, str) and val.startswith("http"):
+            return val
+    return None
+
+
+async def download_export(
+    export_url: str, target: str, label: str = "deck", ext: str = "pptx",
+    max_retries: int = 3,
+) -> str | None:
+    """Download an export file (PPTX or PDF) from a Gamma export URL.
+
+    Args:
+        export_url: The Gamma export download URL.
+        target: Country/state name (used for filename).
+        label: File label (e.g. 'investor_deck', 'governor_pitch_deck').
+        ext: File extension — 'pptx' or 'pdf'.
+        max_retries: Number of download attempts.
 
     Returns the local file path, or None if download fails.
     """
     if not export_url:
         return None
-    try:
-        safe_target = target.lower().replace(" ", "_")
-        out_dir = os.path.join(OUTPUT_DIR, safe_target)
-        os.makedirs(out_dir, exist_ok=True)
-        filename = f"{safe_target}_{label}.pptx"
-        local_path = os.path.join(out_dir, filename)
 
-        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
-            resp = await client.get(export_url)
-            resp.raise_for_status()
-            with open(local_path, "wb") as f:
-                f.write(resp.content)
+    safe_target = target.lower().replace(" ", "_")
+    out_dir = os.path.join(OUTPUT_DIR, safe_target)
+    os.makedirs(out_dir, exist_ok=True)
+    filename = f"{safe_target}_{label}.{ext}"
+    local_path = os.path.join(out_dir, filename)
 
-        logger.info("Downloaded Gamma PPTX to %s (%d bytes)", local_path, len(resp.content))
-        return local_path
-    except Exception:
-        logger.exception("Failed to download Gamma export from %s", export_url)
-        return None
+    for attempt in range(1, max_retries + 1):
+        try:
+            async with httpx.AsyncClient(timeout=90, follow_redirects=True) as client:
+                resp = await client.get(export_url)
+                resp.raise_for_status()
+
+                if len(resp.content) < 100:
+                    logger.warning(
+                        "Gamma export response suspiciously small (%d bytes), attempt %d/%d",
+                        len(resp.content), attempt, max_retries,
+                    )
+                    if attempt < max_retries:
+                        await asyncio.sleep(5 * attempt)
+                        continue
+
+                with open(local_path, "wb") as f:
+                    f.write(resp.content)
+
+            logger.info("Downloaded Gamma %s to %s (%d bytes)", ext.upper(), local_path, len(resp.content))
+            return local_path
+
+        except Exception:
+            logger.exception(
+                "Failed to download Gamma export (attempt %d/%d) from %s",
+                attempt, max_retries, export_url,
+            )
+            if attempt < max_retries:
+                await asyncio.sleep(5 * attempt)
+
+    return None

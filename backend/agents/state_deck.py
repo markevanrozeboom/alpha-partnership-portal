@@ -19,7 +19,7 @@ from models.schemas import (
     FinancialModel, FinancialAssumptions,
 )
 from services.llm import call_llm_plain
-from services.gamma import generate_and_wait
+from services.gamma import generate_and_wait, _extract_gamma_url, _extract_export_url
 from config import OUTPUT_DIR
 from config.rules_loader import get_esa_data
 
@@ -234,12 +234,17 @@ async def generate_state_deck(
     strategy: Strategy,
     financial_model: FinancialModel,
     assumptions: FinancialAssumptions,
-) -> tuple[str | None, str | None]:
+    export_as: str = "pptx",
+) -> tuple[str | None, str | None, str]:
     """Generate an Oklahoma-style state pitch deck via Gamma.
 
-    Returns (gamma_url, export_url) — the Gamma viewer URL and the PPTX
-    export download URL.  Either may be None if the Gamma API doesn't
-    return them.
+    Returns (gamma_url, export_url, deck_input_text) — the Gamma viewer URL,
+    the export download URL, and the raw input text sent to Gamma
+    (so callers can request additional export formats if needed).
+    Either URL may be None if the Gamma API doesn't return them.
+
+    Args:
+        export_as: 'pptx' or 'pdf' — controls the format of the export URL.
     """
     logger.info("Generating state pitch deck for %s via Gamma", state)
 
@@ -307,14 +312,23 @@ async def generate_state_deck(
                 "Use the markdown headings (# Title) as card titles. "
                 "Preserve all financial figures, percentages, and data points exactly as provided."
             ),
-            export_as="pptx",
+            export_as=export_as,
         )
     except Exception as exc:
         logger.warning("Gamma API unavailable, skipping state deck: %s", exc)
-        return None, None
+        return None, None, input_text
 
-    gamma_url = result.get("gammaUrl") or result.get("url")
-    export_url = result.get("exportUrl") or result.get("pptxUrl")
+    # Use robust URL extraction (handles multiple key name variations)
+    gamma_url = _extract_gamma_url(result)
+    export_url = _extract_export_url(result)
 
-    logger.info("State deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
-    return gamma_url, export_url
+    if not gamma_url and not export_url:
+        logger.error(
+            "Gamma generation completed for %s state deck but NO URLs found. "
+            "Keys present: %s. Full response: %s",
+            state, list(result.keys()), result,
+        )
+    else:
+        logger.info("State deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
+
+    return gamma_url, export_url, input_text
