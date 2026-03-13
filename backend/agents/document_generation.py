@@ -267,12 +267,13 @@ async def generate_documents(
     assumptions: FinancialAssumptions,
     audience: AudienceType = AudienceType.INVESTOR,
     revision_notes: str | None = None,
-) -> tuple[str | None, str | None, str, str, str | None]:
+) -> tuple[str | None, str | None, str, str, str | None, str]:
     """Generate presentation deck (via Gamma with local fallback), investment memorandum, and spreadsheet.
 
-    Returns (gamma_url, export_url, docx_path, xlsx_path, local_pptx_path).
+    Returns (gamma_url, export_url, docx_path, xlsx_path, local_pptx_path, deck_input_text).
     ``local_pptx_path`` is a locally-generated PPTX fallback produced when
-    the Gamma API is unavailable.
+    the Gamma API is unavailable.  ``deck_input_text`` is the raw content
+    sent to Gamma, enabling callers to request additional export formats.
     """
     logger.info("Generating documents for %s (audience: %s)", target, audience.value)
 
@@ -307,7 +308,7 @@ async def generate_documents(
     )
 
     # --- Generate investor deck via Gamma ---
-    gamma_url, export_url = await _build_investor_deck_gamma(
+    gamma_url, export_url, deck_input_text = await _build_investor_deck_gamma(
         target, strategy, financial_model, deck_outline, audience,
     )
 
@@ -337,7 +338,7 @@ async def generate_documents(
 
     logger.info("Documents generated: gamma=%s, local_pptx=%s, docx=%s, xlsx=%s",
                 gamma_url, local_pptx_path, docx_path, xlsx_path)
-    return gamma_url, export_url, docx_path, xlsx_path, local_pptx_path
+    return gamma_url, export_url, docx_path, xlsx_path, local_pptx_path, deck_input_text
 
 
 # ---------------------------------------------------------------------------
@@ -1265,10 +1266,12 @@ async def _build_investor_deck_gamma(
     model: FinancialModel,
     outline: str,
     audience: AudienceType,
-) -> tuple[str | None, str | None]:
+) -> tuple[str | None, str | None, str]:
     """Build the investor deck via Gamma API.
 
-    Returns (gamma_url, export_url).
+    Returns (gamma_url, export_url, deck_input_text).
+    The deck_input_text is returned so callers can request additional
+    export formats (e.g. PDF) from Gamma if needed.
     """
     input_text = _build_gamma_investor_input(target, strategy, model, outline, audience)
 
@@ -1287,10 +1290,10 @@ async def _build_investor_deck_gamma(
         )
     except Exception as exc:
         logger.warning("Gamma API unavailable, skipping investor deck: %s", exc)
-        return None, None
+        return None, None, input_text
 
     gamma_url = result.get("gammaUrl") or result.get("url")
     export_url = result.get("exportUrl") or result.get("pptxUrl")
 
     logger.info("Investor deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
-    return gamma_url, export_url
+    return gamma_url, export_url, input_text

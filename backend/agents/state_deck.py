@@ -234,12 +234,13 @@ async def generate_state_deck(
     strategy: Strategy,
     financial_model: FinancialModel,
     assumptions: FinancialAssumptions,
-) -> tuple[str | None, str | None]:
+) -> tuple[str | None, str | None, str]:
     """Generate an Oklahoma-style state pitch deck via Gamma.
 
-    Returns (gamma_url, export_url) — the Gamma viewer URL and the PPTX
-    export download URL.  Either may be None if the Gamma API doesn't
-    return them.
+    Returns (gamma_url, export_url, deck_input_text) — the Gamma viewer URL,
+    the PPTX export download URL, and the raw input text sent to Gamma
+    (so callers can request additional export formats if needed).
+    Either URL may be None if the Gamma API doesn't return them.
     """
     logger.info("Generating state pitch deck for %s via Gamma", state)
 
@@ -308,10 +309,10 @@ async def generate_state_deck(
         )
     except Exception as exc:
         logger.warning("Gamma API unavailable, skipping state deck: %s", exc)
-        return None, None
+        return None, None, input_text
 
     gamma_url = result.get("gammaUrl") or result.get("url")
     export_url = result.get("exportUrl") or result.get("pptxUrl")
 
     logger.info("State deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
-    return gamma_url, export_url
+    return gamma_url, export_url, input_text

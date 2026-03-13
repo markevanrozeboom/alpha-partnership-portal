@@ -223,8 +223,16 @@ async def generate_and_wait(
     return await poll_generation(generation_id)
 
 
-async def download_export(export_url: str, target: str, label: str = "deck") -> str | None:
-    """Download a PPTX from a Gamma export URL and save it locally.
+async def download_export(
+    export_url: str, target: str, label: str = "deck", ext: str = "pptx",
+) -> str | None:
+    """Download an export file (PPTX or PDF) from a Gamma export URL.
+
+    Args:
+        export_url: The Gamma export download URL.
+        target: Country/state name (used for filename).
+        label: File label (e.g. 'investor_deck', 'governor_pitch_deck').
+        ext: File extension — 'pptx' or 'pdf'.
 
     Returns the local file path, or None if download fails.
     """
@@ -234,7 +242,7 @@ async def download_export(export_url: str, target: str, label: str = "deck") -> 
         safe_target = target.lower().replace(" ", "_")
         out_dir = os.path.join(OUTPUT_DIR, safe_target)
         os.makedirs(out_dir, exist_ok=True)
-        filename = f"{safe_target}_{label}.pptx"
+        filename = f"{safe_target}_{label}.{ext}"
         local_path = os.path.join(out_dir, filename)
 
         async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
@@ -243,7 +251,7 @@ async def download_export(export_url: str, target: str, label: str = "deck") -> 
             with open(local_path, "wb") as f:
                 f.write(resp.content)
 
-        logger.info("Downloaded Gamma PPTX to %s (%d bytes)", local_path, len(resp.content))
+        logger.info("Downloaded Gamma %s to %s (%d bytes)", ext.upper(), local_path, len(resp.content))
         return local_path
     except Exception:
         logger.exception("Failed to download Gamma export from %s", export_url)

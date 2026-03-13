@@ -155,24 +155,26 @@ async def run_express_pipeline(run_id: str) -> None:
 
         # Proposal deck + investment memorandum
         if is_us_state:
-            gamma_url, gamma_export_url = await generate_state_deck(
+            gamma_url, gamma_export_url, deck_input_text = await generate_state_deck(
                 target, country_profile, education_analysis,
                 strategy_obj, financial_model, assumptions,
             )
         else:
             gamma_url = None
             gamma_export_url = None
+            deck_input_text = ""
 
-        gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback = await generate_documents(
+        gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback, gen_deck_input_text = await generate_documents(
             target, country_profile, education_analysis, strategy_obj,
             financial_model, assumptions, AudienceType.INVESTOR,
         )
 
         # For US states, use the state deck; for sovereign nations, use the investor deck
         export_url = gamma_export_url if is_us_state else gen_export_url
+        final_deck_input_text = deck_input_text if is_us_state else gen_deck_input_text
 
         # Download Gamma PPTX locally
-        from services.gamma import download_export
+        from services.gamma import download_export, generate_and_wait
         deck_label = "governor_pitch_deck" if is_us_state else "investor_deck"
         final_pptx_path = await download_export(export_url, target, label=deck_label) if export_url else None
 
@@ -185,21 +187,52 @@ async def run_express_pipeline(run_id: str) -> None:
         state["gamma_url"] = final_gamma_url
 
         # ---------------------------------------------------------------
-        # Step 6: Convert to PDF
+        # Step 6: Generate PDFs
         # ---------------------------------------------------------------
         _update(state, 5, "Creating PDF documents...")
 
         # Term Sheet — convert our DOCX to PDF
         term_sheet_pdf = convert_docx_to_pdf(term_sheet_docx_path)
 
-        # Proposal Deck — use the actual deck PPTX, NOT the memorandum
+        # Store PPTX path for download
         if final_pptx_path:
-            proposal_pdf = convert_pptx_to_pdf(final_pptx_path)
             state["proposal_pptx_path"] = final_pptx_path
-        else:
-            # Fallback: if no deck was generated, use the memorandum
-            logger.warning("No deck PPTX available for %s — falling back to memorandum DOCX", target)
-            proposal_pdf = convert_docx_to_pdf(docx_path)
+
+        # Proposal Deck PDF — get a proper Gamma-rendered PDF
+        proposal_pdf = None
+        if final_deck_input_text:
+            try:
+                logger.info("Requesting Gamma PDF export for %s deck...", target)
+                pdf_result = await generate_and_wait(
+                    final_deck_input_text,
+                    num_cards=14 if not is_us_state else 11,
+                    text_mode="preserve",
+                    card_split="inputTextBreaks",
+                    additional_instructions=(
+                        f"This is a strategic partnership proposal deck for {target}. "
+                        "The audience is C-suite / head-of-state level. "
+                        "Use a professional, data-driven tone. Keep slides clean."
+                    ),
+                    export_as="pdf",
+                )
+                pdf_export_url = pdf_result.get("exportUrl") or pdf_result.get("pdfUrl")
+                if pdf_export_url:
+                    proposal_pdf = await download_export(
+                        pdf_export_url, target, label=f"{deck_label}_pdf", ext="pdf",
+                    )
+                    if proposal_pdf:
+                        logger.info("Gamma PDF deck downloaded: %s", proposal_pdf)
+            except Exception as exc:
+                logger.warning("Gamma PDF export failed for %s: %s — using fallback", target, exc)
+
+        # Fallback: text-extracted PDF from PPTX or memorandum DOCX
+        if not proposal_pdf:
+            if final_pptx_path:
+                logger.info("Using PPTX text-extraction PDF fallback for %s", target)
+                proposal_pdf = convert_pptx_to_pdf(final_pptx_path)
+            else:
+                logger.warning("No deck available for %s — falling back to memorandum DOCX", target)
+                proposal_pdf = convert_docx_to_pdf(docx_path)
 
         state["term_sheet_pdf_path"] = term_sheet_pdf
         state["proposal_pdf_path"] = proposal_pdf

@@ -304,7 +304,7 @@ async def _run_documents(state: dict) -> None:
     # --- Generate deck via Gamma (route by target type) ---
     if is_us_state:
         _log(state, f"Generating governor pitch deck for {target} via Gamma...")
-        gamma_url, gamma_export_url = await generate_state_deck(
+        gamma_url, gamma_export_url, _ = await generate_state_deck(
             target, country_profile, education_analysis,
             strategy_obj, model, assumptions,
         )
@@ -325,7 +325,7 @@ async def _run_documents(state: dict) -> None:
     state["term_sheet_docx_path"] = term_sheet_path
 
     # --- Generate investment memorandum + XLSX (and investor deck for sovereign via Gamma) ---
-    gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback = await generate_documents(
+    gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback, _ = await generate_documents(
         target, country_profile, education_analysis, strategy_obj,
         model, assumptions, audience, revision_notes,
     )
