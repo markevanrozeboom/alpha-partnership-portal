@@ -548,7 +548,7 @@ async def generate_term_sheet(
     # Deal parameters from term sheet assumptions
     partnership_map = {1: "Joint Venture (JV)", 2: "Licensing Agreement", 3: "Direct Operation"}
     partnership_type = partnership_map.get(int(ts.get("ts_partnership_type", 1)), "Joint Venture (JV)")
-    alpha_ownership = int(ts.get("ts_alpha_ownership_pct", 49))
+    alpha_ownership = int(ts.get("ts_alpha_ownership_pct", 0))
     term_years = int(ts.get("ts_term_years", 25))
     exclusivity_years = int(ts.get("ts_exclusivity_years", 25))
     upfront_ip = ts.get("ts_upfront_ip_fee", round(financial_model.upfront_ip_fee / 1_000_000))

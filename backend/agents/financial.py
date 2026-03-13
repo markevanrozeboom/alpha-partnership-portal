@@ -123,8 +123,12 @@ def generate_assumptions(
         ),
         FinancialAssumption(
             key="students_year5", label="Year 5 Students",
-            value=target_students_y5, min_val=20_000, max_val=500_000, step=10_000,
+            value=target_students_y5,
+            min_val=max(20_000, min_y5_from_market),
+            max_val=max(500_000, min_y5_from_market * 5),
+            step=10_000,
             unit="students", category="scale",
+            description=f"Min {min_y5_from_market:,} (10% of {school_age_pop:,} school-age pop)",
         ),
         FinancialAssumption(
             key="avg_students_per_school", label="Avg Students per School",
