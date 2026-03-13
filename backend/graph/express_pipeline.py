@@ -213,6 +213,14 @@ async def run_express_pipeline(run_id: str) -> None:
             except Exception as exc:
                 logger.error("Gamma PDF export retry failed for %s: %s", target, exc)
 
+        # Sovereign runs must produce a true Gamma deck. If Gamma is unavailable,
+        # fail explicitly instead of silently downgrading to memorandum output.
+        if (not is_us_state) and not final_gamma_url:
+            raise RuntimeError(
+                "Gamma deck generation failed (no Gamma URL returned). "
+                "Run failed intentionally; please retry."
+            )
+
         state["gamma_url"] = final_gamma_url
 
         # Download Gamma PDF locally
@@ -236,10 +244,9 @@ async def run_express_pipeline(run_id: str) -> None:
         # Term Sheet — convert our DOCX to PDF
         term_sheet_pdf = convert_docx_to_pdf(term_sheet_docx_path)
 
-        # Fallback: if Gamma PDF download failed, convert LOCAL PPTX deck
-        # to PDF. This ensures the "proposal" is always a DECK, never the
-        # investment memorandum (which is a separate supporting document).
-        if not proposal_pdf and local_pptx_fallback:
+        # For US-state runs we allow local PPTX fallback conversion.
+        # For sovereign runs, Gamma output is required.
+        if is_us_state and not proposal_pdf and local_pptx_fallback:
             logger.warning(
                 "No Gamma PDF for %s — converting local PPTX deck to PDF as proposal",
                 target,
@@ -250,18 +257,16 @@ async def run_express_pipeline(run_id: str) -> None:
             except Exception as exc:
                 logger.error("Local PPTX → PDF conversion failed for %s: %s", target, exc)
 
-        # If Gamma produced a viewer URL but export still failed, do NOT silently
-        # substitute a memorandum. Fail the run so the user can retry and get a
-        # true Gamma deck artifact.
-        if not proposal_pdf and final_gamma_url and not is_us_state:
+        # Sovereign runs must not silently substitute memorandum or local fallback.
+        if not proposal_pdf and not is_us_state:
             raise RuntimeError(
-                "Gamma deck generated but PDF export was unavailable. "
-                "Run failed intentionally to avoid falling back to memorandum."
+                "Gamma deck was required but proposal PDF export was unavailable. "
+                "Run failed intentionally to avoid memorandum fallback."
             )
 
-        # Last-resort fallback: if BOTH Gamma and local PPTX→PDF failed,
-        # use the memorandum so the customer at least gets something.
-        if not proposal_pdf:
+        # Last-resort fallback for US-state runs only: if BOTH Gamma and local
+        # PPTX→PDF failed, use the memorandum so the customer still gets output.
+        if not proposal_pdf and is_us_state:
             logger.error(
                 "All deck generation paths failed for %s — last resort: "
                 "using investment memorandum as proposal PDF",
