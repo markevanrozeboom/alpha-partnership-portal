@@ -325,7 +325,7 @@ async def _run_documents(state: dict) -> None:
     state["term_sheet_docx_path"] = term_sheet_path
 
     # --- Generate investment memorandum + XLSX (and investor deck for sovereign via Gamma) ---
-    gen_gamma_url, gen_export_url, docx_path, xlsx_path = await generate_documents(
+    gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback = await generate_documents(
         target, country_profile, education_analysis, strategy_obj,
         model, assumptions, audience, revision_notes,
     )
@@ -338,13 +338,23 @@ async def _run_documents(state: dict) -> None:
     export_url = state["gamma_export_url"]
     deck_label = "governor_pitch_deck" if is_us_state else "investor_deck"
     pptx_path = await download_export(export_url, target, label=deck_label) if export_url else None
+
+    # Fallback: use locally-generated PPTX if Gamma download failed
+    if not pptx_path and local_pptx_fallback:
+        _log(state, "Using locally-generated PPTX fallback (Gamma unavailable).")
+        pptx_path = local_pptx_fallback
+
     state["pptx_path"] = pptx_path
     state["docx_path"] = docx_path
     state["xlsx_path"] = xlsx_path
     state["status"] = PipelineStatus.REVIEW_DOCUMENTS.value
     has_gamma = state.get("gamma_url") is not None
-    _log(state, "All documents generated (Gamma deck, term sheet, memorandum, XLSX)." if has_gamma
-         else "Documents generated (term sheet, memorandum, XLSX). Gamma slide deck unavailable — check API key.")
+    if has_gamma:
+        _log(state, "All documents generated (Gamma deck, term sheet, memorandum, XLSX).")
+    elif pptx_path:
+        _log(state, "All documents generated (local PPTX fallback, term sheet, memorandum, XLSX). Gamma API was unavailable.")
+    else:
+        _log(state, "Documents generated (term sheet, memorandum, XLSX). Investor deck unavailable — Gamma API and local fallback both failed.")
 
 
 async def _finalize(state: dict) -> None:

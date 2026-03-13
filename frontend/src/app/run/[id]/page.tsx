@@ -933,7 +933,7 @@ function DocumentDownloadGrid({ runId, data }: { runId: string; data: RunStatus 
   const deckLabel = isState ? "Governor Pitch Deck" : "Investor Deck";
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Gamma Slide Deck */}
+      {/* Slide Deck (Gamma or local fallback) */}
       <div className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 text-center space-y-3">
         <div className="text-4xl">📊</div>
         <h3 className="font-semibold">{deckLabel}</h3>
@@ -950,13 +950,17 @@ function DocumentDownloadGrid({ runId, data }: { runId: string; data: RunStatus 
               </svg>
               View in Gamma
             </a>
-          ) : (
+          ) : !data.pptx_path && !data.gamma_export_url ? (
             <span className="text-gray-500 text-sm">Not available</span>
-          )}
+          ) : null}
           {(data.pptx_path || data.gamma_export_url) && (
             <a
               href={data.pptx_path ? getDownloadUrl(runId, "pptx") : data.gamma_export_url!}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-white/5"
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                data.gamma_url
+                  ? "border border-white/10 text-gray-300 hover:bg-white/5"
+                  : "bg-[#006D77] text-white hover:bg-[#005a63]"
+              }`}
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -1116,7 +1120,7 @@ function CompletedView({
         </h3>
         <p className="text-sm text-gray-400">These are the two key documents to present to the country/state.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Gamma Slide Deck */}
+          {/* Slide Deck (Gamma or local fallback) */}
           <div className="rounded-xl border border-white/10 bg-[#0d0d1a]/90 p-6 text-center space-y-3">
             <div className="text-4xl">📊</div>
             <div className="h-1 w-16 mx-auto rounded-full bg-gradient-to-r from-purple-500 to-blue-500" />
@@ -1132,14 +1136,20 @@ function CompletedView({
                   </svg>
                   View in Gamma
                 </a>
-              ) : <span className="text-gray-500 text-sm">Not available</span>}
+              ) : !data.pptx_path && !data.gamma_export_url ? (
+                <span className="text-gray-500 text-sm">Not available</span>
+              ) : null}
               {(data.pptx_path || data.gamma_export_url) && (
                 <a href={data.pptx_path ? getDownloadUrl(runId, "pptx") : data.gamma_export_url!}
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-xs font-medium text-gray-300 hover:bg-white/5 transition-colors">
-                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  className={`inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-medium transition-colors ${
+                    data.gamma_url
+                      ? "border border-white/10 text-gray-300 hover:bg-white/5 text-xs px-4 py-2"
+                      : "bg-[#006D77] text-white hover:bg-[#005a63]"
+                  }`}>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Download PPTX
+                  Download
                 </a>
               )}
             </div>

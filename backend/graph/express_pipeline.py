@@ -153,20 +153,30 @@ async def run_express_pipeline(run_id: str) -> None:
 
         # Proposal deck + investment memorandum
         if is_us_state:
-            pptx_path = await generate_state_deck(
+            gamma_url, gamma_export_url = await generate_state_deck(
                 target, country_profile, education_analysis,
                 strategy_obj, financial_model, assumptions,
             )
         else:
-            pptx_path = None
+            gamma_url = None
+            gamma_export_url = None
 
-        gen_pptx_path, docx_path, xlsx_path = await generate_documents(
+        gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback = await generate_documents(
             target, country_profile, education_analysis, strategy_obj,
             financial_model, assumptions, AudienceType.INVESTOR,
         )
 
-        # Use state deck for US states, investor deck for sovereign nations
-        final_pptx_path = pptx_path if is_us_state else gen_pptx_path
+        # For US states, use the state deck; for sovereign nations, use the investor deck
+        export_url = gamma_export_url if is_us_state else gen_export_url
+
+        # Download Gamma PPTX locally
+        from services.gamma import download_export
+        deck_label = "governor_pitch_deck" if is_us_state else "investor_deck"
+        final_pptx_path = await download_export(export_url, target, label=deck_label) if export_url else None
+
+        # Fallback: use locally-generated PPTX if Gamma download failed
+        if not final_pptx_path and local_pptx_fallback:
+            final_pptx_path = local_pptx_fallback
 
         # ---------------------------------------------------------------
         # Step 6: Convert to PDF
