@@ -12,7 +12,7 @@ import logging
 import os
 from datetime import datetime
 
-from services.gamma import generate_and_wait
+from services.gamma import generate_and_wait, _extract_gamma_url, _extract_export_url
 
 from docx import Document as DocxDocument
 from docx.shared import Pt as DocxPt, RGBColor as DocxRGB, Inches as DocxInches, Cm
@@ -308,23 +308,30 @@ async def generate_documents(
         ),
     )
 
-    # --- Generate investor deck via Gamma ---
+    # --- Always generate local PPTX first (guaranteed fallback) ---
+    local_pptx_path = None
+    try:
+        local_pptx_path = _build_pptx(
+            target, strategy, financial_model, deck_outline, audience, output_dir,
+        )
+        logger.info("Local PPTX generated: %s", local_pptx_path)
+    except Exception as exc:
+        logger.error("Local PPTX generation failed for %s: %s", target, exc)
+
+    # --- Generate investor deck via Gamma (enhanced version) ---
     gamma_url, export_url, deck_input_text = await _build_investor_deck_gamma(
         target, strategy, financial_model, deck_outline, audience,
         export_as=export_as,
     )
 
-    # --- Local PPTX fallback when Gamma is unavailable ---
-    local_pptx_path = None
-    if not export_url:
-        logger.info("Gamma unavailable — generating local PPTX fallback for %s", target)
-        try:
-            local_pptx_path = _build_pptx(
-                target, strategy, financial_model, deck_outline, audience, output_dir,
-            )
-            logger.info("Local PPTX fallback generated: %s", local_pptx_path)
-        except Exception as exc:
-            logger.error("Local PPTX fallback also failed for %s: %s", target, exc)
+    # If Gamma succeeded, log it; otherwise the local PPTX is our backup
+    if gamma_url or export_url:
+        logger.info("Gamma deck generated successfully for %s", target)
+    else:
+        logger.warning(
+            "Gamma unavailable for %s — local PPTX %s will be used as fallback",
+            target, "is available" if local_pptx_path else "ALSO FAILED",
+        )
 
     # --- Generate DOCX investment memorandum (multi-section) ---
     docx_path = await _build_investment_memorandum(
@@ -1295,11 +1302,20 @@ async def _build_investor_deck_gamma(
             export_as=export_as,
         )
     except Exception as exc:
-        logger.warning("Gamma API unavailable, skipping investor deck: %s", exc)
+        logger.error("Gamma API failed after retries for investor deck (%s): %s", target, exc)
         return None, None, input_text
 
-    gamma_url = result.get("gammaUrl") or result.get("url")
-    export_url = result.get("exportUrl") or result.get("pptxUrl") or result.get("pdfUrl")
+    # Use robust URL extraction (handles multiple key name variations)
+    gamma_url = _extract_gamma_url(result)
+    export_url = _extract_export_url(result)
 
-    logger.info("Investor deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
+    if not gamma_url and not export_url:
+        logger.error(
+            "Gamma generation completed for %s but NO URLs found in response. "
+            "Keys present: %s. Full response: %s",
+            target, list(result.keys()), result,
+        )
+    else:
+        logger.info("Investor deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
+
     return gamma_url, export_url, input_text

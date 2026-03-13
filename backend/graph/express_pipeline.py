@@ -26,7 +26,7 @@ from agents.financial import generate_assumptions, build_model
 from agents.document_generation import generate_documents
 from agents.term_sheet import generate_term_sheet, generate_term_sheet_assumptions
 from agents.state_deck import generate_state_deck
-from services.pdf_generator import convert_docx_to_pdf
+from services.pdf_generator import convert_docx_to_pdf, convert_pptx_to_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +166,7 @@ async def run_express_pipeline(run_id: str) -> None:
 
         # Investment memorandum (DOCX) + XLSX + investor deck for sovereign
         # For sovereign nations, request PDF export from Gamma as well.
-        gen_gamma_url, gen_export_url, docx_path, xlsx_path, _, _ = await generate_documents(
+        gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback, _ = await generate_documents(
             target, country_profile, education_analysis, strategy_obj,
             financial_model, assumptions, AudienceType.INVESTOR,
             export_as="pdf" if not is_us_state else "pptx",
@@ -198,9 +198,28 @@ async def run_express_pipeline(run_id: str) -> None:
         # Term Sheet — convert our DOCX to PDF
         term_sheet_pdf = convert_docx_to_pdf(term_sheet_docx_path)
 
-        # Fallback: if Gamma PDF download failed, convert memorandum DOCX
+        # Fallback: if Gamma PDF download failed, convert LOCAL PPTX deck
+        # to PDF. This ensures the "proposal" is always a DECK, never the
+        # investment memorandum (which is a separate supporting document).
+        if not proposal_pdf and local_pptx_fallback:
+            logger.warning(
+                "No Gamma PDF for %s — converting local PPTX deck to PDF as proposal",
+                target,
+            )
+            try:
+                proposal_pdf = convert_pptx_to_pdf(local_pptx_fallback)
+                logger.info("Local PPTX → PDF proposal generated: %s", proposal_pdf)
+            except Exception as exc:
+                logger.error("Local PPTX → PDF conversion failed for %s: %s", target, exc)
+
+        # Last-resort fallback: if BOTH Gamma and local PPTX→PDF failed,
+        # use the memorandum so the customer at least gets something.
         if not proposal_pdf:
-            logger.warning("No Gamma PDF for %s — falling back to memorandum DOCX PDF", target)
+            logger.error(
+                "All deck generation paths failed for %s — last resort: "
+                "using investment memorandum as proposal PDF",
+                target,
+            )
             proposal_pdf = convert_docx_to_pdf(docx_path)
 
         state["term_sheet_pdf_path"] = term_sheet_pdf

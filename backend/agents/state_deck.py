@@ -19,7 +19,7 @@ from models.schemas import (
     FinancialModel, FinancialAssumptions,
 )
 from services.llm import call_llm_plain
-from services.gamma import generate_and_wait
+from services.gamma import generate_and_wait, _extract_gamma_url, _extract_export_url
 from config import OUTPUT_DIR
 from config.rules_loader import get_esa_data
 
@@ -315,8 +315,17 @@ async def generate_state_deck(
         logger.warning("Gamma API unavailable, skipping state deck: %s", exc)
         return None, None, input_text
 
-    gamma_url = result.get("gammaUrl") or result.get("url")
-    export_url = result.get("exportUrl") or result.get("pptxUrl") or result.get("pdfUrl")
+    # Use robust URL extraction (handles multiple key name variations)
+    gamma_url = _extract_gamma_url(result)
+    export_url = _extract_export_url(result)
 
-    logger.info("State deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
+    if not gamma_url and not export_url:
+        logger.error(
+            "Gamma generation completed for %s state deck but NO URLs found. "
+            "Keys present: %s. Full response: %s",
+            state, list(result.keys()), result,
+        )
+    else:
+        logger.info("State deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
+
     return gamma_url, export_url, input_text

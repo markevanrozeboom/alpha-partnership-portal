@@ -339,22 +339,25 @@ async def _run_documents(state: dict) -> None:
     deck_label = "governor_pitch_deck" if is_us_state else "investor_deck"
     pptx_path = await download_export(export_url, target, label=deck_label) if export_url else None
 
-    # Fallback: use locally-generated PPTX if Gamma download failed
+    # Fallback: use locally-generated PPTX if Gamma download failed.
+    # The local PPTX is ALWAYS generated now (not just on failure),
+    # so this fallback should be reliable.
     if not pptx_path and local_pptx_fallback:
-        _log(state, "Using locally-generated PPTX fallback (Gamma unavailable).")
+        _log(state, "Using locally-generated PPTX deck (Gamma unavailable or download failed).")
         pptx_path = local_pptx_fallback
 
     state["pptx_path"] = pptx_path
     state["docx_path"] = docx_path
     state["xlsx_path"] = xlsx_path
     state["status"] = PipelineStatus.REVIEW_DOCUMENTS.value
+
     has_gamma = state.get("gamma_url") is not None
-    if has_gamma:
+    if has_gamma and pptx_path:
         _log(state, "All documents generated (Gamma deck, term sheet, memorandum, XLSX).")
     elif pptx_path:
-        _log(state, "All documents generated (local PPTX fallback, term sheet, memorandum, XLSX). Gamma API was unavailable.")
+        _log(state, "All documents generated (local PPTX deck, term sheet, memorandum, XLSX). Gamma API was unavailable — local deck used.")
     else:
-        _log(state, "Documents generated (term sheet, memorandum, XLSX). Investor deck unavailable — Gamma API and local fallback both failed.")
+        _log(state, "Documents generated (term sheet, memorandum, XLSX). WARNING: Deck unavailable — both Gamma API and local PPTX generation failed.")
 
 
 async def _finalize(state: dict) -> None:
