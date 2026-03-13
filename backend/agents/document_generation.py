@@ -1024,12 +1024,15 @@ async def _build_investor_deck_gamma(
         result = await generate_and_wait(
             input_text,
             num_cards=14,
-            text_mode="preserve",
+            text_mode="condense",
             card_split="inputTextBreaks",
+            text_amount="extensive",
             additional_instructions=(
                 f"This is a strategic partnership proposal / investor deck for {target}. "
                 "The audience is C-suite / head-of-state level. "
-                "Use a professional, data-driven tone. Keep slides clean with clear hierarchy."
+                "Use a professional, data-driven tone. Keep slides clean with clear hierarchy. "
+                "Use the markdown headings (# Title) as card titles. "
+                "Preserve all financial figures, percentages, and data points exactly as provided."
             ),
             export_as="pptx",
         )

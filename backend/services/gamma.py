@@ -21,6 +21,9 @@ BASE_URL = "https://public-api.gamma.app/v1.0"
 POLL_INTERVAL_SECONDS = 5
 MAX_POLL_ATTEMPTS = 120  # 10 minutes max
 
+# Default theme name to search for in the workspace
+DEFAULT_THEME_NAME = "Alpha Slides"
+
 
 def _headers() -> dict[str, str]:
     return {
@@ -58,7 +61,8 @@ async def list_themes() -> list[dict[str, Any]]:
                 break
             cursor = data.get("nextCursor")
 
-    logger.info("Fetched %d themes from Gamma", len(themes))
+    theme_names = [t.get("name", "?") for t in themes]
+    logger.info("Fetched %d themes from Gamma: %s", len(themes), theme_names)
     return themes
 
 
@@ -82,24 +86,34 @@ async def find_theme_id(theme_name: str) -> str | None:
             logger.info("Found partial theme match: %s -> %s (%s)", theme_name, t["id"], t["name"])
             return t["id"]
 
-    logger.warning("Theme '%s' not found among %d themes", theme_name, len(themes))
+    logger.warning("Theme '%s' not found among %d themes: %s",
+                   theme_name, len(themes),
+                   [t.get("name", "?") for t in themes])
     return None
 
 
 # Cache the theme ID after first lookup
-_alpha_school_theme_id: str | None = None
+_default_theme_id: str | None = None
 _theme_id_resolved = False
 
 
-async def get_alpha_school_theme_id() -> str | None:
-    """Get the cached 'Alpha School' theme ID, resolving on first call."""
-    global _alpha_school_theme_id, _theme_id_resolved
+async def get_default_theme_id() -> str | None:
+    """Get the cached default theme ID (Alpha Slides), resolving on first call."""
+    global _default_theme_id, _theme_id_resolved
 
     if not _theme_id_resolved:
-        _alpha_school_theme_id = await find_theme_id("Alpha School")
+        _default_theme_id = await find_theme_id(DEFAULT_THEME_NAME)
+        if _default_theme_id:
+            logger.info("Resolved '%s' theme ID: %s", DEFAULT_THEME_NAME, _default_theme_id)
+        else:
+            logger.error(
+                "Could not find '%s' theme — Gamma will use its default theme. "
+                "Verify the theme exists in your Gamma workspace.",
+                DEFAULT_THEME_NAME,
+            )
         _theme_id_resolved = True
 
-    return _alpha_school_theme_id
+    return _default_theme_id
 
 
 async def generate_presentation(
@@ -107,8 +121,9 @@ async def generate_presentation(
     *,
     num_cards: int = 12,
     theme_id: str | None = None,
-    text_mode: str = "preserve",
+    text_mode: str = "condense",
     card_split: str = "inputTextBreaks",
+    text_amount: str = "extensive",
     additional_instructions: str = "",
     export_as: str = "pptx",
 ) -> dict[str, Any]:
@@ -118,9 +133,11 @@ async def generate_presentation(
         input_text: The content for the presentation, with ``\\n---\\n``
             separators between slides when card_split is 'inputTextBreaks'.
         num_cards: Number of slides (1-60 for Pro).
-        theme_id: Gamma theme ID. If None, uses the Alpha School theme.
+        theme_id: Gamma theme ID. If None, uses the Alpha Slides theme.
         text_mode: 'generate', 'condense', or 'preserve'.
         card_split: 'auto' or 'inputTextBreaks'.
+        text_amount: 'brief', 'medium', 'detailed', or 'extensive'.
+            Controls content density per card (used with condense/generate).
         additional_instructions: Extra instructions for Gamma AI.
         export_as: 'pptx' or 'pdf'.
 
@@ -128,7 +145,7 @@ async def generate_presentation(
         The generation response dict containing ``generationId``.
     """
     if theme_id is None:
-        theme_id = await get_alpha_school_theme_id()
+        theme_id = await get_default_theme_id()
 
     body: dict[str, Any] = {
         "inputText": input_text,
@@ -140,11 +157,22 @@ async def generate_presentation(
         "exportAs": export_as,
     }
 
+    # textOptions.amount controls content density — only relevant for
+    # condense/generate modes (ignored by preserve).
+    if text_mode in ("condense", "generate"):
+        body["textOptions"] = {"amount": text_amount}
+
     if theme_id:
         body["themeId"] = theme_id
 
     if additional_instructions:
         body["additionalInstructions"] = additional_instructions
+
+    logger.info(
+        "Gamma generation request — textMode=%s, cardSplit=%s, numCards=%d, "
+        "themeId=%s, textAmount=%s, inputText length=%d chars",
+        text_mode, card_split, num_cards, theme_id, text_amount, len(input_text),
+    )
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
@@ -178,11 +206,16 @@ async def poll_generation(generation_id: str) -> dict[str, Any]:
             logger.debug("Gamma generation %s status: %s (attempt %d)", generation_id, status, attempt + 1)
 
             if status in ("completed", "complete", "done"):
-                logger.info("Gamma generation %s completed", generation_id)
+                logger.info(
+                    "Gamma generation %s completed — gammaUrl=%s, exportUrl=%s",
+                    generation_id,
+                    data.get("gammaUrl", "N/A"),
+                    data.get("exportUrl", "N/A"),
+                )
                 return data
             elif status in ("failed", "error"):
                 error_msg = data.get("error") or data.get("errorMessage") or "Unknown error"
-                logger.error("Gamma generation %s failed: %s", generation_id, error_msg)
+                logger.error("Gamma generation %s failed: %s | Full response: %s", generation_id, error_msg, data)
                 raise RuntimeError(f"Gamma generation failed: {error_msg}")
 
             await asyncio.sleep(POLL_INTERVAL_SECONDS)
@@ -195,8 +228,9 @@ async def generate_and_wait(
     *,
     num_cards: int = 12,
     theme_id: str | None = None,
-    text_mode: str = "preserve",
+    text_mode: str = "condense",
     card_split: str = "inputTextBreaks",
+    text_amount: str = "extensive",
     additional_instructions: str = "",
     export_as: str = "pptx",
 ) -> dict[str, Any]:
@@ -212,6 +246,7 @@ async def generate_and_wait(
         theme_id=theme_id,
         text_mode=text_mode,
         card_split=card_split,
+        text_amount=text_amount,
         additional_instructions=additional_instructions,
         export_as=export_as,
     )
