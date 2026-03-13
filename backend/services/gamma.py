@@ -220,7 +220,18 @@ async def generate_and_wait(
     if not generation_id:
         raise ValueError(f"No generationId in Gamma response: {gen_result}")
 
-    return await poll_generation(generation_id)
+    result = await poll_generation(generation_id)
+
+    # Log all response keys so we can debug export URL discovery
+    logger.info(
+        "Gamma generation %s completed — response keys: %s, gammaUrl=%s, exportUrl=%s",
+        generation_id,
+        list(result.keys()),
+        result.get("gammaUrl"),
+        result.get("exportUrl"),
+    )
+
+    return result
 
 
 async def download_export(

@@ -267,6 +267,7 @@ async def generate_documents(
     assumptions: FinancialAssumptions,
     audience: AudienceType = AudienceType.INVESTOR,
     revision_notes: str | None = None,
+    export_as: str = "pptx",
 ) -> tuple[str | None, str | None, str, str, str | None, str]:
     """Generate presentation deck (via Gamma with local fallback), investment memorandum, and spreadsheet.
 
@@ -310,6 +311,7 @@ async def generate_documents(
     # --- Generate investor deck via Gamma ---
     gamma_url, export_url, deck_input_text = await _build_investor_deck_gamma(
         target, strategy, financial_model, deck_outline, audience,
+        export_as=export_as,
     )
 
     # --- Local PPTX fallback when Gamma is unavailable ---
@@ -1266,12 +1268,16 @@ async def _build_investor_deck_gamma(
     model: FinancialModel,
     outline: str,
     audience: AudienceType,
+    export_as: str = "pptx",
 ) -> tuple[str | None, str | None, str]:
     """Build the investor deck via Gamma API.
 
     Returns (gamma_url, export_url, deck_input_text).
     The deck_input_text is returned so callers can request additional
     export formats (e.g. PDF) from Gamma if needed.
+
+    Args:
+        export_as: 'pptx' or 'pdf' — controls the format of the export URL.
     """
     input_text = _build_gamma_investor_input(target, strategy, model, outline, audience)
 
@@ -1286,14 +1292,14 @@ async def _build_investor_deck_gamma(
                 "The audience is C-suite / head-of-state level. "
                 "Use a professional, data-driven tone. Keep slides clean with clear hierarchy."
             ),
-            export_as="pptx",
+            export_as=export_as,
         )
     except Exception as exc:
         logger.warning("Gamma API unavailable, skipping investor deck: %s", exc)
         return None, None, input_text
 
     gamma_url = result.get("gammaUrl") or result.get("url")
-    export_url = result.get("exportUrl") or result.get("pptxUrl")
+    export_url = result.get("exportUrl") or result.get("pptxUrl") or result.get("pdfUrl")
 
     logger.info("Investor deck generated via Gamma: url=%s, export=%s", gamma_url, export_url)
     return gamma_url, export_url, input_text

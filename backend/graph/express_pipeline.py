@@ -9,9 +9,7 @@ them in sequence with default assumptions (no human review stops).
 
 from __future__ import annotations
 
-import asyncio
 import logging
-import os
 import uuid
 from datetime import datetime
 from typing import Any
@@ -19,17 +17,16 @@ from typing import Any
 from models.schemas import (
     CountryProfile, EducationAnalysis, Strategy,
     FinancialAssumptions, FinancialModel,
-    AudienceType, PipelineStatus, TargetType,
+    AudienceType, TargetType,
 )
 from agents.country_research import run_country_research
 from agents.education_research import run_education_research
 from agents.strategy import run_strategy
-from agents.financial import generate_assumptions, build_model, export_model_xlsx
+from agents.financial import generate_assumptions, build_model
 from agents.document_generation import generate_documents
 from agents.term_sheet import generate_term_sheet, generate_term_sheet_assumptions
 from agents.state_deck import generate_state_deck
-from services.pdf_generator import convert_docx_to_pdf, convert_pptx_to_pdf
-from config import OUTPUT_DIR
+from services.pdf_generator import convert_docx_to_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +58,6 @@ def _make_express_state(run_id: str, target: str) -> dict[str, Any]:
         "step_label": "Researching market...",
         "term_sheet_pdf_path": None,
         "proposal_pdf_path": None,
-        "proposal_pptx_path": None,   # Direct PPTX download (Gamma or local)
         "gamma_url": None,             # Gamma viewer URL for online viewing
         "error_message": None,
         "created_at": datetime.now().isoformat(),
@@ -153,38 +149,46 @@ async def run_express_pipeline(run_id: str) -> None:
             term_sheet_assumptions=ts_assumptions,
         )
 
-        # Proposal deck + investment memorandum
+        # Proposal deck via Gamma — request PDF export directly so we
+        # get both the gammaUrl (online view) AND the PDF download from
+        # a SINGLE Gamma generation (no double call, no wasted credits).
+        from services.gamma import download_export
+
         if is_us_state:
-            gamma_url, gamma_export_url, deck_input_text = await generate_state_deck(
+            gamma_url, pdf_export_url, _ = await generate_state_deck(
                 target, country_profile, education_analysis,
                 strategy_obj, financial_model, assumptions,
+                export_as="pdf",
             )
         else:
             gamma_url = None
-            gamma_export_url = None
-            deck_input_text = ""
+            pdf_export_url = None
 
-        gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback, gen_deck_input_text = await generate_documents(
+        # Investment memorandum (DOCX) + XLSX + investor deck for sovereign
+        # For sovereign nations, request PDF export from Gamma as well.
+        gen_gamma_url, gen_export_url, docx_path, xlsx_path, _, _ = await generate_documents(
             target, country_profile, education_analysis, strategy_obj,
             financial_model, assumptions, AudienceType.INVESTOR,
+            export_as="pdf" if not is_us_state else "pptx",
         )
 
         # For US states, use the state deck; for sovereign nations, use the investor deck
-        export_url = gamma_export_url if is_us_state else gen_export_url
-        final_deck_input_text = deck_input_text if is_us_state else gen_deck_input_text
-
-        # Download Gamma PPTX locally
-        from services.gamma import download_export, generate_and_wait
-        deck_label = "governor_pitch_deck" if is_us_state else "investor_deck"
-        final_pptx_path = await download_export(export_url, target, label=deck_label) if export_url else None
-
-        # Fallback: use locally-generated PPTX if Gamma download failed
-        if not final_pptx_path and local_pptx_fallback:
-            final_pptx_path = local_pptx_fallback
-
-        # Store Gamma URL for online viewing
         final_gamma_url = gamma_url if is_us_state else gen_gamma_url
+        final_pdf_export_url = pdf_export_url if is_us_state else gen_export_url
         state["gamma_url"] = final_gamma_url
+
+        # Download Gamma PDF locally
+        deck_label = "governor_pitch_deck" if is_us_state else "investor_deck"
+        proposal_pdf = None
+        if final_pdf_export_url:
+            logger.info("Downloading Gamma PDF for %s from export URL...", target)
+            proposal_pdf = await download_export(
+                final_pdf_export_url, target, label=deck_label, ext="pdf",
+            )
+            if proposal_pdf:
+                logger.info("Gamma PDF downloaded: %s", proposal_pdf)
+            else:
+                logger.warning("Gamma PDF download failed for %s", target)
 
         # ---------------------------------------------------------------
         # Step 6: Generate PDFs
@@ -194,45 +198,10 @@ async def run_express_pipeline(run_id: str) -> None:
         # Term Sheet — convert our DOCX to PDF
         term_sheet_pdf = convert_docx_to_pdf(term_sheet_docx_path)
 
-        # Store PPTX path for download
-        if final_pptx_path:
-            state["proposal_pptx_path"] = final_pptx_path
-
-        # Proposal Deck PDF — get a proper Gamma-rendered PDF
-        proposal_pdf = None
-        if final_deck_input_text:
-            try:
-                logger.info("Requesting Gamma PDF export for %s deck...", target)
-                pdf_result = await generate_and_wait(
-                    final_deck_input_text,
-                    num_cards=14 if not is_us_state else 11,
-                    text_mode="preserve",
-                    card_split="inputTextBreaks",
-                    additional_instructions=(
-                        f"This is a strategic partnership proposal deck for {target}. "
-                        "The audience is C-suite / head-of-state level. "
-                        "Use a professional, data-driven tone. Keep slides clean."
-                    ),
-                    export_as="pdf",
-                )
-                pdf_export_url = pdf_result.get("exportUrl") or pdf_result.get("pdfUrl")
-                if pdf_export_url:
-                    proposal_pdf = await download_export(
-                        pdf_export_url, target, label=f"{deck_label}_pdf", ext="pdf",
-                    )
-                    if proposal_pdf:
-                        logger.info("Gamma PDF deck downloaded: %s", proposal_pdf)
-            except Exception as exc:
-                logger.warning("Gamma PDF export failed for %s: %s — using fallback", target, exc)
-
-        # Fallback: text-extracted PDF from PPTX or memorandum DOCX
+        # Fallback: if Gamma PDF download failed, convert memorandum DOCX
         if not proposal_pdf:
-            if final_pptx_path:
-                logger.info("Using PPTX text-extraction PDF fallback for %s", target)
-                proposal_pdf = convert_pptx_to_pdf(final_pptx_path)
-            else:
-                logger.warning("No deck available for %s — falling back to memorandum DOCX", target)
-                proposal_pdf = convert_docx_to_pdf(docx_path)
+            logger.warning("No Gamma PDF for %s — falling back to memorandum DOCX PDF", target)
+            proposal_pdf = convert_docx_to_pdf(docx_path)
 
         state["term_sheet_pdf_path"] = term_sheet_pdf
         state["proposal_pdf_path"] = proposal_pdf
