@@ -47,13 +47,28 @@ async def list_themes() -> list[dict[str, Any]]:
             if cursor:
                 params["cursor"] = cursor
 
-            resp = await client.get(
-                f"{BASE_URL}/themes",
-                headers=_headers(),
-                params=params,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+            try:
+                resp = await client.get(
+                    f"{BASE_URL}/themes",
+                    headers=_headers(),
+                    params=params,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+            except Exception as exc:
+                # Gamma occasionally returns 400 for a nextCursor token even
+                # after a valid first page. Do not block deck generation due
+                # to theme-pagination instability.
+                if themes:
+                    logger.warning(
+                        "Theme pagination failed after %d themes (cursor=%s): %s. "
+                        "Proceeding with already-fetched themes.",
+                        len(themes), cursor, exc,
+                    )
+                    break
+                # If even first page fails, bubble up so caller can decide
+                # whether to proceed without a custom theme.
+                raise
 
             themes.extend(data.get("data", []))
 
@@ -71,7 +86,16 @@ async def find_theme_id(theme_name: str) -> str | None:
 
     Performs a case-insensitive partial match.
     """
-    themes = await list_themes()
+    try:
+        themes = await list_themes()
+    except Exception as exc:
+        logger.error(
+            "Failed to fetch Gamma themes for '%s': %s. "
+            "Will proceed without explicit themeId.",
+            theme_name,
+            exc,
+        )
+        return None
     name_lower = theme_name.lower()
 
     # Exact match first
@@ -102,7 +126,15 @@ async def get_default_theme_id() -> str | None:
     global _default_theme_id, _theme_id_resolved
 
     if not _theme_id_resolved:
-        _default_theme_id = await find_theme_id(DEFAULT_THEME_NAME)
+        try:
+            _default_theme_id = await find_theme_id(DEFAULT_THEME_NAME)
+        except Exception as exc:
+            logger.error(
+                "Theme resolution failed unexpectedly: %s. "
+                "Proceeding without explicit themeId.",
+                exc,
+            )
+            _default_theme_id = None
         if _default_theme_id:
             logger.info("Resolved '%s' theme ID: %s", DEFAULT_THEME_NAME, _default_theme_id)
         else:
