@@ -127,13 +127,27 @@ def compute_scaling(data: dict, tier: int) -> dict:
     ppp_factor = min(1.0, gdp_pc / 30000)
     student_target_5yr = max(5000, int(school_age_pop * 0.01 * demand_factor))
     per_student_budget = max(5000, min(30000, avg_tuition * 0.8))
-    # Upfront Ask: Students_Y5 × Per-Student Budget × 30% (mgmt + timeback) + $25M IP — SPECS 2D
-    upfront_ask = student_target_5yr * per_student_budget * 0.30 + 25_000_000
+    # Fixed development costs by tier ($M): Tier 1 = $750M, Tier 2 = $150M, Tier 3 = $100M
+    tier_dev_costs = {1: 750_000_000, 2: 150_000_000, 3: 100_000_000}
+    fixed_dev_cost = tier_dev_costs.get(tier, 750_000_000)
+    # AlphaCore License (Alpha Holdings), App Content R&D + LifeSkills R&D (local expense)
+    alphacore_license = fixed_dev_cost // 3
+    app_content_rd = fixed_dev_cost // 3
+    lifeskills_rd = fixed_dev_cost - 2 * (fixed_dev_cost // 3)
+    # Variable upfront: Mgmt Fee = students × budget × 10%, Timeback = students × budget × 20%
+    upfront_mgmt_fee = student_target_5yr * per_student_budget * 0.10
+    upfront_timeback_fee = student_target_5yr * per_student_budget * 0.20
+    upfront_ask = fixed_dev_cost + upfront_mgmt_fee + upfront_timeback_fee
 
     return {
         "tier": tier,
         "ppp_factor": round(ppp_factor, 3),
         "upfront_ask": round(upfront_ask),
+        "alphacore_license": round(alphacore_license),
+        "app_content_rd": round(app_content_rd),
+        "lifeskills_rd": round(lifeskills_rd),
+        "upfront_mgmt_fee": round(upfront_mgmt_fee),
+        "upfront_timeback_fee": round(upfront_timeback_fee),
         "student_target_5yr": student_target_5yr,
         "per_student_budget": round(per_student_budget),
         "demand_factor": demand_factor,

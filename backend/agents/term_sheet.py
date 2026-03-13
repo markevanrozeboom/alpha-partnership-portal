@@ -67,22 +67,32 @@ template and calibrate all new term sheets to this standard.
 100% Next71 owned, Alpha exclusive operator.
 $25k annual tuition × 100-200k students = $2.5B-$5.0B annual revenue.
 
-| Item                          | Up-Front | Ongoing     | Recipient      | Notes |
-|-------------------------------|----------|-------------|----------------|-------|
-| Incept UAE eduLLM Dev         | $250M    |             | Alpha Holdings | Optional |
-| AlphaCore License             | $250M    |             | Alpha Holdings | |
-| UAE EdTech App R&D            | $250M    |             | Local expense  | |
-| AsasCore R&D                  | $250M    |             | Local expense  | |
-| Marketing/Launch Capital      |          | $250M       | Local expense  | |
-| Scholarships                  |          | $1B/100k    | Local expense  | |
-| Management Fee                | $250M    | 10% tuition | Alpha Holdings | Min $2,500/student |
-| TimeBack Fee                  |          | 20% tuition | Alpha Holdings | Min $5,000/student |
-| **Total Ed71 Schools**        | **$1.25B** | **Scale dependent** | | |
+Upfront:
+| Item                          | Upfront    | Recipient           |
+|-------------------------------|------------|---------------------|
+| AlphaCore License             | $250M      | Alpha Holdings      |
+| UAE EdTech App R&D            | $250M      | Local expense       |
+| AsasCore R&D                  | $250M      | Local expense       |
+| Management Fee Prepay         | $250M      | Prepaid OpEx for 100k student-years |
+| TimeBack License Fee Prepay   | $500M      | Prepaid OpEx for 100k student-years |
+| **Total Ed71 Schools**        | **$1.5B**  |                     |
+
+Ongoing:
+| Item                          | Ongoing       | Recipient      |
+|-------------------------------|---------------|----------------|
+| Parent Edu / Launch / Guides  | $25-50M/yr    | Local expense  |
+| Additional School Funding     | $1B/yr*       | Local expense  |
+| Management Fee                | 10% budget    | OpEx to Alpha Holdings |
+| TimeBack License Fee          | 20% budget    | OpEx to Alpha Holdings |
+| **Total Ongoing**             | **Scale dependent** |         |
+* per 100k students
 
 ### Key Principles
 - Management fee: 10% of tuition (non-negotiable floor), $2,500 per student minimum
 - Timeback license: 20% of tuition (non-negotiable floor), $5,000 per student minimum
-- Upfront prepayment: 2 years of management fees at signing
+- Management Fee Prepay: prepaid for initial student-years at signing
+- Timeback License Fee Prepay: prepaid for initial student-years at signing
+- Parent Edu / Launch / Guides: 5-10% of management fee, ongoing local expense
 - Flagship school presence essential for "halo effect"
 - Scholarship backstop: 50% capacity × tuition × number of schools × 5 years
 - Alpha commitments: (1) children love school, (2) learn 2x faster, (3) life skills for AI age
@@ -96,6 +106,11 @@ $25k annual tuition × 100-200k students = $2.5B-$5.0B annual revenue.
 # Keys that overlap with the financial model and require recalculation
 FINANCIAL_MODEL_OVERLAP_KEYS = {
     "ts_upfront_ip_fee",
+    "ts_upfront_alphacore_license",
+    "ts_upfront_app_content_rd",
+    "ts_upfront_lifeskills_rd",
+    "ts_upfront_mgmt_fee",
+    "ts_upfront_timeback_fee",
     "ts_management_fee_pct",
     "ts_timeback_license_pct",
     "ts_students_year5",
@@ -106,6 +121,11 @@ FINANCIAL_MODEL_OVERLAP_KEYS = {
 # Mapping from term sheet assumption keys to financial model assumption keys
 TS_TO_FM_KEY_MAP = {
     "ts_upfront_ip_fee": "upfront_ip_fee",
+    "ts_upfront_alphacore_license": "upfront_alphacore_license",
+    "ts_upfront_app_content_rd": "upfront_app_content_rd",
+    "ts_upfront_lifeskills_rd": "upfront_lifeskills_rd",
+    "ts_upfront_mgmt_fee": "upfront_mgmt_fee",
+    "ts_upfront_timeback_fee": "upfront_timeback_fee",
     "ts_management_fee_pct": "management_fee_pct",
     "ts_timeback_license_pct": "timeback_license_pct",
     "ts_students_year5": "students_year5",
@@ -189,14 +209,54 @@ def generate_term_sheet_assumptions(
             description="Alpha has exclusive rights to the 2hr Learning model in the territory",
         ),
 
-        # --- Fee Structure (overlaps with financial model) ---
+        # --- Upfront Payment Breakdown (overlaps with financial model) ---
+        FinancialAssumption(
+            key="ts_upfront_alphacore_license",
+            label="AlphaCore License ($M)",
+            value=round(financial_model.upfront_alphacore_license / 1_000_000) if financial_model.upfront_alphacore_license > 1_000_000 else round(financial_model.upfront_alphacore_license),
+            min_val=10, max_val=500, step=10,
+            unit="$M", category="fees",
+            description="AlphaCore curriculum OS and learning management system license",
+        ),
+        FinancialAssumption(
+            key="ts_upfront_app_content_rd",
+            label="Customized Country-Specific App Content R&D ($M)",
+            value=round(financial_model.upfront_app_content_rd / 1_000_000) if financial_model.upfront_app_content_rd > 1_000_000 else round(financial_model.upfront_app_content_rd),
+            min_val=10, max_val=500, step=10,
+            unit="$M", category="fees",
+            description="R&D for country-specific EdTech app content and localization",
+        ),
+        FinancialAssumption(
+            key="ts_upfront_lifeskills_rd",
+            label="Customized Country-Specific LifeSkills R&D ($M)",
+            value=round(financial_model.upfront_lifeskills_rd / 1_000_000) if financial_model.upfront_lifeskills_rd > 1_000_000 else round(financial_model.upfront_lifeskills_rd),
+            min_val=10, max_val=500, step=10,
+            unit="$M", category="fees",
+            description="R&D for country-specific life skills curriculum (AsasCore equivalent)",
+        ),
+        FinancialAssumption(
+            key="ts_upfront_mgmt_fee",
+            label="Upfront Management Fee ($M)",
+            value=round(financial_model.upfront_mgmt_fee / 1_000_000) if financial_model.upfront_mgmt_fee > 1_000_000 else max(1, round(financial_model.upfront_mgmt_fee)),
+            min_val=1, max_val=500, step=5,
+            unit="$M", category="fees",
+            description="Target Students Y5 × Per-Student Budget × 10%",
+        ),
+        FinancialAssumption(
+            key="ts_upfront_timeback_fee",
+            label="Upfront Timeback Fee ($M)",
+            value=round(financial_model.upfront_timeback_fee / 1_000_000) if financial_model.upfront_timeback_fee > 1_000_000 else max(1, round(financial_model.upfront_timeback_fee)),
+            min_val=1, max_val=1000, step=5,
+            unit="$M", category="fees",
+            description="Target Students Y5 × Per-Student Budget × 20%",
+        ),
         FinancialAssumption(
             key="ts_upfront_ip_fee",
-            label="Upfront IP / Development Fee ($M)",
+            label="Total Upfront Ask ($M)",
             value=upfront_ip_m,
-            min_val=5, max_val=500, step=5,
+            min_val=5, max_val=2000, step=5,
             unit="$M", category="fees",
-            description="One-time IP licensing and development fee. ⚠️ Changes recalculate financial model.",
+            description="Sum of all upfront components. ⚠️ Changes recalculate financial model.",
         ),
         FinancialAssumption(
             key="ts_management_fee_pct",
@@ -363,12 +423,32 @@ Every term should be SPECIFIC — no placeholder ranges, commit to the exact num
 - Alpha ownership/control: {alpha_ownership}%
 - Governance (board composition, voting rights, reserved matters)
 
+### Upfront Payments
+
+| Item | Upfront | Recipient |
+|------|---------|-----------|
+| AlphaCore License | ${upfront_alphacore:,.0f}M | Alpha Holdings |
+| Customized Country-Specific App Content R&D | ${upfront_app_rd:,.0f}M | Local expense |
+| Customized Country-Specific LifeSkills R&D | ${upfront_lifeskills_rd:,.0f}M | Local expense |
+| Management Fee Prepay | ${upfront_mgmt:,.0f}M | Prepaid OpEx |
+| TimeBack License Fee Prepay | ${upfront_timeback:,.0f}M | Prepaid OpEx |
+| **Total** | **${upfront_ip:,.0f}M** | |
+
+### Ongoing Costs
+
+| Item | Ongoing | Recipient |
+|------|---------|-----------|
+| Parent Edu / Launch / Guides | 5-10% of Mgmt Fee | Local expense |
+| Additional School Funding | Scale dependent | Local expense |
+| Management Fee | {mgmt_pct}% of per-student budget | OpEx to Alpha Holdings |
+| TimeBack License Fee | {timeback_pct}% of per-student budget | OpEx to Alpha Holdings |
+| **Total Ongoing** | **Scale dependent** | |
+
 ### IP Licensing & Technology
 - Timeback platform license: {timeback_pct}% of per-student revenue (minimum ${min_timeback_per_student:,.0f}/student)
-- AlphaCore curriculum license: included
+- AlphaCore curriculum license: included in upfront AlphaCore License
 - Incept eduLLM localisation: included
 - Guide School teacher training: included
-- Upfront IP development & licensing fee: ${upfront_ip:,.0f}
 
 ### Management Fee
 - Alpha management fee: {mgmt_pct}% of gross school revenue (minimum ${min_mgmt_per_student:,.0f}/student)
@@ -471,7 +551,13 @@ async def generate_term_sheet(
     alpha_ownership = int(ts.get("ts_alpha_ownership_pct", 49))
     term_years = int(ts.get("ts_term_years", 25))
     exclusivity_years = int(ts.get("ts_exclusivity_years", 25))
-    upfront_ip = ts.get("ts_upfront_ip_fee", round(financial_model.upfront_ip_fee / 1_000_000)) * 1_000_000
+    upfront_ip = ts.get("ts_upfront_ip_fee", round(financial_model.upfront_ip_fee / 1_000_000))
+    # Upfront breakdown ($M values)
+    upfront_alphacore = ts.get("ts_upfront_alphacore_license", round(financial_model.upfront_alphacore_license / 1_000_000) if financial_model.upfront_alphacore_license > 0 else 250)
+    upfront_app_rd = ts.get("ts_upfront_app_content_rd", round(financial_model.upfront_app_content_rd / 1_000_000) if financial_model.upfront_app_content_rd > 0 else 250)
+    upfront_lifeskills_rd = ts.get("ts_upfront_lifeskills_rd", round(financial_model.upfront_lifeskills_rd / 1_000_000) if financial_model.upfront_lifeskills_rd > 0 else 250)
+    upfront_mgmt = ts.get("ts_upfront_mgmt_fee", round(financial_model.upfront_mgmt_fee / 1_000_000) if financial_model.upfront_mgmt_fee > 0 else 0)
+    upfront_timeback = ts.get("ts_upfront_timeback_fee", round(financial_model.upfront_timeback_fee / 1_000_000) if financial_model.upfront_timeback_fee > 0 else 0)
     mgmt_pct = int(ts.get("ts_management_fee_pct", round(financial_model.management_fee_pct * 100)))
     timeback_pct = int(ts.get("ts_timeback_license_pct", round(financial_model.timeback_license_pct * 100)))
     prepay_years = int(ts.get("ts_mgmt_fee_prepay_years", 2))
@@ -489,9 +575,15 @@ async def generate_term_sheet(
     # Build deal params string for context
     deal_params = f"""- Partnership: {partnership_type}
 - Alpha ownership: {alpha_ownership}%
-- Upfront IP fee: ${upfront_ip:,.0f}
-- Management fee: {mgmt_pct}% of revenue
-- Timeback license: {timeback_pct}% of per-student budget
+- Upfront breakdown:
+  - AlphaCore License: ${upfront_alphacore}M (Alpha Holdings)
+  - Country-Specific App Content R&D: ${upfront_app_rd}M (Local expense)
+  - Country-Specific LifeSkills R&D: ${upfront_lifeskills_rd}M (Local expense)
+  - Upfront Management Fee: ${upfront_mgmt}M (Alpha Holdings)
+  - Upfront Timeback Fee: ${upfront_timeback}M (Alpha Holdings)
+  - Total upfront: ${upfront_ip}M
+- Management fee: {mgmt_pct}% of revenue (ongoing)
+- Timeback license: {timeback_pct}% of per-student budget (ongoing)
 - Prepayment: {prepay_years} years (${prepay_amount:,.0f})
 - Year 5 students: {students_y5:,}
 - Per-student budget: ${per_student:,.0f}
@@ -536,6 +628,11 @@ async def generate_term_sheet(
             timeback_pct=timeback_pct,
             mgmt_pct=mgmt_pct,
             upfront_ip=upfront_ip,
+            upfront_alphacore=upfront_alphacore,
+            upfront_app_rd=upfront_app_rd,
+            upfront_lifeskills_rd=upfront_lifeskills_rd,
+            upfront_mgmt=upfront_mgmt,
+            upfront_timeback=upfront_timeback,
             min_mgmt_per_student=min_mgmt_per_student,
             min_timeback_per_student=min_timeback_per_student,
             prepay_years=prepay_years,

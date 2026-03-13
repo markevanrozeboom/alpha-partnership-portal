@@ -9,8 +9,27 @@ formulas:
     reference_gdp: 30000
 
   upfront_ask:
-    formula: "student_target_5yr * per_student_budget * 0.30 + 25000000"
-    description: "Target students × per-student budget × 30% (mgmt + timeback) + $25M IP license fee"
+    formula: "alphacore_license + app_content_rd + lifeskills_rd + (student_target_5yr * per_student_budget * 0.10) + (student_target_5yr * per_student_budget * 0.20)"
+    description: "Fixed development costs (AlphaCore License + App Content R&D + LifeSkills R&D) + variable fees (Management Fee 10% + Timeback 20% of students × budget)"
+    components:
+      alphacore_license:
+        tier_1: 250000000
+        tier_2: 50000000
+        tier_3: 33000000
+      app_content_rd:
+        tier_1: 250000000
+        tier_2: 50000000
+        tier_3: 33000000
+      lifeskills_rd:
+        tier_1: 250000000
+        tier_2: 50000000
+        tier_3: 34000000
+      management_fee_upfront: "student_target_5yr * per_student_budget * 0.10"
+      timeback_upfront: "student_target_5yr * per_student_budget * 0.20"
+    fixed_dev_costs:
+      tier_1: 750000000  # $750M
+      tier_2: 150000000  # $150M
+      tier_3: 100000000  # $100M
     minimum: 25000000  # $25M floor
 
   student_target_5yr:

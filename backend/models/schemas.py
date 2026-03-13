@@ -337,6 +337,11 @@ class FinancialModel(BaseModel):
     management_fee_pct: float = 0.10
     timeback_license_pct: float = 0.20
     upfront_ip_fee: float = 25_000_000
+    upfront_alphacore_license: float = 0
+    upfront_app_content_rd: float = 0
+    upfront_lifeskills_rd: float = 0
+    upfront_mgmt_fee: float = 0
+    upfront_timeback_fee: float = 0
     total_management_fee_revenue: float = 0
     total_timeback_license_revenue: float = 0
 
