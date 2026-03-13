@@ -302,12 +302,15 @@ async def generate_state_deck(
         result = await generate_and_wait(
             input_text,
             num_cards=11,
-            text_mode="preserve",
+            text_mode="condense",
             card_split="inputTextBreaks",
+            text_amount="extensive",
             additional_instructions=(
                 f"This is a governor pitch deck for {state}. "
                 "Use a professional, data-driven tone. The audience is a state governor. "
-                "Keep slides clean with clear hierarchy. Emphasise outcomes and proof points."
+                "Keep slides clean with clear hierarchy. Emphasise outcomes and proof points. "
+                "Use the markdown headings (# Title) as card titles. "
+                "Preserve all financial figures, percentages, and data points exactly as provided."
             ),
             export_as=export_as,
         )
