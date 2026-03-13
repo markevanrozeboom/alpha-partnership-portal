@@ -166,7 +166,7 @@ async def run_express_pipeline(run_id: str) -> None:
 
         # Investment memorandum (DOCX) + XLSX + investor deck for sovereign
         # For sovereign nations, request PDF export from Gamma as well.
-        gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback, _ = await generate_documents(
+        gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback, deck_input_text = await generate_documents(
             target, country_profile, education_analysis, strategy_obj,
             financial_model, assumptions, AudienceType.INVESTOR,
             export_as="pdf" if not is_us_state else "pptx",
@@ -175,6 +175,44 @@ async def run_express_pipeline(run_id: str) -> None:
         # For US states, use the state deck; for sovereign nations, use the investor deck
         final_gamma_url = gamma_url if is_us_state else gen_gamma_url
         final_pdf_export_url = pdf_export_url if is_us_state else gen_export_url
+
+        # Sovereign runs should prefer true Gamma output.
+        # If we got a Gamma viewer URL but no export URL, try one additional
+        # Gamma generation specifically for PDF export using the same deck input.
+        if (not is_us_state) and final_gamma_url and not final_pdf_export_url and deck_input_text:
+            logger.warning(
+                "Gamma viewer URL exists but no PDF export URL for %s — retrying Gamma export generation",
+                target,
+            )
+            try:
+                from services.gamma import generate_and_wait, _extract_gamma_url, _extract_export_url
+
+                retry_result = await generate_and_wait(
+                    deck_input_text,
+                    num_cards=14,
+                    text_mode="condense",
+                    card_split="inputTextBreaks",
+                    text_amount="extensive",
+                    additional_instructions=(
+                        f"This is a strategic partnership proposal / investor deck for {target}. "
+                        "The audience is C-suite / head-of-state level. "
+                        "Use a professional, data-driven tone. Keep slides clean with clear hierarchy. "
+                        "Use the markdown headings (# Title) as card titles. "
+                        "Preserve all financial figures, percentages, and data points exactly as provided."
+                    ),
+                    export_as="pdf",
+                    max_retries=2,
+                )
+                retry_gamma_url = _extract_gamma_url(retry_result)
+                retry_export_url = _extract_export_url(retry_result)
+                if retry_gamma_url and not final_gamma_url:
+                    final_gamma_url = retry_gamma_url
+                if retry_export_url:
+                    final_pdf_export_url = retry_export_url
+                    logger.info("Recovered Gamma PDF export URL on retry for %s", target)
+            except Exception as exc:
+                logger.error("Gamma PDF export retry failed for %s: %s", target, exc)
+
         state["gamma_url"] = final_gamma_url
 
         # Download Gamma PDF locally
@@ -211,6 +249,15 @@ async def run_express_pipeline(run_id: str) -> None:
                 logger.info("Local PPTX → PDF proposal generated: %s", proposal_pdf)
             except Exception as exc:
                 logger.error("Local PPTX → PDF conversion failed for %s: %s", target, exc)
+
+        # If Gamma produced a viewer URL but export still failed, do NOT silently
+        # substitute a memorandum. Fail the run so the user can retry and get a
+        # true Gamma deck artifact.
+        if not proposal_pdf and final_gamma_url and not is_us_state:
+            raise RuntimeError(
+                "Gamma deck generated but PDF export was unavailable. "
+                "Run failed intentionally to avoid falling back to memorandum."
+            )
 
         # Last-resort fallback: if BOTH Gamma and local PPTX→PDF failed,
         # use the memorandum so the customer at least gets something.

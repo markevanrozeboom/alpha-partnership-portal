@@ -311,12 +311,49 @@ def _extract_gamma_url(result: dict[str, Any]) -> str | None:
 
     Gamma's API has used different key names across versions.
     """
-    for key in ("gammaUrl", "url", "gamma_url", "viewUrl", "view_url",
-                "presentationUrl", "presentation_url", "cardUrl"):
-        val = result.get(key)
-        if val and isinstance(val, str) and val.startswith("http"):
-            return val
-    return None
+    keys = (
+        "gammaUrl", "url", "gamma_url", "viewUrl", "view_url",
+        "presentationUrl", "presentation_url", "cardUrl",
+    )
+
+    def _walk(obj: Any) -> str | None:
+        if isinstance(obj, dict):
+            for key in keys:
+                val = obj.get(key)
+                if isinstance(val, str) and val.startswith("http"):
+                    return val
+            for val in obj.values():
+                found = _walk(val)
+                if found:
+                    return found
+        elif isinstance(obj, list):
+            for item in obj:
+                found = _walk(item)
+                if found:
+                    return found
+        return None
+
+    found = _walk(result)
+    if found:
+        return found
+
+    # Last-resort heuristic: look for any Gamma-hosted URL in nested payloads.
+    def _walk_any_url(obj: Any) -> str | None:
+        if isinstance(obj, dict):
+            for val in obj.values():
+                found = _walk_any_url(val)
+                if found:
+                    return found
+        elif isinstance(obj, list):
+            for item in obj:
+                found = _walk_any_url(item)
+                if found:
+                    return found
+        elif isinstance(obj, str) and obj.startswith("http") and "gamma" in obj.lower():
+            return obj
+        return None
+
+    return _walk_any_url(result)
 
 
 def _extract_export_url(result: dict[str, Any]) -> str | None:
@@ -324,13 +361,52 @@ def _extract_export_url(result: dict[str, Any]) -> str | None:
 
     Gamma's API has used different key names across versions.
     """
-    for key in ("exportUrl", "export_url", "pptxUrl", "pptx_url",
-                "pdfUrl", "pdf_url", "downloadUrl", "download_url",
-                "fileUrl", "file_url"):
-        val = result.get(key)
-        if val and isinstance(val, str) and val.startswith("http"):
-            return val
-    return None
+    keys = (
+        "exportUrl", "export_url", "pptxUrl", "pptx_url",
+        "pdfUrl", "pdf_url", "downloadUrl", "download_url",
+        "fileUrl", "file_url",
+    )
+
+    def _walk(obj: Any) -> str | None:
+        if isinstance(obj, dict):
+            for key in keys:
+                val = obj.get(key)
+                if isinstance(val, str) and val.startswith("http"):
+                    return val
+            for val in obj.values():
+                found = _walk(val)
+                if found:
+                    return found
+        elif isinstance(obj, list):
+            for item in obj:
+                found = _walk(item)
+                if found:
+                    return found
+        return None
+
+    found = _walk(result)
+    if found:
+        return found
+
+    # Last-resort heuristic: detect direct downloadable URLs in nested payloads.
+    def _walk_any_exportish_url(obj: Any) -> str | None:
+        if isinstance(obj, dict):
+            for val in obj.values():
+                found = _walk_any_exportish_url(val)
+                if found:
+                    return found
+        elif isinstance(obj, list):
+            for item in obj:
+                found = _walk_any_exportish_url(item)
+                if found:
+                    return found
+        elif isinstance(obj, str) and obj.startswith("http"):
+            lowered = obj.lower()
+            if any(marker in lowered for marker in (".pdf", ".pptx", "download", "export")):
+                return obj
+        return None
+
+    return _walk_any_exportish_url(result)
 
 
 async def download_export(
@@ -360,8 +436,23 @@ async def download_export(
     for attempt in range(1, max_retries + 1):
         try:
             async with httpx.AsyncClient(timeout=90, follow_redirects=True) as client:
-                resp = await client.get(export_url)
-                resp.raise_for_status()
+                # Some Gamma export URLs require API-key auth, others are signed/public.
+                # Try authenticated first, then anonymous fallback.
+                resp: httpx.Response | None = None
+                last_http_exc: Exception | None = None
+                for headers in ({"X-API-KEY": GAMMA_API_KEY}, {}):
+                    try:
+                        req_headers = headers if headers else None
+                        resp = await client.get(export_url, headers=req_headers)
+                        resp.raise_for_status()
+                        break
+                    except Exception as http_exc:
+                        last_http_exc = http_exc
+                        resp = None
+                        continue
+
+                if not resp:
+                    raise last_http_exc or RuntimeError("Gamma export download failed")
 
                 if len(resp.content) < 100:
                     logger.warning(
@@ -371,6 +462,31 @@ async def download_export(
                     if attempt < max_retries:
                         await asyncio.sleep(5 * attempt)
                         continue
+
+                # Basic file signature validation prevents HTML/error pages from
+                # being saved as .pdf/.pptx and later misclassified as success.
+                if ext.lower() == "pdf" and not resp.content.startswith(b"%PDF"):
+                    logger.warning(
+                        "Gamma export content is not a valid PDF (attempt %d/%d, first bytes=%s)",
+                        attempt,
+                        max_retries,
+                        resp.content[:8],
+                    )
+                    if attempt < max_retries:
+                        await asyncio.sleep(5 * attempt)
+                        continue
+                    return None
+                if ext.lower() == "pptx" and not resp.content.startswith(b"PK"):
+                    logger.warning(
+                        "Gamma export content is not a valid PPTX zip (attempt %d/%d, first bytes=%s)",
+                        attempt,
+                        max_retries,
+                        resp.content[:8],
+                    )
+                    if attempt < max_retries:
+                        await asyncio.sleep(5 * attempt)
+                        continue
+                    return None
 
                 with open(local_path, "wb") as f:
                     f.write(resp.content)
