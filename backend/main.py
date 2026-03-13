@@ -26,6 +26,11 @@ from graph.pipeline import (
     get_run_state,
     rewind_to_stage,
 )
+from graph.express_pipeline import (
+    create_express_run,
+    run_express_pipeline,
+    get_express_state,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -428,6 +433,62 @@ async def download_file(run_id: str, file_type: str):
         path,
         filename=os.path.basename(path),
         media_type="application/octet-stream",
+    )
+
+
+# ===========================================================================
+# CUSTOMER PORTAL — Express Pipeline Endpoints
+# ===========================================================================
+
+@app.post("/api/portal/runs", response_model=dict)
+async def create_express_run_endpoint(req: CreateRunRequest):
+    """Start an express pipeline run (customer portal — no HITL gates).
+
+    Runs the full pipeline end-to-end and produces PDF deliverables.
+    """
+    target = req.target.strip()
+    if not target:
+        raise HTTPException(400, "Target is required")
+
+    run_id = create_express_run(target)
+    # Run the full pipeline in the background
+    asyncio.create_task(run_express_pipeline(run_id))
+    return {"run_id": run_id}
+
+
+@app.get("/api/portal/runs/{run_id}")
+async def get_express_run_status(run_id: str):
+    """Get status of an express pipeline run (customer portal)."""
+    state = get_express_state(run_id)
+    if state.get("status") == "error" and state.get("error_message") == "Run not found":
+        raise HTTPException(404, "Run not found")
+    return state
+
+
+@app.get("/api/portal/runs/{run_id}/download/{file_type}")
+async def download_express_file(run_id: str, file_type: str):
+    """Download a PDF from an express pipeline run.
+
+    file_type: 'term_sheet' or 'proposal'
+    """
+    state = get_express_state(run_id)
+
+    if state.get("status") != "completed":
+        raise HTTPException(400, "Documents are not ready yet")
+
+    file_map = {
+        "term_sheet": state.get("term_sheet_pdf_path"),
+        "proposal": state.get("proposal_pdf_path"),
+    }
+
+    path = file_map.get(file_type)
+    if not path or not os.path.exists(path):
+        raise HTTPException(404, f"File not found: {file_type}")
+
+    return FileResponse(
+        path,
+        filename=os.path.basename(path),
+        media_type="application/pdf",
     )
 
 

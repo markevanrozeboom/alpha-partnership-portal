@@ -313,3 +313,40 @@ export async function recalculateModel(
 export function getDownloadUrl(runId: string, fileType: string): string {
   return `${API_URL}/api/runs/${runId}/download/${fileType}`;
 }
+
+// ===========================================================================
+// CUSTOMER PORTAL — Express Pipeline API
+// ===========================================================================
+
+export interface ExpressRunStatus {
+  run_id: string;
+  target: string;
+  status: string;
+  step_index: number;
+  total_steps: number;
+  step_label: string;
+  term_sheet_pdf_path: string | null;
+  proposal_pdf_path: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export async function createExpressRun(target: string): Promise<{ run_id: string }> {
+  const res = await fetch(`${API_URL}/api/portal/runs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target }),
+  });
+  if (!res.ok) throw new Error(`Failed to create run: ${res.statusText}`);
+  return res.json();
+}
+
+export async function getExpressRunStatus(runId: string): Promise<ExpressRunStatus> {
+  const res = await fetch(`${API_URL}/api/portal/runs/${runId}`);
+  if (!res.ok) throw new Error(`Failed to get run: ${res.statusText}`);
+  return res.json();
+}
+
+export function getExpressDownloadUrl(runId: string, fileType: "term_sheet" | "proposal"): string {
+  return `${API_URL}/api/portal/runs/${runId}/download/${fileType}`;
+}
