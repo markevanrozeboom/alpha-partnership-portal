@@ -4,32 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createExpressRun } from "@/lib/api";
 
-// ---------------------------------------------------------------------------
-// Country / State lists for quick selection
-// ---------------------------------------------------------------------------
-
-const COUNTRIES = [
-  { name: "Saudi Arabia", flag: "🇸🇦" },
-  { name: "Qatar", flag: "🇶🇦" },
-  { name: "Kuwait", flag: "🇰🇼" },
-  { name: "Bahrain", flag: "🇧🇭" },
-  { name: "Singapore", flag: "🇸🇬" },
-  { name: "United Kingdom", flag: "🇬🇧" },
-  { name: "India", flag: "🇮🇳" },
-  { name: "United Arab Emirates", flag: "🇦🇪" },
-  { name: "Oman", flag: "🇴🇲" },
-  { name: "Japan", flag: "🇯🇵" },
-];
-
-const US_STATES = [
-  "Arizona", "Florida", "Texas", "Indiana", "Ohio",
-  "North Carolina", "Tennessee", "Utah", "West Virginia", "Iowa",
-];
-
-// ---------------------------------------------------------------------------
-// Portal Landing Page
-// ---------------------------------------------------------------------------
-
 export default function PortalPage() {
   const router = useRouter();
   const [target, setTarget] = useState("");
@@ -118,56 +92,6 @@ export default function PortalPage() {
           {error && (
             <p className="text-red-400 text-sm">{error}</p>
           )}
-
-          {/* Quick Select */}
-          <div className="space-y-6 pt-6">
-            <div>
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-                Sovereign Nations
-              </h3>
-              <div className="flex flex-wrap justify-center gap-2">
-                {COUNTRIES.map((c) => (
-                  <button
-                    key={c.name}
-                    onClick={() => setTarget(c.name)}
-                    disabled={loading}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all
-                      ${target === c.name
-                        ? "bg-[#006D77] text-white ring-1 ring-[#006D77]"
-                        : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-                      }
-                    `}
-                  >
-                    <span>{c.flag}</span>
-                    <span>{c.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-                US States
-              </h3>
-              <div className="flex flex-wrap justify-center gap-2">
-                {US_STATES.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setTarget(s)}
-                    disabled={loading}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all
-                      ${target === s
-                        ? "bg-[#006D77] text-white ring-1 ring-[#006D77]"
-                        : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-                      }
-                    `}
-                  >
-                    🇺🇸 {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
