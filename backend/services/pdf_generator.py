@@ -346,18 +346,222 @@ def convert_docx_to_pdf(docx_path: str) -> str:
     return pdf_path
 
 
-def convert_pptx_to_pdf(pptx_path: str) -> str:
-    """Convert a PPTX presentation to a PDF summary document.
+class LandscapeDeckPDF(FPDF):
+    """Landscape PDF that mimics a slide deck — one slide per page.
 
-    Since PPTX → PDF conversion requires system dependencies,
-    this creates a clean text-based PDF summary of the deck content.
+    Each page has a dark background with white/accent text, matching the
+    brand of the local PPTX fallback deck.
+    """
+
+    def __init__(self, target_name: str = ""):
+        super().__init__(orientation="L", unit="mm", format="A4")
+        # A4 landscape: 297 x 210 mm
+        self.target_name = _clean_text(target_name)
+        self.set_auto_page_break(auto=False)
+
+    # --- Wrap cell / multi_cell for text cleaning ---
+
+    def cell(self, w=None, h=None, text="", *args, **kwargs):
+        return super().cell(w, h, _clean_text(str(text)), *args, **kwargs)
+
+    def multi_cell(self, w=None, h=None, text="", *args, **kwargs):
+        return super().multi_cell(w, h, _clean_text(str(text)), *args, **kwargs)
+
+    def footer(self):
+        self.set_y(-12)
+        self.set_font("Helvetica", "I", 7)
+        self.set_text_color(*MID_GRAY)
+        super().cell(0, 8, (
+            f"CONFIDENTIAL  |  2hr Learning (Alpha)  |  "
+            f"{self.target_name}  |  Page {self.page_no()}"
+        ), align="C")
+
+    def _dark_bg(self):
+        """Fill the current page with the dark brand background."""
+        self.set_fill_color(10, 15, 26)  # #0A0F1A
+        self.rect(0, 0, self.w, self.h, "F")
+
+    def _accent_bar(self, y: float, width: float = 60):
+        """Draw a horizontal accent bar."""
+        self.set_draw_color(*ACCENT)
+        self.set_line_width(0.8)
+        self.line(15, y, 15 + width, y)
+
+    def add_cover_slide(self, title: str, subtitle: str, target: str):
+        """Dark cover slide matching the PPTX style."""
+        self.add_page()
+        self._dark_bg()
+
+        # Accent bar at top
+        self.set_fill_color(*ACCENT)
+        self.rect(0, 0, self.w, 3, "F")
+
+        # Main title
+        self.set_y(55)
+        self.set_font("Helvetica", "B", 36)
+        self.set_text_color(*WHITE)
+        self.multi_cell(0, 16, title, align="C")
+
+        # Subtitle
+        self.ln(6)
+        self.set_font("Helvetica", "", 18)
+        self.set_text_color(*ACCENT)
+        self.multi_cell(0, 10, subtitle, align="C")
+
+        # Target
+        self.ln(4)
+        self.set_font("Helvetica", "", 13)
+        self.set_text_color(170, 170, 170)
+        self.multi_cell(0, 8, target, align="C")
+
+        # CONFIDENTIAL
+        self.ln(14)
+        self.set_font("Helvetica", "B", 10)
+        self.set_text_color(204, 60, 60)
+        self.multi_cell(0, 8, "CONFIDENTIAL & NON-BINDING", align="C")
+
+        # Date + prepared by
+        self.ln(6)
+        self.set_font("Helvetica", "", 9)
+        self.set_text_color(130, 130, 130)
+        self.multi_cell(0, 6, datetime.now().strftime("%B %Y"), align="C")
+        self.multi_cell(0, 6, "Prepared by 2hr Learning - Alpha Division", align="C")
+
+    def add_content_slide(self, title: str, bullets: list[str],
+                          slide_num: int = 0, total_slides: int = 0):
+        """Standard content slide with title + bullet points."""
+        self.add_page()
+        self._dark_bg()
+
+        # Top accent bar
+        self.set_fill_color(*ACCENT)
+        self.rect(0, 0, self.w, 2.5, "F")
+
+        # Slide number badge (top-right)
+        if slide_num and total_slides:
+            self.set_font("Helvetica", "", 8)
+            self.set_text_color(100, 100, 100)
+            self.set_xy(self.w - 35, 6)
+            super().cell(25, 6, f"{slide_num} / {total_slides}", align="R")
+
+        # Title
+        self.set_xy(15, 12)
+        self.set_font("Helvetica", "B", 24)
+        self.set_text_color(*WHITE)
+        self.multi_cell(self.w - 30, 11, title)
+
+        # Accent underline
+        title_bottom = self.get_y() + 2
+        self._accent_bar(title_bottom, width=80)
+
+        # Bullet content
+        self.set_y(title_bottom + 6)
+        self.set_x(18)
+
+        for bullet in bullets:
+            if not bullet.strip():
+                self.ln(3)
+                continue
+
+            # Detect sub-heading style (lines starting with ** or all-caps short lines)
+            is_subheading = (
+                (bullet.startswith("**") and bullet.endswith("**")) or
+                (len(bullet) < 50 and bullet == bullet.upper() and not bullet.startswith("-"))
+            )
+            clean = bullet.strip("*").strip("-").strip()
+
+            if is_subheading:
+                self.ln(3)
+                self.set_font("Helvetica", "B", 13)
+                self.set_text_color(*ACCENT)
+                self.set_x(18)
+                self.multi_cell(self.w - 36, 7, clean)
+                self.ln(1)
+            else:
+                self.set_font("Helvetica", "", 11)
+                self.set_text_color(200, 200, 210)
+                self.set_x(18)
+                # Bullet prefix
+                super().cell(6, 7, _clean_text("-"))
+                self.multi_cell(self.w - 42, 7, clean)
+                self.ln(1)
+
+            # Safety: don't overflow the page
+            if self.get_y() > self.h - 20:
+                break
+
+    def add_table_slide(self, title: str, headers: list[str],
+                        rows: list[list[str]], slide_num: int = 0,
+                        total_slides: int = 0):
+        """Slide with a styled data table."""
+        self.add_page()
+        self._dark_bg()
+
+        # Top accent bar
+        self.set_fill_color(*ACCENT)
+        self.rect(0, 0, self.w, 2.5, "F")
+
+        # Slide number badge
+        if slide_num and total_slides:
+            self.set_font("Helvetica", "", 8)
+            self.set_text_color(100, 100, 100)
+            self.set_xy(self.w - 35, 6)
+            super().cell(25, 6, f"{slide_num} / {total_slides}", align="R")
+
+        # Title
+        self.set_xy(15, 12)
+        self.set_font("Helvetica", "B", 24)
+        self.set_text_color(*WHITE)
+        self.multi_cell(self.w - 30, 11, title)
+        self._accent_bar(self.get_y() + 2, width=80)
+        self.ln(8)
+
+        # Table
+        num_cols = len(headers)
+        if num_cols == 0:
+            return
+        usable = self.w - 30
+        col_w = usable / num_cols
+        row_h = 9
+
+        # Header row
+        self.set_x(15)
+        self.set_font("Helvetica", "B", 9)
+        self.set_fill_color(*ACCENT)
+        self.set_text_color(*WHITE)
+        for h in headers:
+            super().cell(col_w, row_h, _clean_text(h), border=0, fill=True, align="C")
+        self.ln(row_h)
+
+        # Data rows
+        for ri, row in enumerate(rows):
+            if self.get_y() > self.h - 22:
+                break  # don't overflow
+            self.set_x(15)
+            if ri % 2 == 0:
+                self.set_fill_color(18, 22, 36)
+            else:
+                self.set_fill_color(14, 18, 30)
+            self.set_font("Helvetica", "", 9)
+            self.set_text_color(200, 200, 210)
+            for ci, val in enumerate(row):
+                align = "L" if ci == 0 else "R"
+                super().cell(col_w, row_h, _clean_text(val), border=0, fill=True, align=align)
+            self.ln(row_h)
+
+
+def convert_pptx_to_pdf(pptx_path: str) -> str:
+    """Convert a PPTX presentation to a professional landscape PDF deck.
+
+    Each slide becomes a full landscape page with the dark-branded style,
+    matching the look of the local PPTX fallback.
 
     Returns the path to the generated PDF file.
     """
     if not pptx_path or not os.path.exists(pptx_path):
         raise FileNotFoundError(f"PPTX file not found: {pptx_path}")
 
-    logger.info("Converting PPTX to PDF summary: %s", pptx_path)
+    logger.info("Converting PPTX to landscape PDF deck: %s", pptx_path)
 
     from pptx import Presentation
 
@@ -365,67 +569,88 @@ def convert_pptx_to_pdf(pptx_path: str) -> str:
     pdf_path = pptx_path.rsplit(".", 1)[0] + ".pdf"
 
     # Extract target name
-    target_name = os.path.basename(pptx_path).split("_")[0:2]
-    target_name = " ".join(target_name).replace("_", " ").title()
+    parts = os.path.basename(pptx_path).split("_")[0:2]
+    target_name = " ".join(parts).replace("_", " ").title()
 
-    pdf = AlphaPDF(title="Proposal Deck", subtitle=target_name)
-    pdf.alias_nb_pages()
+    total_slides = len(prs.slides)
+    pdf = LandscapeDeckPDF(target_name=target_name)
 
-    pdf.add_cover_page(
-        title="PROPOSAL DECK",
-        subtitle="Strategic Education Partnership",
-        target=f"2hr Learning (Alpha) x {target_name}",
+    # Cover slide
+    pdf.add_cover_slide(
+        title=f"2hr Learning x {target_name}",
+        subtitle="Strategic Partnership Proposal",
+        target=f"Prepared for {target_name}",
     )
 
-    for slide_num, slide in enumerate(prs.slides, 1):
-        pdf.add_page()
+    # Content slides
+    for slide_idx, slide in enumerate(prs.slides, 1):
+        # Gather all text content from this slide
+        title_text = ""
+        body_lines: list[str] = []
+        table_data: list[list[str]] = []
+        table_headers: list[str] = []
 
-        # Slide header bar
-        pdf.set_fill_color(*DARK)
-        pdf.rect(0, 10, pdf.w, 14, "F")
-        pdf.set_y(12)
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.set_text_color(*WHITE)
-        pdf.cell(0, 10, f"  Slide {slide_num}", align="L")
-        pdf.ln(16)
-
-        # Extract text from slide shapes
         for shape in slide.shapes:
+            # Check for tables
+            if shape.has_table:
+                tbl = shape.table
+                for ri, row in enumerate(tbl.rows):
+                    cells = [_clean_text(c.text.strip()) for c in row.cells]
+                    if ri == 0:
+                        table_headers = cells
+                    else:
+                        table_data.append(cells)
+                continue
+
             if not shape.has_text_frame:
                 continue
+
             for para in shape.text_frame.paragraphs:
-                text = _clean_text(para.text.strip())
+                text = para.text.strip()
                 if not text:
                     continue
 
-                # Detect title-like text (large font)
+                # Detect title-like text (large font or first textbox)
                 is_title = False
                 for run in para.runs:
                     if run.font.size and run.font.size.pt >= 20:
                         is_title = True
                         break
 
-                if is_title:
-                    pdf.set_font("Helvetica", "B", 16)
-                    pdf.set_text_color(*DARK)
-                    pdf.multi_cell(0, 9, text)
-                    pdf.ln(3)
-                elif para.runs and para.runs[0].font.bold:
-                    pdf.set_font("Helvetica", "B", 11)
-                    pdf.set_text_color(*TEXT_COLOR)
-                    pdf.multi_cell(0, 7, text)
-                    pdf.ln(1)
+                if is_title and not title_text:
+                    title_text = text
                 else:
-                    pdf.set_font("Helvetica", "", 10)
-                    pdf.set_text_color(*TEXT_COLOR)
-                    # Add bullet if it looks like a bullet point
-                    if len(text) > 20:
-                        pdf.cell(6, 6, "-")
-                        pdf.multi_cell(0, 6, text)
-                    else:
-                        pdf.multi_cell(0, 6, text)
+                    body_lines.append(text)
+
+        # If no title found, use first body line
+        if not title_text and body_lines:
+            title_text = body_lines.pop(0)
+        if not title_text:
+            title_text = f"Slide {slide_idx}"
+
+        # Render as table slide or content slide
+        if table_headers and table_data:
+            pdf.add_table_slide(
+                title_text, table_headers, table_data,
+                slide_num=slide_idx, total_slides=total_slides,
+            )
+            # Also render any remaining body lines
+            if body_lines:
+                y = pdf.get_y() + 4
+                pdf.set_y(y)
+                pdf.set_x(18)
+                pdf.set_font("Helvetica", "", 10)
+                pdf.set_text_color(180, 180, 190)
+                for line in body_lines[:4]:
+                    pdf.set_x(18)
+                    pdf.multi_cell(pdf.w - 36, 6, _clean_text(line))
                     pdf.ln(1)
+        else:
+            pdf.add_content_slide(
+                title_text, body_lines,
+                slide_num=slide_idx, total_slides=total_slides,
+            )
 
     pdf.output(pdf_path)
-    logger.info("PPTX → PDF summary generated: %s", pdf_path)
+    logger.info("PPTX -> landscape PDF deck generated: %s", pdf_path)
     return pdf_path

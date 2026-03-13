@@ -893,8 +893,12 @@ def _build_pptx(
     """Build a local PPTX investor deck as a fallback when the Gamma API is
     unavailable.  Returns the absolute path to the generated ``.pptx`` file.
 
-    The deck mirrors the same content structure used by ``_build_gamma_investor_input``.
+    The deck mirrors the same content structure used by ``_build_gamma_investor_input``
+    but with professional tables, accent bars, and visual design elements.
     """
+    from pptx.util import Emu
+    from pptx.dml.color import RGBColor as _RGB
+    from pptx.oxml.ns import qn
 
     prs = PptxPresentation()
     prs.slide_width = PptxInches(13.333)
@@ -903,21 +907,67 @@ def _build_pptx(
     # Branding colours
     DARK_BG = PptxRGB(0x0A, 0x0F, 0x1A)
     ACCENT = PptxRGB(0x00, 0x6D, 0x77)
+    ACCENT2 = PptxRGB(0x00, 0xD4, 0xAA)
     WHITE = PptxRGB(0xFF, 0xFF, 0xFF)
     LIGHT_GRAY = PptxRGB(0xCC, 0xCC, 0xCC)
+    MID_GRAY = PptxRGB(0x88, 0x88, 0x99)
+    DARK_ROW = PptxRGB(0x12, 0x16, 0x24)
+    ALT_ROW = PptxRGB(0x0E, 0x12, 0x1E)
 
     def _add_slide() -> "pptx.slide.Slide":
         layout = prs.slide_layouts[6]  # blank layout
         slide = prs.slides.add_slide(layout)
-        # dark background
         bg = slide.background
         fill = bg.fill
         fill.solid()
         fill.fore_color.rgb = DARK_BG
         return slide
 
+    def _add_accent_bar(slide, top: float = 0.0, height: float = 0.04):
+        """Add an accent-coloured bar across the top of the slide."""
+        shape = slide.shapes.add_shape(
+            1,  # MSO_SHAPE.RECTANGLE
+            PptxInches(0), PptxInches(top),
+            PptxInches(13.333), PptxInches(height),
+        )
+        shape.fill.solid()
+        shape.fill.fore_color.rgb = ACCENT
+        shape.line.fill.background()  # no border
+
+    def _add_accent_line(slide, left: float, top: float, width: float):
+        """Add a thin accent line for visual hierarchy."""
+        shape = slide.shapes.add_shape(
+            1,  # rectangle used as line
+            PptxInches(left), PptxInches(top),
+            PptxInches(width), PptxInches(0.03),
+        )
+        shape.fill.solid()
+        shape.fill.fore_color.rgb = ACCENT
+        shape.line.fill.background()
+
+    def _add_slide_number(slide, num: int, total: int):
+        """Add a slide number in the bottom-right."""
+        txBox = slide.shapes.add_textbox(
+            PptxInches(11.5), PptxInches(7.0), PptxInches(1.5), PptxInches(0.4),
+        )
+        p = txBox.text_frame.paragraphs[0]
+        p.text = f"{num} / {total}"
+        p.font.size = PptxPt(9)
+        p.font.color.rgb = MID_GRAY
+        p.alignment = PP_ALIGN.RIGHT
+
+    def _add_footer(slide):
+        """Add confidential footer."""
+        txBox = slide.shapes.add_textbox(
+            PptxInches(0.8), PptxInches(7.0), PptxInches(8.0), PptxInches(0.4),
+        )
+        p = txBox.text_frame.paragraphs[0]
+        p.text = "CONFIDENTIAL  |  2hr Learning (Alpha)"
+        p.font.size = PptxPt(8)
+        p.font.color.rgb = MID_GRAY
+        p.alignment = PP_ALIGN.LEFT
+
     def _add_title(slide, text: str, top: float = 0.4):
-        from pptx.util import Emu
         txBox = slide.shapes.add_textbox(
             PptxInches(0.8), PptxInches(top), PptxInches(11.7), PptxInches(0.9),
         )
@@ -930,7 +980,17 @@ def _build_pptx(
         p.font.color.rgb = WHITE
         p.alignment = PP_ALIGN.LEFT
 
-    def _add_body(slide, lines: list[str], top: float = 1.5):
+    def _add_subtitle(slide, text: str, top: float = 1.2):
+        txBox = slide.shapes.add_textbox(
+            PptxInches(0.8), PptxInches(top), PptxInches(11.7), PptxInches(0.5),
+        )
+        p = txBox.text_frame.paragraphs[0]
+        p.text = text
+        p.font.size = PptxPt(14)
+        p.font.color.rgb = ACCENT
+        p.font.italic = True
+
+    def _add_body(slide, lines: list[str], top: float = 1.8):
         txBox = slide.shapes.add_textbox(
             PptxInches(0.8), PptxInches(top), PptxInches(11.7), PptxInches(5.0),
         )
@@ -939,35 +999,173 @@ def _build_pptx(
         for i, line in enumerate(lines):
             p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
             p.text = line
-            p.font.size = PptxPt(18)
+            p.font.size = PptxPt(16)
             p.font.color.rgb = LIGHT_GRAY
-            p.space_after = PptxPt(8)
+            p.space_after = PptxPt(10)
+
+    def _add_table(slide, headers: list[str], rows: list[list[str]],
+                   left: float = 0.8, top: float = 1.8,
+                   width: float = 11.7, row_height: float = 0.45):
+        """Add a styled data table to the slide."""
+        num_rows = len(rows) + 1  # +1 for header
+        num_cols = len(headers)
+        tbl = slide.shapes.add_table(
+            num_rows, num_cols,
+            PptxInches(left), PptxInches(top),
+            PptxInches(width), PptxInches(row_height * num_rows),
+        ).table
+
+        # Style header row
+        for ci, h in enumerate(headers):
+            cell = tbl.cell(0, ci)
+            cell.text = h
+            for p in cell.text_frame.paragraphs:
+                p.font.size = PptxPt(11)
+                p.font.bold = True
+                p.font.color.rgb = WHITE
+                p.alignment = PP_ALIGN.CENTER
+            # Accent background
+            tcPr = cell._tc.get_or_add_tcPr()
+            solidFill = tcPr.makeelement(qn("a:solidFill"), {})
+            srgbClr = solidFill.makeelement(qn("a:srgbClr"), {"val": "006D77"})
+            solidFill.append(srgbClr)
+            tcPr.append(solidFill)
+
+        # Data rows
+        for ri, row in enumerate(rows):
+            bg_hex = "121624" if ri % 2 == 0 else "0E121E"
+            for ci, val in enumerate(row):
+                cell = tbl.cell(ri + 1, ci)
+                cell.text = val
+                for p in cell.text_frame.paragraphs:
+                    p.font.size = PptxPt(10)
+                    p.font.color.rgb = LIGHT_GRAY
+                    p.alignment = PP_ALIGN.RIGHT if ci > 0 else PP_ALIGN.LEFT
+                # Row background
+                tcPr = cell._tc.get_or_add_tcPr()
+                solidFill = tcPr.makeelement(qn("a:solidFill"), {})
+                srgbClr = solidFill.makeelement(qn("a:srgbClr"), {"val": bg_hex})
+                solidFill.append(srgbClr)
+                tcPr.append(solidFill)
+
+        return tbl
+
+    def _add_kpi_boxes(slide, kpis: list[tuple[str, str]], top: float = 1.8):
+        """Add KPI highlight boxes in a row (label, value pairs)."""
+        count = len(kpis)
+        box_w = min(2.5, 11.0 / count)
+        gap = 0.3
+        total_w = count * box_w + (count - 1) * gap
+        start_x = (13.333 - total_w) / 2
+
+        for i, (label, value) in enumerate(kpis):
+            x = start_x + i * (box_w + gap)
+            # Box background
+            shape = slide.shapes.add_shape(
+                1, PptxInches(x), PptxInches(top),
+                PptxInches(box_w), PptxInches(1.2),
+            )
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = PptxRGB(0x12, 0x16, 0x24)
+            shape.line.color.rgb = ACCENT
+            shape.line.width = PptxPt(1)
+
+            # Value
+            txBox = slide.shapes.add_textbox(
+                PptxInches(x + 0.1), PptxInches(top + 0.15),
+                PptxInches(box_w - 0.2), PptxInches(0.6),
+            )
+            p = txBox.text_frame.paragraphs[0]
+            p.text = value
+            p.font.size = PptxPt(22)
+            p.font.bold = True
+            p.font.color.rgb = ACCENT2
+            p.alignment = PP_ALIGN.CENTER
+
+            # Label
+            txBox2 = slide.shapes.add_textbox(
+                PptxInches(x + 0.1), PptxInches(top + 0.75),
+                PptxInches(box_w - 0.2), PptxInches(0.35),
+            )
+            p2 = txBox2.text_frame.paragraphs[0]
+            p2.text = label
+            p2.font.size = PptxPt(9)
+            p2.font.color.rgb = MID_GRAY
+            p2.alignment = PP_ALIGN.CENTER
+
+    # Calculate total slides for numbering
+    total_slides = 14
+    if model.pnl_projection:
+        total_slides += 1  # P&L table slide
+    if model.capital_deployment:
+        total_slides += 1
+    slide_num = 0
 
     # ── Slide 1: Title ─────────────────────────────────────────────────
+    slide_num += 1
     s = _add_slide()
-    _add_title(s, f"2hr Learning × {target}", top=2.0)
-    _add_body(s, ["Strategic Partnership Proposal", "", "CONFIDENTIAL"], top=3.2)
+    _add_accent_bar(s, top=0.0, height=0.06)
+    _add_title(s, f"2hr Learning x {target}", top=2.2)
+    _add_body(s, ["Strategic Partnership Proposal"], top=3.3)
+    # CONFIDENTIAL badge
+    txBox = s.shapes.add_textbox(
+        PptxInches(0.8), PptxInches(4.2), PptxInches(3.0), PptxInches(0.4),
+    )
+    p = txBox.text_frame.paragraphs[0]
+    p.text = "CONFIDENTIAL & NON-BINDING"
+    p.font.size = PptxPt(11)
+    p.font.bold = True
+    p.font.color.rgb = PptxRGB(0xCC, 0x40, 0x40)
+    # Date
+    txBox2 = s.shapes.add_textbox(
+        PptxInches(0.8), PptxInches(4.7), PptxInches(3.0), PptxInches(0.3),
+    )
+    from datetime import datetime as _dt
+    p2 = txBox2.text_frame.paragraphs[0]
+    p2.text = _dt.now().strftime("%B %Y")
+    p2.font.size = PptxPt(10)
+    p2.font.color.rgb = MID_GRAY
+    # Bottom accent bar
+    _add_accent_bar(s, top=7.44, height=0.06)
 
-    # ── Slide 2: Executive Summary ─────────────────────────────────────
+    # ── Slide 2: Executive Summary with KPI boxes ──────────────────────
+    slide_num += 1
     s = _add_slide()
+    _add_accent_bar(s)
     _add_title(s, "Executive Summary")
-    jv = strategy.brand.jv_name_suggestion or f"Alpha × {target}"
-    exec_lines = [
-        f"Opportunity: Transform K-12 education in {target} through AI-powered learning",
-        f"Partnership: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} structure with local entity",
-    ]
+    _add_accent_line(s, 0.8, 1.15, 4.0)
+    _add_slide_number(s, slide_num, total_slides)
+    _add_footer(s)
+
+    # KPI boxes
+    kpis: list[tuple[str, str]] = []
     if model.pnl_projection:
         y5 = model.pnl_projection[-1]
-        exec_lines.append(f"Scale: {y5.students:,} students across {y5.schools} schools by Year 5")
-        exec_lines.append(f"Investment: Year 5 revenue of ${y5.revenue:,.0f}")
+        kpis.append(("Y5 Students", f"{y5.students:,}"))
+        kpis.append(("Y5 Revenue", f"${y5.revenue:,.0f}"))
     if model.returns_analysis.irr:
-        exec_lines.append(f"Returns: {model.returns_analysis.irr}% IRR, {model.returns_analysis.moic}x MOIC")
-    exec_lines.append("Proven model: UAE deal ($1.5B, 200K students) as reference")
-    _add_body(s, [f"• {l}" for l in exec_lines])
+        kpis.append(("IRR", f"{model.returns_analysis.irr}%"))
+    if model.returns_analysis.moic:
+        kpis.append(("MOIC", f"{model.returns_analysis.moic}x"))
+    if kpis:
+        _add_kpi_boxes(s, kpis[:4], top=1.5)
+
+    exec_lines = [
+        f"• Transform K-12 education in {target} through AI-powered learning",
+        f"• {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} structure with local entity",
+        "• Proven model: UAE deal ($1.5B, 200K students) as reference",
+    ]
+    _add_body(s, exec_lines, top=3.2)
 
     # ── Slide 3: The Alpha Model ───────────────────────────────────────
+    slide_num += 1
     s = _add_slide()
+    _add_accent_bar(s)
     _add_title(s, "The 2hr Learning Model")
+    _add_accent_line(s, 0.8, 1.15, 4.0)
+    _add_subtitle(s, "AI-powered education that compresses and elevates", top=1.3)
+    _add_slide_number(s, slide_num, total_slides)
+    _add_footer(s)
     _add_body(s, [
         "• Timeback: AI compresses core academics into 2 hours/day",
         "• Remaining time: STEM, sports, arts, entrepreneurship, life skills",
@@ -978,8 +1176,13 @@ def _build_pptx(
     ])
 
     # ── Slide 4: Market Opportunity ────────────────────────────────────
+    slide_num += 1
     s = _add_slide()
+    _add_accent_bar(s)
     _add_title(s, f"Market Opportunity: {target}")
+    _add_accent_line(s, 0.8, 1.15, 4.0)
+    _add_slide_number(s, slide_num, total_slides)
+    _add_footer(s)
     _add_body(s, [
         "• School-age population: significant K-12 cohort",
         "• Education sector undergoing reform and modernisation",
@@ -989,86 +1192,159 @@ def _build_pptx(
         "• Alpha's model addresses the core pain points",
     ])
 
-    # ── Slide 5: Financial Overview ────────────────────────────────────
+    # ── Slide 5: Financial Overview with TABLE ─────────────────────────
+    slide_num += 1
     s = _add_slide()
+    _add_accent_bar(s)
     _add_title(s, "5-Year Financial Summary")
+    _add_accent_line(s, 0.8, 1.15, 4.0)
+    _add_slide_number(s, slide_num, total_slides)
+    _add_footer(s)
+
     if model.pnl_projection:
-        y1 = model.pnl_projection[0]
-        y5 = model.pnl_projection[-1]
-        fin_lines = [
-            f"• Year 1: {y1.students:,} students → ${y1.revenue:,.0f} revenue → ${y1.ebitda:,.0f} EBITDA",
-            f"• Year 5: {y5.students:,} students → ${y5.revenue:,.0f} revenue → ${y5.ebitda:,.0f} EBITDA",
+        headers = ["Metric"] + [f"Year {p.year}" for p in model.pnl_projection]
+        pnl_rows = [
+            ["Students"] + [f"{p.students:,}" for p in model.pnl_projection],
+            ["Schools"] + [f"{p.schools}" for p in model.pnl_projection],
+            ["Revenue"] + [f"${p.revenue:,.0f}" for p in model.pnl_projection],
+            ["EBITDA"] + [f"${p.ebitda:,.0f}" for p in model.pnl_projection],
+            ["Net Income"] + [f"${p.net_income:,.0f}" for p in model.pnl_projection],
+            ["FCF"] + [f"${p.free_cash_flow:,.0f}" for p in model.pnl_projection],
         ]
-        if model.returns_analysis.irr:
-            fin_lines.append(f"• IRR: {model.returns_analysis.irr}%")
-        if model.returns_analysis.moic:
-            fin_lines.append(f"• MOIC: {model.returns_analysis.moic}x")
-        fin_lines.append(f"• Management fee revenue (5yr): ${model.total_management_fee_revenue:,.0f}")
-        fin_lines.append(f"• Timeback license revenue (5yr): ${model.total_timeback_license_revenue:,.0f}")
-        _add_body(s, fin_lines)
+        _add_table(s, headers, pnl_rows, top=1.6, row_height=0.42)
     else:
         _add_body(s, ["• Financial model pending"])
 
-    # ── Slide 6: Deal Structure ────────────────────────────────────────
+    # ── Slide 6: Returns & KPIs ────────────────────────────────────────
+    slide_num += 1
     s = _add_slide()
-    _add_title(s, "Proposed Deal Structure")
+    _add_accent_bar(s)
+    _add_title(s, "Investment Returns")
+    _add_accent_line(s, 0.8, 1.15, 4.0)
+    _add_slide_number(s, slide_num, total_slides)
+    _add_footer(s)
+
+    returns_kpis: list[tuple[str, str]] = [
+        ("IRR", f"{model.returns_analysis.irr}%" if model.returns_analysis.irr else "N/A"),
+        ("MOIC", f"{model.returns_analysis.moic}x" if model.returns_analysis.moic else "N/A"),
+        ("Mgmt Fee (5yr)", f"${model.total_management_fee_revenue:,.0f}"),
+        ("Timeback License (5yr)", f"${model.total_timeback_license_revenue:,.0f}"),
+    ]
+    _add_kpi_boxes(s, returns_kpis, top=1.5)
     _add_body(s, [
-        f"• Structure: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} with local partner",
-        f"• Ownership: {strategy.partnership_structure.ownership_split or '0/100 — Alpha operates, local entity owns'}",
         f"• Upfront IP fee: ${model.upfront_ip_fee:,.0f}",
         f"• Management fee: {model.management_fee_pct * 100:.0f}% of school revenue",
         f"• Timeback license: {model.timeback_license_pct * 100:.0f}% of per-student budget",
-        "• Local entity manages cultural IP layer, national identity integration",
-    ])
+    ], top=3.5)
 
-    # ── Slide 7: School Portfolio ──────────────────────────────────────
+    # ── Slide 7: Deal Structure ────────────────────────────────────────
+    slide_num += 1
     s = _add_slide()
+    _add_accent_bar(s)
+    _add_title(s, "Proposed Deal Structure")
+    _add_accent_line(s, 0.8, 1.15, 4.0)
+    _add_slide_number(s, slide_num, total_slides)
+    _add_footer(s)
+
+    deal_headers = ["Component", "Details"]
+    deal_rows = [
+        ["Structure", f"{strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} with local partner"],
+        ["Ownership", strategy.partnership_structure.ownership_split or "0/100 -- Alpha operates, local entity owns"],
+        ["Upfront IP Fee", f"${model.upfront_ip_fee:,.0f}"],
+        ["Management Fee", f"{model.management_fee_pct * 100:.0f}% of school revenue"],
+        ["Timeback License", f"{model.timeback_license_pct * 100:.0f}% of per-student budget"],
+        ["Local Role", "Cultural IP layer, national identity integration"],
+    ]
+    _add_table(s, deal_headers, deal_rows, top=1.6, row_height=0.5)
+
+    # ── Slide 8: School Portfolio TABLE ────────────────────────────────
+    slide_num += 1
+    s = _add_slide()
+    _add_accent_bar(s)
     _add_title(s, "School Type Portfolio")
-    if strategy.school_types:
-        lines = [f"• {st.name}: {st.focus or ''} — {st.tuition or ''}" for st in strategy.school_types[:4]]
-    else:
-        lines = ["• Premium, Mid-Market, and Specialised school types"]
-    _add_body(s, lines)
+    _add_accent_line(s, 0.8, 1.15, 4.0)
+    _add_slide_number(s, slide_num, total_slides)
+    _add_footer(s)
 
-    # ── Slide 8: Rollout Plan ──────────────────────────────────────────
+    if strategy.school_types and len(strategy.school_types) > 0:
+        school_headers = ["School Type", "Focus", "Tuition"]
+        school_rows = [
+            [st.name or "", st.focus or "", st.tuition or ""]
+            for st in strategy.school_types[:6]
+        ]
+        _add_table(s, school_headers, school_rows, top=1.6, row_height=0.5)
+    else:
+        _add_body(s, ["• Premium, Mid-Market, and Specialised school types"])
+
+    # ── Slide 9: Rollout Plan ──────────────────────────────────────────
+    slide_num += 1
     s = _add_slide()
+    _add_accent_bar(s)
     _add_title(s, "5-Year Rollout Plan")
+    _add_accent_line(s, 0.8, 1.15, 4.0)
+    _add_slide_number(s, slide_num, total_slides)
+    _add_footer(s)
+
     if strategy.phased_rollout:
-        rollout_lines = []
-        for ph in strategy.phased_rollout[:5]:
-            if ph.student_count:
-                rollout_lines.append(f"• {ph.phase}: {ph.timeline} — {ph.student_count:,} students")
-            else:
-                rollout_lines.append(f"• {ph.phase}: {ph.timeline}")
-        _add_body(s, rollout_lines)
+        rollout_headers = ["Phase", "Timeline", "Students"]
+        rollout_rows = [
+            [ph.phase or "", ph.timeline or "", f"{ph.student_count:,}" if ph.student_count else ""]
+            for ph in strategy.phased_rollout[:5]
+        ]
+        _add_table(s, rollout_headers, rollout_rows, top=1.6, row_height=0.5)
     else:
         _add_body(s, ["• Phased rollout details in strategy report"])
 
-    # ── Slide 9: Unit Economics ────────────────────────────────────────
+    # ── Slide 10: Unit Economics TABLE ─────────────────────────────────
+    slide_num += 1
     s = _add_slide()
+    _add_accent_bar(s)
     _add_title(s, "Unit Economics")
-    ue_lines = [
-        f"• {ue.school_type}: ${ue.per_student_revenue:,.0f}/student revenue, "
-        f"${ue.contribution_margin:,.0f} margin ({ue.margin_pct}%)"
-        for ue in model.unit_economics[:4]
-    ]
-    _add_body(s, ue_lines if ue_lines else ["• Unit economics in financial model"])
+    _add_accent_line(s, 0.8, 1.15, 4.0)
+    _add_slide_number(s, slide_num, total_slides)
+    _add_footer(s)
 
-    # ── Slide 10: Risk Mitigation ──────────────────────────────────────
+    if model.unit_economics:
+        ue_headers = ["School Type", "Revenue/Student", "Margin/Student", "Margin %"]
+        ue_rows = [
+            [ue.school_type,
+             f"${ue.per_student_revenue:,.0f}",
+             f"${ue.contribution_margin:,.0f}",
+             f"{ue.margin_pct}%"]
+            for ue in model.unit_economics[:6]
+        ]
+        _add_table(s, ue_headers, ue_rows, top=1.6, row_height=0.5)
+    else:
+        _add_body(s, ["• Unit economics in financial model"])
+
+    # ── Slide 11: Risk Mitigation ──────────────────────────────────────
+    slide_num += 1
     s = _add_slide()
+    _add_accent_bar(s)
     _add_title(s, "Risk Mitigation")
-    _add_body(s, [
-        "• Regulatory risk: Proactive government engagement and compliance",
-        "• Execution risk: Phased rollout with decision gates",
-        "• Cultural risk: Local IP layer and cultural advisory board",
-        "• FX risk: Local currency revenue with USD hedging strategy",
-        "• Competitive risk: Proprietary AI and outcomes data as moat",
-        "• Political risk: Multi-stakeholder alignment strategy",
-    ])
+    _add_accent_line(s, 0.8, 1.15, 4.0)
+    _add_slide_number(s, slide_num, total_slides)
+    _add_footer(s)
 
-    # ── Slide 11: Key Asks ─────────────────────────────────────────────
+    risk_headers = ["Risk Category", "Mitigation Strategy"]
+    risk_rows = [
+        ["Regulatory", "Proactive government engagement and compliance"],
+        ["Execution", "Phased rollout with decision gates"],
+        ["Cultural", "Local IP layer and cultural advisory board"],
+        ["FX / Currency", "Local currency revenue with USD hedging strategy"],
+        ["Competitive", "Proprietary AI and outcomes data as moat"],
+        ["Political", "Multi-stakeholder alignment strategy"],
+    ]
+    _add_table(s, risk_headers, risk_rows, top=1.6, row_height=0.5)
+
+    # ── Slide 12: Key Asks ─────────────────────────────────────────────
+    slide_num += 1
     s = _add_slide()
+    _add_accent_bar(s)
     _add_title(s, "Key Asks & Next Steps")
+    _add_accent_line(s, 0.8, 1.15, 4.0)
+    _add_slide_number(s, slide_num, total_slides)
+    _add_footer(s)
     asks = strategy.key_asks[:6] if strategy.key_asks else [
         "Sovereign commitment to student volume targets",
         "Regulatory fast-track for school licensing",
@@ -1077,33 +1353,62 @@ def _build_pptx(
     ]
     _add_body(s, [f"• {a}" for a in asks])
 
-    # ── Slide 12: Appendix – P&L ──────────────────────────────────────
+    # ── Slide 13: Appendix – P&L (full table) ─────────────────────────
     if model.pnl_projection:
+        slide_num += 1
         s = _add_slide()
+        _add_accent_bar(s)
         _add_title(s, "Appendix: Detailed P&L Projection")
-        pnl_lines = [
-            f"• Y{p.year}: {p.students:,} students | ${p.revenue:,.0f} rev | "
-            f"${p.ebitda:,.0f} EBITDA | ${p.free_cash_flow:,.0f} FCF"
-            for p in model.pnl_projection
-        ]
-        _add_body(s, pnl_lines)
+        _add_accent_line(s, 0.8, 1.15, 4.0)
+        _add_slide_number(s, slide_num, total_slides)
+        _add_footer(s)
 
-    # ── Slide 13: Appendix – Capital Deployment ───────────────────────
+        full_headers = ["Metric"] + [f"Year {p.year}" for p in model.pnl_projection]
+        full_rows = [
+            ["Students"] + [f"{p.students:,}" for p in model.pnl_projection],
+            ["Schools"] + [f"{p.schools}" for p in model.pnl_projection],
+            ["Revenue"] + [f"${p.revenue:,.0f}" for p in model.pnl_projection],
+            ["COGS"] + [f"${p.cogs:,.0f}" for p in model.pnl_projection],
+            ["Gross Margin"] + [f"${p.gross_margin:,.0f}" for p in model.pnl_projection],
+            ["OPEX"] + [f"${p.opex:,.0f}" for p in model.pnl_projection],
+            ["EBITDA"] + [f"${p.ebitda:,.0f}" for p in model.pnl_projection],
+            ["Net Income"] + [f"${p.net_income:,.0f}" for p in model.pnl_projection],
+            ["FCF"] + [f"${p.free_cash_flow:,.0f}" for p in model.pnl_projection],
+        ]
+        _add_table(s, full_headers, full_rows, top=1.6, row_height=0.4)
+
+    # ── Slide 14: Appendix – Capital Deployment ───────────────────────
     if model.capital_deployment:
+        slide_num += 1
         s = _add_slide()
+        _add_accent_bar(s)
         _add_title(s, "Appendix: Capital Deployment")
-        cap_lines = [
-            f"• Year {cd.year}: ${cd.total:,.0f} total "
-            f"({'${:,.0f} IP'.format(cd.ip_development) if cd.ip_development else ''}"
-            f" + ${cd.launch_capital:,.0f} launch + ${cd.real_estate:,.0f} RE)"
+        _add_accent_line(s, 0.8, 1.15, 4.0)
+        _add_slide_number(s, slide_num, total_slides)
+        _add_footer(s)
+
+        cap_headers = ["Year", "IP Development", "Launch Capital", "Real Estate", "Total"]
+        cap_rows = [
+            [f"Year {cd.year}",
+             f"${cd.ip_development:,.0f}" if cd.ip_development else "$0",
+             f"${cd.launch_capital:,.0f}",
+             f"${cd.real_estate:,.0f}",
+             f"${cd.total:,.0f}"]
             for cd in model.capital_deployment
         ]
-        _add_body(s, cap_lines)
+        _add_table(s, cap_headers, cap_rows, top=1.6, row_height=0.5)
 
-    # ── Slide 14: Thank You ───────────────────────────────────────────
+    # ── Slide 15: Thank You ───────────────────────────────────────────
+    slide_num += 1
     s = _add_slide()
+    _add_accent_bar(s, top=0.0, height=0.06)
     _add_title(s, "Thank You", top=2.5)
-    _add_body(s, ["2hr Learning — Transforming Education Globally"], top=3.8)
+    _add_body(s, [
+        "2hr Learning - Transforming Education Globally",
+        "",
+        "Contact: partnerships@2hrlearning.com",
+    ], top=3.5)
+    _add_accent_bar(s, top=7.44, height=0.06)
 
     # Save
     safe_name = target.lower().replace(" ", "_")

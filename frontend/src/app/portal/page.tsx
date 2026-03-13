@@ -115,7 +115,7 @@ export default function PortalPage() {
               <div className="text-3xl">📄</div>
               <h3 className="font-semibold text-lg">Proposal Deck</h3>
               <p className="text-sm text-gray-400 leading-relaxed">
-                A comprehensive investment memorandum with market analysis,
+                A comprehensive proposal deck with market analysis,
                 financial projections, deal structure, implementation roadmap,
                 and risk assessment.
               </p>
