@@ -22,7 +22,7 @@ POLL_INTERVAL_SECONDS = 5
 MAX_POLL_ATTEMPTS = 120  # 10 minutes max
 
 # Default theme name to search for in the workspace
-DEFAULT_THEME_NAME = "Alpha Slides"
+DEFAULT_THEME_NAME = "Alpha School"
 
 
 def _headers() -> dict[str, str]:
@@ -98,7 +98,7 @@ _theme_id_resolved = False
 
 
 async def get_default_theme_id() -> str | None:
-    """Get the cached default theme ID (Alpha Slides), resolving on first call."""
+    """Get the cached default theme ID (Alpha School), resolving on first call."""
     global _default_theme_id, _theme_id_resolved
 
     if not _theme_id_resolved:

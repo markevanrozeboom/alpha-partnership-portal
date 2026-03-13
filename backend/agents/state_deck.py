@@ -1,7 +1,7 @@
 """State Pitch Deck Generator — Oklahoma-style governor pitch via Gamma.
 
 Produces a 10-slide deck tailored for US state governors, generated through
-Gamma's API using the "Alpha Slides" theme.
+Gamma's API using the "Alpha School" theme.
 
 Format: Problem → Results → Live Pilot → How It Works → The Deal →
 Economics → What Each Side Provides → Gated Roadmap → The Ask.
