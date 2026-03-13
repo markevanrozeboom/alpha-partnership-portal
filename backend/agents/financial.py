@@ -166,13 +166,52 @@ def generate_assumptions(
             description="Alpha's technology/IP licensing fee",
             locked=True
         ),
+
+        # --- Upfront Payment Breakdown ---
+        # Alpha Holdings receipts (upfront)
         FinancialAssumption(
-            key="upfront_ip_fee", label="Upfront IP/Development Fee ($M)",
-            # Upfront Ask: Students_Y5 × Per-Student Budget × 30% (mgmt + timeback) + $25M IP — SPECS 2D
-            value=max(25, round((target_students_y5 * base_per_student * 0.30 + 25_000_000) / 1_000_000)),
-            min_val=25, max_val=500, step=5,
+            key="upfront_alphacore_license", label="AlphaCore License ($M)",
+            value=250, min_val=50, max_val=500, step=10,
             unit="$M", category="fees",
-            description="Students×Budget×30% fees + $25M IP license",
+            description="AlphaCore curriculum OS & LMS license — paid to Alpha Holdings",
+        ),
+        FinancialAssumption(
+            key="upfront_mgmt_fee", label="Upfront Management Fee ($M)",
+            # Target Students Y5 × Per-Student Budget × 10%
+            value=max(1, round(target_students_y5 * base_per_student * 0.10 / 1_000_000)),
+            min_val=1, max_val=500, step=5,
+            unit="$M", category="fees",
+            description="Target Students Y5 × Per-Student Budget × 10% — paid to Alpha Holdings",
+        ),
+        FinancialAssumption(
+            key="upfront_timeback_fee", label="Upfront Timeback Fee ($M)",
+            # Target Students Y5 × Per-Student Budget × 20%
+            value=max(1, round(target_students_y5 * base_per_student * 0.20 / 1_000_000)),
+            min_val=1, max_val=1000, step=5,
+            unit="$M", category="fees",
+            description="Target Students Y5 × Per-Student Budget × 20% — paid to Alpha Holdings",
+        ),
+        # Local expenses (counterparty cost, shown for deal sizing)
+        FinancialAssumption(
+            key="upfront_app_content_rd", label="Customized Country-Specific App Content R&D ($M)",
+            value=250, min_val=50, max_val=500, step=10,
+            unit="$M", category="fees",
+            description="Local expense — country-specific EdTech app content R&D (owned by local entity)",
+        ),
+        FinancialAssumption(
+            key="upfront_lifeskills_rd", label="Customized Country-Specific LifeSkills R&D ($M)",
+            value=250, min_val=50, max_val=500, step=10,
+            unit="$M", category="fees",
+            description="Local expense — country-specific life skills curriculum R&D (owned by local entity)",
+        ),
+        FinancialAssumption(
+            key="upfront_ip_fee", label="Total Upfront Ask ($M)",
+            value=max(25, 250 + 250 + 250
+                  + round(target_students_y5 * base_per_student * 0.10 / 1_000_000)
+                  + round(target_students_y5 * base_per_student * 0.20 / 1_000_000)),
+            min_val=25, max_val=2000, step=5,
+            unit="$M", category="fees",
+            description="AlphaCore License + App Content R&D + LifeSkills R&D + Mgmt Fee + Timeback (includes local expenses)",
         ),
         FinancialAssumption(
             key="guide_school_fee", label="Guide School Training Fee (per teacher, $)",
@@ -221,6 +260,9 @@ def _generate_cohort_assumptions(
     default_cohorts = 2 if tier == 2 else 1
     total_students = default_cohorts * cohort_size
 
+    # Fixed development costs by tier ($M): Tier 2 = $150M, Tier 3 = $100M
+    tier_dev_cost = 150 if tier == 2 else 100
+
     assumptions = [
         FinancialAssumption(
             key="num_cohorts", label="Number of 25K-Student Cohorts",
@@ -260,13 +302,49 @@ def _generate_cohort_assumptions(
             unit="%", category="fees",
             locked=True,
         ),
+        # --- Upfront Payment Breakdown ---
+        # Alpha Holdings receipts (upfront)
         FinancialAssumption(
-            key="upfront_ip_fee", label="Upfront IP Fee ($M)",
-            # Upfront Ask: total_students × per_student × 30% + $25M IP — SPECS 2D
-            value=max(25, round((total_students * per_student * 0.30 + 25_000_000) / 1_000_000)),
-            min_val=25, max_val=500, step=5,
+            key="upfront_alphacore_license", label="AlphaCore License ($M)",
+            value=tier_dev_cost // 3, min_val=10, max_val=500, step=5,
             unit="$M", category="fees",
-            description="Students×Budget×30% fees + $25M IP license",
+            description="AlphaCore curriculum OS & LMS license — paid to Alpha Holdings",
+        ),
+        FinancialAssumption(
+            key="upfront_mgmt_fee", label="Upfront Management Fee ($M)",
+            value=max(1, round(total_students * per_student * 0.10 / 1_000_000)),
+            min_val=1, max_val=500, step=5,
+            unit="$M", category="fees",
+            description="Target Students Y5 × Per-Student Budget × 10% — paid to Alpha Holdings",
+        ),
+        FinancialAssumption(
+            key="upfront_timeback_fee", label="Upfront Timeback Fee ($M)",
+            value=max(1, round(total_students * per_student * 0.20 / 1_000_000)),
+            min_val=1, max_val=1000, step=5,
+            unit="$M", category="fees",
+            description="Target Students Y5 × Per-Student Budget × 20% — paid to Alpha Holdings",
+        ),
+        # Local expenses (counterparty cost, shown for deal sizing)
+        FinancialAssumption(
+            key="upfront_app_content_rd", label="Customized Country-Specific App Content R&D ($M)",
+            value=tier_dev_cost // 3, min_val=10, max_val=500, step=5,
+            unit="$M", category="fees",
+            description="Local expense — country-specific EdTech app content R&D (owned by local entity)",
+        ),
+        FinancialAssumption(
+            key="upfront_lifeskills_rd", label="Customized Country-Specific LifeSkills R&D ($M)",
+            value=tier_dev_cost - 2 * (tier_dev_cost // 3), min_val=10, max_val=500, step=5,
+            unit="$M", category="fees",
+            description="Local expense — country-specific life skills curriculum R&D (owned by local entity)",
+        ),
+        FinancialAssumption(
+            key="upfront_ip_fee", label="Total Upfront Ask ($M)",
+            value=max(25, tier_dev_cost
+                  + round(total_students * per_student * 0.10 / 1_000_000)
+                  + round(total_students * per_student * 0.20 / 1_000_000)),
+            min_val=25, max_val=2000, step=5,
+            unit="$M", category="fees",
+            description="AlphaCore License + App Content R&D + LifeSkills R&D + Mgmt Fee + Timeback (includes local expenses)",
         ),
         # Costs
         FinancialAssumption(
@@ -497,6 +575,11 @@ def build_model(
         management_fee_pct=mgmt_fee_pct,
         timeback_license_pct=timeback_pct,
         upfront_ip_fee=upfront_ip,
+        upfront_alphacore_license=a.get("upfront_alphacore_license", 250) * 1_000_000,
+        upfront_app_content_rd=a.get("upfront_app_content_rd", 250) * 1_000_000,
+        upfront_lifeskills_rd=a.get("upfront_lifeskills_rd", 250) * 1_000_000,
+        upfront_mgmt_fee=a.get("upfront_mgmt_fee", 0) * 1_000_000,
+        upfront_timeback_fee=a.get("upfront_timeback_fee", 0) * 1_000_000,
         total_management_fee_revenue=round(total_mgmt_rev),
         total_timeback_license_revenue=round(total_timeback_rev),
     )
@@ -637,6 +720,11 @@ def _build_cohort_model(a: dict) -> FinancialModel:
         management_fee_pct=mgmt_fee_pct,
         timeback_license_pct=timeback_pct,
         upfront_ip_fee=upfront_ip,
+        upfront_alphacore_license=a.get("upfront_alphacore_license", 50) * 1_000_000,
+        upfront_app_content_rd=a.get("upfront_app_content_rd", 50) * 1_000_000,
+        upfront_lifeskills_rd=a.get("upfront_lifeskills_rd", 50) * 1_000_000,
+        upfront_mgmt_fee=a.get("upfront_mgmt_fee", 0) * 1_000_000,
+        upfront_timeback_fee=a.get("upfront_timeback_fee", 0) * 1_000_000,
         total_management_fee_revenue=round(total_mgmt),
         total_timeback_license_revenue=round(total_timeback),
     )
