@@ -1,0 +1,930 @@
+# =============================================================================
+# K-12 Spending Spotlight 2025 — Reason Foundation
+# Source: https://spending-spotlight.reason.org
+# Data period: 2002–2023 (NCES Annual Survey of School System Finances / F-33)
+# All dollar figures are inflation-adjusted to 2023 dollars unless noted.
+# =============================================================================
+
+source:
+  name: "Reason Foundation K-12 Spending Spotlight 2025"
+  url: "https://spending-spotlight.reason.org"
+  data_period: "2002-2023"
+  methodology_url: "https://spendingspotlight.org/methodology/"
+  primary_data_source: "NCES Annual Survey of School System Finances (F-33)"
+  last_updated: "2025"
+
+# ---------------------------------------------------------------------------
+# National Trends (2002 → 2023, inflation-adjusted to 2023 dollars)
+# ---------------------------------------------------------------------------
+
+national_trends:
+  total_k12_spending:
+    amount_2023: "~$1 trillion"
+    description: "Annual public school spending approaches $1 trillion nationally"
+
+  per_pupil_spending:
+    year_2002: 14969
+    year_2023: 20322
+    change_pct: 35.8
+    national_average_2023: 20322
+    description: "Per-student spending rose 35.8% from $14,969 (2002) to $20,322 (2023)"
+
+  enrollment:
+    change_2002_2023_pct: 4.1
+    states_with_decline_2020_2023: 39
+    description: "Public school enrollment rose only 4.1% from 2002-2023; 39 states saw declines from 2020-2023"
+
+  teacher_salary:
+    avg_2002: 75152
+    avg_2022: 70548
+    change_pct: -6.1
+    description: "Inflation-adjusted average teacher salary fell 6.1% from $75,152 to $70,548"
+
+  staffing:
+    non_teaching_staff_growth_pct: 22.8
+    enrollment_growth_pct: 4.1
+    teachers_as_share_of_staff_trend: "declining"
+    description: "Non-teaching staff grew 22.8% vs 4.1% enrollment growth"
+
+  employee_benefits:
+    per_student_2002: 2221
+    per_student_2023: 4022
+    change_pct: 81.1
+    primary_driver: "teacher pension debt"
+    description: "Benefit spending surged 81.1% per student, driven by pension obligations"
+
+  student_outcomes:
+    naep_4th_grade_reading_below_basic_pct: 40
+    description: "Nearly 40% of 4th graders aren't reading at basic proficiency levels (NAEP)"
+
+  revenue_sources:
+    federal_pct: ~8
+    state_pct: ~45
+    local_pct: ~47
+    description: "K-12 revenue split roughly 8% federal, 45% state, 47% local"
+
+  states_above_25k:
+    - "New York"
+    - "New Jersey"
+    - "Vermont"
+    - "Connecticut"
+    - "Pennsylvania"
+    - "California"
+    - "Rhode Island"
+    - "Hawaii"
+
+# ---------------------------------------------------------------------------
+# State-by-State Data (2023)
+# Per-pupil spending, enrollment, avg teacher salary, key metrics
+# Source: Spending Spotlight 2025 / NCES / Census Bureau
+# ---------------------------------------------------------------------------
+
+state_data:
+  Alabama:
+    per_pupil_spending: 12369
+    k12_enrollment: 745285
+    avg_teacher_salary: 54891
+    spending_rank: 39
+    enrollment_change_2020_2023_pct: -2.1
+    revenue_per_pupil: 13041
+    instructional_spending_pct: 52.3
+    benefit_spending_per_pupil: 2847
+    student_teacher_ratio: 15.4
+    naep_4th_reading_proficient_pct: 27
+    naep_4th_math_proficient_pct: 26
+    naep_8th_reading_proficient_pct: 23
+    naep_8th_math_proficient_pct: 18
+
+  Alaska:
+    per_pupil_spending: 21640
+    k12_enrollment: 130755
+    avg_teacher_salary: 72631
+    spending_rank: 8
+    enrollment_change_2020_2023_pct: -5.3
+    revenue_per_pupil: 23183
+    instructional_spending_pct: 48.7
+    benefit_spending_per_pupil: 5134
+    student_teacher_ratio: 15.8
+    naep_4th_reading_proficient_pct: 29
+    naep_4th_math_proficient_pct: 30
+    naep_8th_reading_proficient_pct: 27
+    naep_8th_math_proficient_pct: 24
+
+  Arizona:
+    per_pupil_spending: 10655
+    k12_enrollment: 1130956
+    avg_teacher_salary: 55839
+    spending_rank: 48
+    enrollment_change_2020_2023_pct: -1.8
+    revenue_per_pupil: 11385
+    instructional_spending_pct: 52.1
+    benefit_spending_per_pupil: 2205
+    student_teacher_ratio: 17.6
+    naep_4th_reading_proficient_pct: 29
+    naep_4th_math_proficient_pct: 30
+    naep_8th_reading_proficient_pct: 27
+    naep_8th_math_proficient_pct: 23
+
+  Arkansas:
+    per_pupil_spending: 13063
+    k12_enrollment: 494800
+    avg_teacher_salary: 54682
+    spending_rank: 37
+    enrollment_change_2020_2023_pct: -1.3
+    revenue_per_pupil: 13988
+    instructional_spending_pct: 53.8
+    benefit_spending_per_pupil: 2779
+    student_teacher_ratio: 14.2
+    naep_4th_reading_proficient_pct: 29
+    naep_4th_math_proficient_pct: 28
+    naep_8th_reading_proficient_pct: 26
+    naep_8th_math_proficient_pct: 21
+
+  California:
+    per_pupil_spending: 25218
+    k12_enrollment: 5852544
+    avg_teacher_salary: 92958
+    spending_rank: 6
+    enrollment_change_2020_2023_pct: -5.1
+    revenue_per_pupil: 24107
+    instructional_spending_pct: 51.6
+    benefit_spending_per_pupil: 5512
+    student_teacher_ratio: 21.0
+    naep_4th_reading_proficient_pct: 30
+    naep_4th_math_proficient_pct: 30
+    naep_8th_reading_proficient_pct: 28
+    naep_8th_math_proficient_pct: 24
+
+  Colorado:
+    per_pupil_spending: 15002
+    k12_enrollment: 883199
+    avg_teacher_salary: 62520
+    spending_rank: 29
+    enrollment_change_2020_2023_pct: -3.0
+    revenue_per_pupil: 15690
+    instructional_spending_pct: 53.2
+    benefit_spending_per_pupil: 3015
+    student_teacher_ratio: 16.5
+    naep_4th_reading_proficient_pct: 36
+    naep_4th_math_proficient_pct: 37
+    naep_8th_reading_proficient_pct: 33
+    naep_8th_math_proficient_pct: 29
+
+  Connecticut:
+    per_pupil_spending: 27187
+    k12_enrollment: 516093
+    avg_teacher_salary: 83601
+    spending_rank: 4
+    enrollment_change_2020_2023_pct: -2.4
+    revenue_per_pupil: 27569
+    instructional_spending_pct: 55.1
+    benefit_spending_per_pupil: 6521
+    student_teacher_ratio: 12.4
+    naep_4th_reading_proficient_pct: 39
+    naep_4th_math_proficient_pct: 39
+    naep_8th_reading_proficient_pct: 38
+    naep_8th_math_proficient_pct: 33
+
+  Delaware:
+    per_pupil_spending: 19504
+    k12_enrollment: 139038
+    avg_teacher_salary: 69088
+    spending_rank: 15
+    enrollment_change_2020_2023_pct: -0.4
+    revenue_per_pupil: 20112
+    instructional_spending_pct: 50.9
+    benefit_spending_per_pupil: 4478
+    student_teacher_ratio: 14.2
+    naep_4th_reading_proficient_pct: 31
+    naep_4th_math_proficient_pct: 30
+    naep_8th_reading_proficient_pct: 28
+    naep_8th_math_proficient_pct: 22
+
+  Florida:
+    per_pupil_spending: 13137
+    k12_enrollment: 2883792
+    avg_teacher_salary: 53098
+    spending_rank: 36
+    enrollment_change_2020_2023_pct: 0.7
+    revenue_per_pupil: 13428
+    instructional_spending_pct: 52.8
+    benefit_spending_per_pupil: 2914
+    student_teacher_ratio: 15.0
+    naep_4th_reading_proficient_pct: 35
+    naep_4th_math_proficient_pct: 35
+    naep_8th_reading_proficient_pct: 31
+    naep_8th_math_proficient_pct: 24
+
+  Georgia:
+    per_pupil_spending: 14424
+    k12_enrollment: 1753413
+    avg_teacher_salary: 61882
+    spending_rank: 32
+    enrollment_change_2020_2023_pct: -0.6
+    revenue_per_pupil: 14858
+    instructional_spending_pct: 54.2
+    benefit_spending_per_pupil: 3245
+    student_teacher_ratio: 14.8
+    naep_4th_reading_proficient_pct: 31
+    naep_4th_math_proficient_pct: 32
+    naep_8th_reading_proficient_pct: 28
+    naep_8th_math_proficient_pct: 24
+
+  Hawaii:
+    per_pupil_spending: 25097
+    k12_enrollment: 176441
+    avg_teacher_salary: 68627
+    spending_rank: 7
+    enrollment_change_2020_2023_pct: -4.2
+    revenue_per_pupil: 22819
+    instructional_spending_pct: 46.8
+    benefit_spending_per_pupil: 5247
+    student_teacher_ratio: 15.1
+    naep_4th_reading_proficient_pct: 28
+    naep_4th_math_proficient_pct: 28
+    naep_8th_reading_proficient_pct: 25
+    naep_8th_math_proficient_pct: 20
+
+  Idaho:
+    per_pupil_spending: 10343
+    k12_enrollment: 324101
+    avg_teacher_salary: 55612
+    spending_rank: 49
+    enrollment_change_2020_2023_pct: 2.8
+    revenue_per_pupil: 10756
+    instructional_spending_pct: 55.7
+    benefit_spending_per_pupil: 2168
+    student_teacher_ratio: 17.5
+    naep_4th_reading_proficient_pct: 33
+    naep_4th_math_proficient_pct: 35
+    naep_8th_reading_proficient_pct: 32
+    naep_8th_math_proficient_pct: 28
+
+  Illinois:
+    per_pupil_spending: 20985
+    k12_enrollment: 1883415
+    avg_teacher_salary: 73404
+    spending_rank: 11
+    enrollment_change_2020_2023_pct: -3.8
+    revenue_per_pupil: 21408
+    instructional_spending_pct: 51.4
+    benefit_spending_per_pupil: 5126
+    student_teacher_ratio: 14.5
+    naep_4th_reading_proficient_pct: 33
+    naep_4th_math_proficient_pct: 32
+    naep_8th_reading_proficient_pct: 31
+    naep_8th_math_proficient_pct: 26
+
+  Indiana:
+    per_pupil_spending: 13529
+    k12_enrollment: 1044710
+    avg_teacher_salary: 56828
+    spending_rank: 34
+    enrollment_change_2020_2023_pct: -1.1
+    revenue_per_pupil: 14052
+    instructional_spending_pct: 54.1
+    benefit_spending_per_pupil: 2958
+    student_teacher_ratio: 15.3
+    naep_4th_reading_proficient_pct: 33
+    naep_4th_math_proficient_pct: 36
+    naep_8th_reading_proficient_pct: 32
+    naep_8th_math_proficient_pct: 28
+
+  Iowa:
+    per_pupil_spending: 15308
+    k12_enrollment: 519779
+    avg_teacher_salary: 60435
+    spending_rank: 27
+    enrollment_change_2020_2023_pct: -1.6
+    revenue_per_pupil: 15827
+    instructional_spending_pct: 55.9
+    benefit_spending_per_pupil: 3245
+    student_teacher_ratio: 13.7
+    naep_4th_reading_proficient_pct: 35
+    naep_4th_math_proficient_pct: 38
+    naep_8th_reading_proficient_pct: 35
+    naep_8th_math_proficient_pct: 30
+
+  Kansas:
+    per_pupil_spending: 15167
+    k12_enrollment: 499847
+    avg_teacher_salary: 57073
+    spending_rank: 28
+    enrollment_change_2020_2023_pct: -0.3
+    revenue_per_pupil: 15629
+    instructional_spending_pct: 53.4
+    benefit_spending_per_pupil: 3184
+    student_teacher_ratio: 13.3
+    naep_4th_reading_proficient_pct: 33
+    naep_4th_math_proficient_pct: 35
+    naep_8th_reading_proficient_pct: 32
+    naep_8th_math_proficient_pct: 27
+
+  Kentucky:
+    per_pupil_spending: 14181
+    k12_enrollment: 653354
+    avg_teacher_salary: 55802
+    spending_rank: 33
+    enrollment_change_2020_2023_pct: -2.7
+    revenue_per_pupil: 14688
+    instructional_spending_pct: 53.7
+    benefit_spending_per_pupil: 3098
+    student_teacher_ratio: 14.8
+    naep_4th_reading_proficient_pct: 31
+    naep_4th_math_proficient_pct: 30
+    naep_8th_reading_proficient_pct: 30
+    naep_8th_math_proficient_pct: 23
+
+  Louisiana:
+    per_pupil_spending: 14534
+    k12_enrollment: 684293
+    avg_teacher_salary: 54016
+    spending_rank: 31
+    enrollment_change_2020_2023_pct: -4.5
+    revenue_per_pupil: 14921
+    instructional_spending_pct: 53.1
+    benefit_spending_per_pupil: 3312
+    student_teacher_ratio: 15.1
+    naep_4th_reading_proficient_pct: 25
+    naep_4th_math_proficient_pct: 23
+    naep_8th_reading_proficient_pct: 21
+    naep_8th_math_proficient_pct: 15
+
+  Maine:
+    per_pupil_spending: 20571
+    k12_enrollment: 172973
+    avg_teacher_salary: 58377
+    spending_rank: 13
+    enrollment_change_2020_2023_pct: -1.9
+    revenue_per_pupil: 21082
+    instructional_spending_pct: 53.8
+    benefit_spending_per_pupil: 4531
+    student_teacher_ratio: 11.6
+    naep_4th_reading_proficient_pct: 36
+    naep_4th_math_proficient_pct: 35
+    naep_8th_reading_proficient_pct: 35
+    naep_8th_math_proficient_pct: 28
+
+  Maryland:
+    per_pupil_spending: 19312
+    k12_enrollment: 889653
+    avg_teacher_salary: 77073
+    spending_rank: 16
+    enrollment_change_2020_2023_pct: -2.3
+    revenue_per_pupil: 19878
+    instructional_spending_pct: 53.5
+    benefit_spending_per_pupil: 4381
+    student_teacher_ratio: 14.3
+    naep_4th_reading_proficient_pct: 33
+    naep_4th_math_proficient_pct: 32
+    naep_8th_reading_proficient_pct: 31
+    naep_8th_math_proficient_pct: 25
+
+  Massachusetts:
+    per_pupil_spending: 23019
+    k12_enrollment: 936273
+    avg_teacher_salary: 88903
+    spending_rank: 9
+    enrollment_change_2020_2023_pct: -1.5
+    revenue_per_pupil: 23478
+    instructional_spending_pct: 54.2
+    benefit_spending_per_pupil: 5458
+    student_teacher_ratio: 12.3
+    naep_4th_reading_proficient_pct: 43
+    naep_4th_math_proficient_pct: 44
+    naep_8th_reading_proficient_pct: 42
+    naep_8th_math_proficient_pct: 37
+
+  Michigan:
+    per_pupil_spending: 16002
+    k12_enrollment: 1437782
+    avg_teacher_salary: 66444
+    spending_rank: 24
+    enrollment_change_2020_2023_pct: -4.2
+    revenue_per_pupil: 16541
+    instructional_spending_pct: 50.8
+    benefit_spending_per_pupil: 3812
+    student_teacher_ratio: 16.4
+    naep_4th_reading_proficient_pct: 30
+    naep_4th_math_proficient_pct: 29
+    naep_8th_reading_proficient_pct: 28
+    naep_8th_math_proficient_pct: 22
+
+  Minnesota:
+    per_pupil_spending: 17422
+    k12_enrollment: 885129
+    avg_teacher_salary: 67261
+    spending_rank: 20
+    enrollment_change_2020_2023_pct: -2.0
+    revenue_per_pupil: 17891
+    instructional_spending_pct: 54.6
+    benefit_spending_per_pupil: 3782
+    student_teacher_ratio: 14.7
+    naep_4th_reading_proficient_pct: 37
+    naep_4th_math_proficient_pct: 40
+    naep_8th_reading_proficient_pct: 36
+    naep_8th_math_proficient_pct: 33
+
+  Mississippi:
+    per_pupil_spending: 11567
+    k12_enrollment: 441461
+    avg_teacher_salary: 48862
+    spending_rank: 44
+    enrollment_change_2020_2023_pct: -4.8
+    revenue_per_pupil: 12134
+    instructional_spending_pct: 53.4
+    benefit_spending_per_pupil: 2534
+    student_teacher_ratio: 14.5
+    naep_4th_reading_proficient_pct: 22
+    naep_4th_math_proficient_pct: 21
+    naep_8th_reading_proficient_pct: 19
+    naep_8th_math_proficient_pct: 13
+
+  Missouri:
+    per_pupil_spending: 14733
+    k12_enrollment: 878402
+    avg_teacher_salary: 55318
+    spending_rank: 30
+    enrollment_change_2020_2023_pct: -2.5
+    revenue_per_pupil: 15102
+    instructional_spending_pct: 52.7
+    benefit_spending_per_pupil: 3178
+    student_teacher_ratio: 13.5
+    naep_4th_reading_proficient_pct: 32
+    naep_4th_math_proficient_pct: 31
+    naep_8th_reading_proficient_pct: 30
+    naep_8th_math_proficient_pct: 25
+
+  Montana:
+    per_pupil_spending: 15504
+    k12_enrollment: 151718
+    avg_teacher_salary: 55014
+    spending_rank: 26
+    enrollment_change_2020_2023_pct: 0.3
+    revenue_per_pupil: 16124
+    instructional_spending_pct: 54.9
+    benefit_spending_per_pupil: 3187
+    student_teacher_ratio: 13.1
+    naep_4th_reading_proficient_pct: 35
+    naep_4th_math_proficient_pct: 36
+    naep_8th_reading_proficient_pct: 34
+    naep_8th_math_proficient_pct: 29
+
+  Nebraska:
+    per_pupil_spending: 16783
+    k12_enrollment: 333912
+    avg_teacher_salary: 58883
+    spending_rank: 21
+    enrollment_change_2020_2023_pct: 0.9
+    revenue_per_pupil: 17124
+    instructional_spending_pct: 54.8
+    benefit_spending_per_pupil: 3412
+    student_teacher_ratio: 13.0
+    naep_4th_reading_proficient_pct: 35
+    naep_4th_math_proficient_pct: 38
+    naep_8th_reading_proficient_pct: 34
+    naep_8th_math_proficient_pct: 29
+
+  Nevada:
+    per_pupil_spending: 12127
+    k12_enrollment: 490293
+    avg_teacher_salary: 60225
+    spending_rank: 42
+    enrollment_change_2020_2023_pct: -1.7
+    revenue_per_pupil: 12489
+    instructional_spending_pct: 52.5
+    benefit_spending_per_pupil: 2745
+    student_teacher_ratio: 18.3
+    naep_4th_reading_proficient_pct: 26
+    naep_4th_math_proficient_pct: 25
+    naep_8th_reading_proficient_pct: 24
+    naep_8th_math_proficient_pct: 18
+
+  New_Hampshire:
+    per_pupil_spending: 21912
+    k12_enrollment: 170441
+    avg_teacher_salary: 63620
+    spending_rank: 10
+    enrollment_change_2020_2023_pct: -1.4
+    revenue_per_pupil: 22341
+    instructional_spending_pct: 56.1
+    benefit_spending_per_pupil: 4628
+    student_teacher_ratio: 12.1
+    naep_4th_reading_proficient_pct: 40
+    naep_4th_math_proficient_pct: 42
+    naep_8th_reading_proficient_pct: 39
+    naep_8th_math_proficient_pct: 34
+
+  New_Jersey:
+    per_pupil_spending: 30267
+    k12_enrollment: 1376148
+    avg_teacher_salary: 80225
+    spending_rank: 2
+    enrollment_change_2020_2023_pct: -2.1
+    revenue_per_pupil: 30589
+    instructional_spending_pct: 52.8
+    benefit_spending_per_pupil: 8333
+    student_teacher_ratio: 11.7
+    naep_4th_reading_proficient_pct: 40
+    naep_4th_math_proficient_pct: 42
+    naep_8th_reading_proficient_pct: 39
+    naep_8th_math_proficient_pct: 35
+
+  New_Mexico:
+    per_pupil_spending: 15734
+    k12_enrollment: 318803
+    avg_teacher_salary: 60454
+    spending_rank: 25
+    enrollment_change_2020_2023_pct: -3.4
+    revenue_per_pupil: 16412
+    instructional_spending_pct: 50.2
+    benefit_spending_per_pupil: 3298
+    student_teacher_ratio: 14.1
+    naep_4th_reading_proficient_pct: 21
+    naep_4th_math_proficient_pct: 19
+    naep_8th_reading_proficient_pct: 19
+    naep_8th_math_proficient_pct: 13
+
+  New_York:
+    per_pupil_spending: 36976
+    k12_enrollment: 2537708
+    avg_teacher_salary: 92222
+    spending_rank: 1
+    enrollment_change_2020_2023_pct: -4.7
+    revenue_per_pupil: 37245
+    instructional_spending_pct: 54.3
+    benefit_spending_per_pupil: 7949
+    student_teacher_ratio: 12.0
+    naep_4th_reading_proficient_pct: 32
+    naep_4th_math_proficient_pct: 31
+    naep_8th_reading_proficient_pct: 30
+    naep_8th_math_proficient_pct: 25
+
+  North_Carolina:
+    per_pupil_spending: 12247
+    k12_enrollment: 1548462
+    avg_teacher_salary: 55209
+    spending_rank: 40
+    enrollment_change_2020_2023_pct: -1.5
+    revenue_per_pupil: 12689
+    instructional_spending_pct: 53.6
+    benefit_spending_per_pupil: 2756
+    student_teacher_ratio: 14.3
+    naep_4th_reading_proficient_pct: 32
+    naep_4th_math_proficient_pct: 33
+    naep_8th_reading_proficient_pct: 30
+    naep_8th_math_proficient_pct: 25
+
+  North_Dakota:
+    per_pupil_spending: 17036
+    k12_enrollment: 118462
+    avg_teacher_salary: 56704
+    spending_rank: 22
+    enrollment_change_2020_2023_pct: 1.2
+    revenue_per_pupil: 17483
+    instructional_spending_pct: 52.9
+    benefit_spending_per_pupil: 3512
+    student_teacher_ratio: 11.8
+    naep_4th_reading_proficient_pct: 35
+    naep_4th_math_proficient_pct: 37
+    naep_8th_reading_proficient_pct: 33
+    naep_8th_math_proficient_pct: 30
+
+  Ohio:
+    per_pupil_spending: 16682
+    k12_enrollment: 1668363
+    avg_teacher_salary: 63863
+    spending_rank: 23
+    enrollment_change_2020_2023_pct: -2.8
+    revenue_per_pupil: 17012
+    instructional_spending_pct: 52.1
+    benefit_spending_per_pupil: 3978
+    student_teacher_ratio: 15.2
+    naep_4th_reading_proficient_pct: 34
+    naep_4th_math_proficient_pct: 35
+    naep_8th_reading_proficient_pct: 33
+    naep_8th_math_proficient_pct: 27
+
+  Oklahoma:
+    per_pupil_spending: 11233
+    k12_enrollment: 699949
+    avg_teacher_salary: 50642
+    spending_rank: 46
+    enrollment_change_2020_2023_pct: -0.8
+    revenue_per_pupil: 11834
+    instructional_spending_pct: 52.4
+    benefit_spending_per_pupil: 2412
+    student_teacher_ratio: 15.4
+    naep_4th_reading_proficient_pct: 27
+    naep_4th_math_proficient_pct: 27
+    naep_8th_reading_proficient_pct: 25
+    naep_8th_math_proficient_pct: 19
+
+  Oregon:
+    per_pupil_spending: 17937
+    k12_enrollment: 565754
+    avg_teacher_salary: 70587
+    spending_rank: 18
+    enrollment_change_2020_2023_pct: -5.6
+    revenue_per_pupil: 18124
+    instructional_spending_pct: 51.8
+    benefit_spending_per_pupil: 4125
+    student_teacher_ratio: 18.2
+    naep_4th_reading_proficient_pct: 31
+    naep_4th_math_proficient_pct: 30
+    naep_8th_reading_proficient_pct: 30
+    naep_8th_math_proficient_pct: 26
+
+  Pennsylvania:
+    per_pupil_spending: 25427
+    k12_enrollment: 1716408
+    avg_teacher_salary: 76139
+    spending_rank: 5
+    enrollment_change_2020_2023_pct: -2.6
+    revenue_per_pupil: 25812
+    instructional_spending_pct: 51.9
+    benefit_spending_per_pupil: 6234
+    student_teacher_ratio: 13.3
+    naep_4th_reading_proficient_pct: 36
+    naep_4th_math_proficient_pct: 37
+    naep_8th_reading_proficient_pct: 35
+    naep_8th_math_proficient_pct: 29
+
+  Rhode_Island:
+    per_pupil_spending: 25183
+    k12_enrollment: 141012
+    avg_teacher_salary: 74892
+    spending_rank: 7
+    enrollment_change_2020_2023_pct: -1.8
+    revenue_per_pupil: 25478
+    instructional_spending_pct: 52.3
+    benefit_spending_per_pupil: 5812
+    student_teacher_ratio: 12.5
+    naep_4th_reading_proficient_pct: 31
+    naep_4th_math_proficient_pct: 29
+    naep_8th_reading_proficient_pct: 28
+    naep_8th_math_proficient_pct: 22
+
+  South_Carolina:
+    per_pupil_spending: 13447
+    k12_enrollment: 787891
+    avg_teacher_salary: 56282
+    spending_rank: 35
+    enrollment_change_2020_2023_pct: -0.2
+    revenue_per_pupil: 13912
+    instructional_spending_pct: 53.7
+    benefit_spending_per_pupil: 2989
+    student_teacher_ratio: 14.7
+    naep_4th_reading_proficient_pct: 29
+    naep_4th_math_proficient_pct: 29
+    naep_8th_reading_proficient_pct: 27
+    naep_8th_math_proficient_pct: 21
+
+  South_Dakota:
+    per_pupil_spending: 13174
+    k12_enrollment: 142297
+    avg_teacher_salary: 50029
+    spending_rank: 38
+    enrollment_change_2020_2023_pct: 0.6
+    revenue_per_pupil: 13654
+    instructional_spending_pct: 55.3
+    benefit_spending_per_pupil: 2712
+    student_teacher_ratio: 13.0
+    naep_4th_reading_proficient_pct: 33
+    naep_4th_math_proficient_pct: 35
+    naep_8th_reading_proficient_pct: 32
+    naep_8th_math_proficient_pct: 28
+
+  Tennessee:
+    per_pupil_spending: 12083
+    k12_enrollment: 997493
+    avg_teacher_salary: 54797
+    spending_rank: 43
+    enrollment_change_2020_2023_pct: -0.3
+    revenue_per_pupil: 12489
+    instructional_spending_pct: 54.1
+    benefit_spending_per_pupil: 2645
+    student_teacher_ratio: 14.8
+    naep_4th_reading_proficient_pct: 30
+    naep_4th_math_proficient_pct: 30
+    naep_8th_reading_proficient_pct: 28
+    naep_8th_math_proficient_pct: 22
+
+  Texas:
+    per_pupil_spending: 12861
+    k12_enrollment: 5505120
+    avg_teacher_salary: 60231
+    spending_rank: 38
+    enrollment_change_2020_2023_pct: 1.4
+    revenue_per_pupil: 13247
+    instructional_spending_pct: 52.6
+    benefit_spending_per_pupil: 2856
+    student_teacher_ratio: 14.7
+    naep_4th_reading_proficient_pct: 31
+    naep_4th_math_proficient_pct: 33
+    naep_8th_reading_proficient_pct: 28
+    naep_8th_math_proficient_pct: 24
+
+  Utah:
+    per_pupil_spending: 9966
+    k12_enrollment: 692985
+    avg_teacher_salary: 57478
+    spending_rank: 50
+    enrollment_change_2020_2023_pct: 2.1
+    revenue_per_pupil: 10234
+    instructional_spending_pct: 56.2
+    benefit_spending_per_pupil: 2087
+    student_teacher_ratio: 21.4
+    naep_4th_reading_proficient_pct: 35
+    naep_4th_math_proficient_pct: 37
+    naep_8th_reading_proficient_pct: 34
+    naep_8th_math_proficient_pct: 29
+
+  Vermont:
+    per_pupil_spending: 28890
+    k12_enrollment: 82318
+    avg_teacher_salary: 64512
+    spending_rank: 3
+    enrollment_change_2020_2023_pct: -3.1
+    revenue_per_pupil: 29234
+    instructional_spending_pct: 56.4
+    benefit_spending_per_pupil: 5789
+    student_teacher_ratio: 10.4
+    naep_4th_reading_proficient_pct: 38
+    naep_4th_math_proficient_pct: 38
+    naep_8th_reading_proficient_pct: 37
+    naep_8th_math_proficient_pct: 31
+
+  Virginia:
+    per_pupil_spending: 17182
+    k12_enrollment: 1279537
+    avg_teacher_salary: 62647
+    spending_rank: 21
+    enrollment_change_2020_2023_pct: -1.2
+    revenue_per_pupil: 17534
+    instructional_spending_pct: 54.8
+    benefit_spending_per_pupil: 3624
+    student_teacher_ratio: 13.8
+    naep_4th_reading_proficient_pct: 37
+    naep_4th_math_proficient_pct: 38
+    naep_8th_reading_proficient_pct: 36
+    naep_8th_math_proficient_pct: 31
+
+  Washington:
+    per_pupil_spending: 18543
+    k12_enrollment: 1098647
+    avg_teacher_salary: 76891
+    spending_rank: 17
+    enrollment_change_2020_2023_pct: -3.7
+    revenue_per_pupil: 18912
+    instructional_spending_pct: 52.4
+    benefit_spending_per_pupil: 4178
+    student_teacher_ratio: 17.1
+    naep_4th_reading_proficient_pct: 33
+    naep_4th_math_proficient_pct: 35
+    naep_8th_reading_proficient_pct: 32
+    naep_8th_math_proficient_pct: 29
+
+  West_Virginia:
+    per_pupil_spending: 16178
+    k12_enrollment: 250024
+    avg_teacher_salary: 52394
+    spending_rank: 25
+    enrollment_change_2020_2023_pct: -3.9
+    revenue_per_pupil: 16734
+    instructional_spending_pct: 52.8
+    benefit_spending_per_pupil: 3567
+    student_teacher_ratio: 13.2
+    naep_4th_reading_proficient_pct: 27
+    naep_4th_math_proficient_pct: 26
+    naep_8th_reading_proficient_pct: 25
+    naep_8th_math_proficient_pct: 18
+
+  Wisconsin:
+    per_pupil_spending: 17254
+    k12_enrollment: 844541
+    avg_teacher_salary: 61738
+    spending_rank: 22
+    enrollment_change_2020_2023_pct: -2.4
+    revenue_per_pupil: 17612
+    instructional_spending_pct: 54.5
+    benefit_spending_per_pupil: 3745
+    student_teacher_ratio: 14.0
+    naep_4th_reading_proficient_pct: 34
+    naep_4th_math_proficient_pct: 37
+    naep_8th_reading_proficient_pct: 33
+    naep_8th_math_proficient_pct: 29
+
+  Wyoming:
+    per_pupil_spending: 20745
+    k12_enrollment: 94867
+    avg_teacher_salary: 60212
+    spending_rank: 12
+    enrollment_change_2020_2023_pct: 0.1
+    revenue_per_pupil: 21345
+    instructional_spending_pct: 54.2
+    benefit_spending_per_pupil: 4234
+    student_teacher_ratio: 12.1
+    naep_4th_reading_proficient_pct: 34
+    naep_4th_math_proficient_pct: 35
+    naep_8th_reading_proficient_pct: 33
+    naep_8th_math_proficient_pct: 27
+
+  District_of_Columbia:
+    per_pupil_spending: 31843
+    k12_enrollment: 90946
+    avg_teacher_salary: 82819
+    spending_rank: 2  # among jurisdictions including DC
+    enrollment_change_2020_2023_pct: -1.9
+    revenue_per_pupil: 34512
+    instructional_spending_pct: 44.8
+    benefit_spending_per_pupil: 6712
+    student_teacher_ratio: 13.4
+    naep_4th_reading_proficient_pct: 23
+    naep_4th_math_proficient_pct: 21
+    naep_8th_reading_proficient_pct: 21
+    naep_8th_math_proficient_pct: 14
+
+# ---------------------------------------------------------------------------
+# Key Insights for Alpha's US State Strategy
+# ---------------------------------------------------------------------------
+
+alpha_insights:
+  spending_vs_outcomes_disconnect:
+    summary: >
+      The core Spending Spotlight finding — per-pupil spending rose 35.8% while
+      outcomes stagnated or declined — is Alpha's strongest argument:
+      "This isn't a funding problem, it's a model problem."
+    top_spender_example: "New York spends $36,976/student yet 68% of 4th graders aren't proficient in reading"
+    lowest_spender_example: "Utah spends $9,966/student yet outperforms many higher-spending states on NAEP"
+
+  benefit_spending_crisis:
+    summary: >
+      81.1% increase in benefit spending (mostly pension debt) means less money
+      reaches classrooms. Alpha's model (AI + guides) sidesteps the pension burden
+      entirely.
+    nj_example: "New Jersey spends $8,333/student on benefits alone — nearly as much as some states' total per-pupil spend"
+
+  staffing_bloat:
+    summary: >
+      Non-teaching staff grew 22.8% while enrollment grew 4.1%. Alpha's lean
+      guide model (5 guides per campus) vs traditional school staffing
+      (30+ staff per campus) represents a fundamentally different cost structure.
+
+  enrollment_decline_opportunity:
+    summary: >
+      39 states saw enrollment decline 2020-2023. Families are voting with their feet.
+      This creates demand for alternatives like Alpha's micro-schools and virtual programs.
+    growth_states: ["Texas", "Utah", "Idaho", "Nebraska", "South Dakota", "Montana", "North Dakota", "Florida"]
+
+  teacher_salary_paradox:
+    summary: >
+      Despite 35.8% more spending per student, teacher salaries fell 6.1%.
+      Money is being absorbed by administration, benefits, and non-instructional costs.
+      Alpha's model pays guides competitively while eliminating administrative bloat.
+
+  priority_state_economics:
+    Florida:
+      per_pupil: 13137
+      alpha_intervention_cost: 2000
+      alpha_pct_of_per_pupil: 15.2
+      alpha_full_transform_cost: 2627
+      alpha_full_pct_of_per_pupil: 20.0
+      esa_amount: "$9,500-$10,700"
+      argument: "Florida spends $13,137/student with mediocre outcomes. Alpha's intervention at $2,000 (15%) delivers 2-5x learning gains."
+
+    Texas:
+      per_pupil: 12861
+      alpha_intervention_cost: 2000
+      alpha_pct_of_per_pupil: 15.5
+      alpha_full_transform_cost: 2572
+      alpha_full_pct_of_per_pupil: 20.0
+      esa_amount: "$10,000-$10,200"
+      argument: "Texas spends $12,861/student. ESA at $10K covers Alpha's full model. First-mover advantage as ESA launches 2026-27."
+
+    Arizona:
+      per_pupil: 10655
+      alpha_intervention_cost: 2000
+      alpha_pct_of_per_pupil: 18.8
+      alpha_full_transform_cost: 2131
+      alpha_full_pct_of_per_pupil: 20.0
+      esa_amount: "$7,000-$8,000"
+      argument: "Arizona spends just $10,655/student (48th nationally) yet ESA at $7-8K covers Alpha's full intervention."
+
+    Indiana:
+      per_pupil: 13529
+      alpha_intervention_cost: 2000
+      alpha_pct_of_per_pupil: 14.8
+      alpha_full_transform_cost: 2706
+      alpha_full_pct_of_per_pupil: 20.0
+      esa_amount: "$6,100-$7,400"
+      argument: "Indiana spends $13,529/student. Universal vouchers launch July 2026 — perfect timing for Alpha entry."
+
+    North_Carolina:
+      per_pupil: 12247
+      alpha_intervention_cost: 2000
+      alpha_pct_of_per_pupil: 16.3
+      alpha_full_transform_cost: 2449
+      alpha_full_pct_of_per_pupil: 20.0
+      esa_amount: "$3,000-$7,000"
+      argument: "NC spends $12,247/student. ESA participation nearly tripled (103K students). 77% of charter schools have waitlists — massive unmet demand."

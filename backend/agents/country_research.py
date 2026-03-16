@@ -24,7 +24,11 @@ from services.perplexity import research_country, research_us_state
 from services.world_bank import get_country_data
 from services.humanizer import humanize_report
 from config import OUTPUT_DIR
-from config.rules_loader import classify_tier as classify_country_tier
+from config.rules_loader import (
+    classify_tier as classify_country_tier,
+    get_state_spending_data,
+    get_spending_spotlight_national_trends,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -487,11 +491,57 @@ async def run_country_research(
     if not profile.target.region:
         profile.target.region = "North America" if target_type == TargetType.US_STATE else ""
 
+    # --- Populate US state education data from Spending Spotlight ---
+    spending_spotlight_context = ""
+    if target_type == TargetType.US_STATE:
+        ss_data = get_state_spending_data(target)
+        national = get_spending_spotlight_national_trends()
+        if ss_data:
+            # Backfill structured profile with Spending Spotlight data
+            if not profile.education.k12_enrolled and ss_data.get("k12_enrollment"):
+                profile.education.k12_enrolled = ss_data["k12_enrollment"]
+            if not profile.education.avg_public_spend_per_student and ss_data.get("per_pupil_spending"):
+                profile.education.avg_public_spend_per_student = ss_data["per_pupil_spending"]
+            if not profile.education.student_teacher_ratio and ss_data.get("student_teacher_ratio"):
+                profile.education.student_teacher_ratio = ss_data["student_teacher_ratio"]
+            if not profile.education.teacher_count and ss_data.get("k12_enrollment") and ss_data.get("student_teacher_ratio"):
+                profile.education.teacher_count = round(
+                    ss_data["k12_enrollment"] / ss_data["student_teacher_ratio"]
+                )
+
+            spending_spotlight_context = (
+                f"\n\n**K-12 Spending Spotlight Data (Reason Foundation, 2002-2023):**\n"
+                f"Source: https://spending-spotlight.reason.org\n"
+                f"- Per-pupil spending: ${ss_data.get('per_pupil_spending', 'N/A'):,} "
+                f"(national avg: ${national.get('per_pupil_spending', {}).get('national_average_2023', 20322):,})\n"
+                f"- Spending rank: #{ss_data.get('spending_rank', 'N/A')} nationally\n"
+                f"- K-12 enrollment: {ss_data.get('k12_enrollment', 'N/A'):,}\n"
+                f"- Average teacher salary: ${ss_data.get('avg_teacher_salary', 'N/A'):,} "
+                f"(national avg: ${national.get('teacher_salary', {}).get('avg_2022', 70548):,})\n"
+                f"- Student-teacher ratio: {ss_data.get('student_teacher_ratio', 'N/A')}\n"
+                f"- Revenue per pupil: ${ss_data.get('revenue_per_pupil', 'N/A'):,}\n"
+                f"- Instructional spending share: {ss_data.get('instructional_spending_pct', 'N/A')}%\n"
+                f"- Benefit spending per pupil: ${ss_data.get('benefit_spending_per_pupil', 'N/A'):,}\n"
+                f"- Enrollment change (2020-2023): {ss_data.get('enrollment_change_2020_2023_pct', 'N/A')}%\n"
+                f"- NAEP 4th grade reading proficient: {ss_data.get('naep_4th_reading_proficient_pct', 'N/A')}%\n"
+                f"- NAEP 4th grade math proficient: {ss_data.get('naep_4th_math_proficient_pct', 'N/A')}%\n"
+                f"- NAEP 8th grade reading proficient: {ss_data.get('naep_8th_reading_proficient_pct', 'N/A')}%\n"
+                f"- NAEP 8th grade math proficient: {ss_data.get('naep_8th_math_proficient_pct', 'N/A')}%\n"
+                f"\n**National Benchmarks (Spending Spotlight 2025):**\n"
+                f"- Per-pupil spending rose 35.8% nationally (2002-2023) yet outcomes stagnated\n"
+                f"- Avg teacher salary fell 6.1% despite increased spending\n"
+                f"- Non-teaching staff grew 22.8% vs 4.1% enrollment growth\n"
+                f"- Benefit spending per pupil rose 81.1% (pension debt)\n"
+                f"- ~40% of 4th graders below basic reading level (NAEP)\n"
+                f"- 39 states saw enrollment decline (2020-2023)\n"
+            )
+
     # --- Build data context for report prompts ---
     data_context = (
         f"**World Bank Data:**\n{wb_data}\n\n"
         f"**Live Research (Perplexity Sonar Deep Research):**\n{research_text}\n\n"
         f"**Citations:**\n{chr(10).join(str(c) for c in citations)}"
+        f"{spending_spotlight_context}"
     )
 
     # --- Generate narrative report ---

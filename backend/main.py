@@ -31,6 +31,11 @@ from graph.express_pipeline import (
     run_express_pipeline,
     get_express_state,
 )
+from services.spending_spotlight import (
+    refresh_spending_spotlight,
+    get_refresh_status,
+    start_background_refresh,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -48,6 +53,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Background task handle for Spending Spotlight data refresh
+_spotlight_refresh_task = None
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background tasks on app startup."""
+    global _spotlight_refresh_task
+    # Auto-refresh Spending Spotlight data weekly (168 hours)
+    _spotlight_refresh_task = start_background_refresh(interval_hours=168)
+    logger.info("Spending Spotlight background refresh task started")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up background tasks on app shutdown."""
+    global _spotlight_refresh_task
+    if _spotlight_refresh_task and not _spotlight_refresh_task.done():
+        _spotlight_refresh_task.cancel()
+        logger.info("Spending Spotlight background refresh task cancelled")
 
 
 # ---------------------------------------------------------------------------
@@ -490,6 +516,48 @@ async def download_express_file(run_id: str, file_type: str):
         filename=os.path.basename(path),
         media_type="application/pdf",
     )
+
+
+# ---------------------------------------------------------------------------
+# Spending Spotlight Data Feed
+# ---------------------------------------------------------------------------
+
+@app.post("/api/data/spending-spotlight/refresh")
+async def refresh_spotlight_data(force: bool = False):
+    """Trigger a manual refresh of K-12 Spending Spotlight data.
+
+    Scrapes https://spending-spotlight.reason.org for the latest state-by-state
+    K-12 spending, enrollment, salary, and NAEP data. Falls back to Perplexity
+    research if scraping fails.
+
+    Query params:
+        force: If true, bypass the 24-hour cooldown and refresh immediately.
+    """
+    try:
+        result = await refresh_spending_spotlight(force=force)
+        return result
+    except Exception as exc:
+        raise HTTPException(500, f"Refresh failed: {exc}")
+
+
+@app.get("/api/data/spending-spotlight/status")
+async def spotlight_status():
+    """Get the current status of the Spending Spotlight data feed."""
+    return await get_refresh_status()
+
+
+@app.get("/api/data/spending-spotlight/{state}")
+async def get_state_spotlight_data(state: str):
+    """Get Spending Spotlight data for a specific US state.
+
+    Returns per-pupil spending, enrollment, teacher salary, NAEP scores,
+    and other metrics from the Reason Foundation's Spending Spotlight database.
+    """
+    from config.rules_loader import get_state_spending_data
+    data = get_state_spending_data(state)
+    if not data:
+        raise HTTPException(404, f"No Spending Spotlight data found for: {state}")
+    return {"state": state, "data": data, "source": "spending-spotlight.reason.org"}
 
 
 # ---------------------------------------------------------------------------

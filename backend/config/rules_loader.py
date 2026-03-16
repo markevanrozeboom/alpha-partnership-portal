@@ -60,6 +60,45 @@ def load_proposal_structure() -> dict:
     return {}
 
 
+@lru_cache(maxsize=1)
+def load_k12_spending_spotlight() -> dict:
+    """Load K-12 Spending Spotlight data (Reason Foundation, 2002-2023).
+
+    Contains per-pupil spending, enrollment, teacher salaries, NAEP scores,
+    staffing, benefit spending, and national trends for all 50 states + DC.
+    Source: https://spending-spotlight.reason.org
+    """
+    path = RULES_DIR / "k12_spending_spotlight.yaml"
+    if path.exists():
+        return yaml.safe_load(path.read_text(encoding="utf-8"))
+    return {}
+
+
+def get_state_spending_data(state: str) -> dict:
+    """Get K-12 spending data for a specific US state from Spending Spotlight.
+
+    Returns dict with per_pupil_spending, k12_enrollment, avg_teacher_salary,
+    naep scores, benefit_spending_per_pupil, etc.
+    """
+    data = load_k12_spending_spotlight()
+    state_data = data.get("state_data", {})
+    # Try exact match, then normalized (spaces → underscores)
+    key = state.replace(" ", "_")
+    return state_data.get(state, state_data.get(key, {}))
+
+
+def get_spending_spotlight_national_trends() -> dict:
+    """Get national K-12 spending trends from Spending Spotlight."""
+    data = load_k12_spending_spotlight()
+    return data.get("national_trends", {})
+
+
+def get_spending_spotlight_alpha_insights() -> dict:
+    """Get Alpha-specific insights derived from Spending Spotlight data."""
+    data = load_k12_spending_spotlight()
+    return data.get("alpha_insights", {})
+
+
 def get_esa_data(state: str) -> dict:
     """Get ESA/voucher data for a specific US state."""
     rules = load_us_state_rules()

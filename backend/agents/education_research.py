@@ -22,6 +22,11 @@ from services.llm import call_llm, call_llm_plain
 from services.perplexity import research_education
 from services.humanizer import humanize_report
 from config import OUTPUT_DIR
+from config.rules_loader import (
+    get_state_spending_data,
+    get_spending_spotlight_national_trends,
+    get_spending_spotlight_alpha_insights,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -430,10 +435,64 @@ async def run_education_research(
     if country_profile.regulatory.foreign_ownership_rules:
         ctx_parts.append(f"Foreign ownership: {country_profile.regulatory.foreign_ownership_rules}")
 
+    # --- Inject Spending Spotlight data for US states ---
+    spending_spotlight_context = ""
+    if country_profile.target.type == TargetType.US_STATE:
+        ss_data = get_state_spending_data(target)
+        national = get_spending_spotlight_national_trends()
+        alpha_insights = get_spending_spotlight_alpha_insights()
+        if ss_data:
+            spending_spotlight_context = (
+                f"\n\n**K-12 Spending Spotlight Data (Reason Foundation, 2002-2023):**\n"
+                f"Source: https://spending-spotlight.reason.org\n"
+                f"- Per-pupil spending: ${ss_data.get('per_pupil_spending', 'N/A'):,}\n"
+                f"- Spending rank: #{ss_data.get('spending_rank', 'N/A')} nationally\n"
+                f"- K-12 enrollment: {ss_data.get('k12_enrollment', 'N/A'):,}\n"
+                f"- Average teacher salary: ${ss_data.get('avg_teacher_salary', 'N/A'):,}\n"
+                f"- Student-teacher ratio: {ss_data.get('student_teacher_ratio', 'N/A')}\n"
+                f"- Revenue per pupil: ${ss_data.get('revenue_per_pupil', 'N/A'):,}\n"
+                f"- Instructional spending share: {ss_data.get('instructional_spending_pct', 'N/A')}%\n"
+                f"- Benefit spending per pupil: ${ss_data.get('benefit_spending_per_pupil', 'N/A'):,}\n"
+                f"- Enrollment change (2020-2023): {ss_data.get('enrollment_change_2020_2023_pct', 'N/A')}%\n"
+                f"- NAEP 4th grade reading proficient: {ss_data.get('naep_4th_reading_proficient_pct', 'N/A')}%\n"
+                f"- NAEP 4th grade math proficient: {ss_data.get('naep_4th_math_proficient_pct', 'N/A')}%\n"
+                f"- NAEP 8th grade reading proficient: {ss_data.get('naep_8th_reading_proficient_pct', 'N/A')}%\n"
+                f"- NAEP 8th grade math proficient: {ss_data.get('naep_8th_math_proficient_pct', 'N/A')}%\n"
+            )
+        if national:
+            spending_spotlight_context += (
+                f"\n**National Benchmarks (Spending Spotlight 2025):**\n"
+                f"- National avg per-pupil spending: ${national.get('per_pupil_spending', {}).get('national_average_2023', 20322):,}\n"
+                f"- Per-pupil spending rose {national.get('per_pupil_spending', {}).get('change_pct', 35.8)}% (2002-2023)\n"
+                f"- Avg teacher salary (national): ${national.get('teacher_salary', {}).get('avg_2022', 70548):,}\n"
+                f"- Teacher salary change: {national.get('teacher_salary', {}).get('change_pct', -6.1)}% (2002-2022)\n"
+                f"- Non-teaching staff growth: {national.get('staffing', {}).get('non_teaching_staff_growth_pct', 22.8)}% vs {national.get('enrollment', {}).get('change_2002_2023_pct', 4.1)}% enrollment growth\n"
+                f"- Benefit spending per pupil rose {national.get('employee_benefits', {}).get('change_pct', 81.1)}% (2002-2023)\n"
+                f"- {national.get('enrollment', {}).get('states_with_decline_2020_2023', 39)} states saw enrollment decline (2020-2023)\n"
+                f"- ~{national.get('student_outcomes', {}).get('naep_4th_grade_reading_below_basic_pct', 40)}% of 4th graders below basic reading level (NAEP)\n"
+            )
+        if alpha_insights:
+            disconnect = alpha_insights.get("spending_vs_outcomes_disconnect", {})
+            state_key = target.replace(" ", "_")
+            priority = alpha_insights.get("priority_state_economics", {}).get(state_key, {})
+            spending_spotlight_context += (
+                f"\n**Alpha Strategic Insight (from Spending Spotlight data):**\n"
+                f"- Core argument: {disconnect.get('summary', 'More spending has not led to better outcomes.')}\n"
+            )
+            if priority:
+                spending_spotlight_context += (
+                    f"- Alpha intervention cost: ${priority.get('alpha_intervention_cost', 2000):,}/student "
+                    f"({priority.get('alpha_pct_of_per_pupil', 'N/A')}% of per-pupil spend)\n"
+                    f"- Alpha full transformation: ${priority.get('alpha_full_transform_cost', 'N/A'):,}/student "
+                    f"({priority.get('alpha_full_pct_of_per_pupil', 20)}% of per-pupil spend)\n"
+                    f"- Pitch: {priority.get('argument', '')}\n"
+                )
+
     data_context = (
         f"**Country Profile:**\n{chr(10).join(ctx_parts)}\n\n"
         f"**Live Research (Perplexity):**\n{research_text}\n\n"
         f"**Citations:**\n{chr(10).join(str(c) for c in citations)}"
+        f"{spending_spotlight_context}"
     )
 
     # --- Structured analysis ---

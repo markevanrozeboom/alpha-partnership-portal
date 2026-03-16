@@ -21,7 +21,11 @@ from models.schemas import (
 from services.llm import call_llm_plain
 from services.gamma import generate_and_wait, _extract_gamma_url, _extract_export_url
 from config import OUTPUT_DIR
-from config.rules_loader import get_esa_data
+from config.rules_loader import (
+    get_esa_data,
+    get_state_spending_data,
+    get_spending_spotlight_national_trends,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -102,13 +106,28 @@ def _build_gamma_input(
     )
 
     # --- Slide 2: The Problem ---
+    problem_bullets = [
+        f"- {state} K-12 system: {k12_students:,.0f} students across the state",
+        f"- Per-pupil spending: ${per_pupil:,.0f}/student (national avg: ${national_avg_per_pupil:,.0f})",
+    ]
+    if ss_data.get("spending_rank"):
+        problem_bullets.append(f"- Ranked #{ss_data['spending_rank']} in per-pupil spending nationally")
+    if ss_data.get("naep_4th_reading_proficient_pct"):
+        not_proficient = 100 - ss_data["naep_4th_reading_proficient_pct"]
+        problem_bullets.append(f"- {not_proficient}% of 4th graders NOT proficient in reading (NAEP)")
+    if ss_data.get("naep_4th_math_proficient_pct"):
+        not_proficient_math = 100 - ss_data["naep_4th_math_proficient_pct"]
+        problem_bullets.append(f"- {not_proficient_math}% of 4th graders NOT proficient in math (NAEP)")
+    if ss_data.get("benefit_spending_per_pupil"):
+        problem_bullets.append(
+            f"- ${ss_data['benefit_spending_per_pupil']:,}/student goes to benefits (mostly pensions) — not classrooms"
+        )
+    problem_bullets.extend([
+        "- This isn't a funding problem — it's a model problem",
+        "- More money into the same system won't change outcomes",
+    ])
     slides.append(
-        f"# The Problem — {state} Needs a New Model\n\n"
-        f"- {state} K-12 system: {k12_students:,.0f} students across the state\n"
-        f"- Per-pupil spending: ${per_pupil:,.0f}/student\n"
-        f"- This isn't a funding problem — it's a model problem\n"
-        f"- The traditional classroom model hasn't delivered results\n"
-        f"- More money into the same system won't change outcomes"
+        f"# The Problem — {state} Needs a New Model\n\n" + "\n".join(problem_bullets)
     )
 
     # --- Slide 3: We've Solved This ---
@@ -160,13 +179,19 @@ def _build_gamma_input(
     # --- Slide 7: The Economics ---
     econ_text = (
         f"# The Economics — What It Costs\n\n"
-        f"{state} spends ${per_pupil:,.0f}/student. Here's what Alpha costs:\n\n"
+        f"{state} spends ${per_pupil:,.0f}/student (national avg: ${national_avg_per_pupil:,.0f}).\n"
+        f"Here's what Alpha costs:\n\n"
         f"- Intervention & Mark Rober Science: $2,000/student/year (outcomes-based)\n"
         f"  - {round(2000/per_pupil*100)}% of current per-pupil spend for transformational outcomes\n"
         f"- Full School Transformation: ~${timeback_cost:,}/student (20% of per-pupil)\n"
         f"  - Remaining 80% (${per_pupil - timeback_cost:,.0f}) covers guides, life skills, facility, ops\n"
         f"  - Same total budget. World-class outcomes."
     )
+    if ss_data.get("benefit_spending_per_pupil"):
+        econ_text += (
+            f"\n\n- Currently ${ss_data['benefit_spending_per_pupil']:,}/student goes to employee benefits "
+            f"(pension debt) — Alpha's model sidesteps this entirely"
+        )
     if esa_data and esa_data.get("esa_amount"):
         esa_amt = esa_data["esa_amount"]
         econ_text += f"\n\n- ESA/Voucher: ${esa_amt:,}/student covers Alpha programs directly"
@@ -248,11 +273,24 @@ async def generate_state_deck(
     """
     logger.info("Generating state pitch deck for %s via Gamma", state)
 
-    # Get state-specific data
+    # Get state-specific data (Spending Spotlight + ESA)
     esa_data = get_esa_data(state)
-    per_pupil = country_profile.education.avg_public_spend_per_student or 11_000
-    k12_students = country_profile.education.k12_enrolled or 500_000
+    ss_data = get_state_spending_data(state)
+    national_trends = get_spending_spotlight_national_trends()
+
+    # Prefer Spending Spotlight data, fall back to country_profile
+    per_pupil = (
+        ss_data.get("per_pupil_spending")
+        or country_profile.education.avg_public_spend_per_student
+        or 11_000
+    )
+    k12_students = (
+        ss_data.get("k12_enrollment")
+        or country_profile.education.k12_enrolled
+        or 500_000
+    )
     timeback_cost = round(per_pupil * PRICING["timeback_pct"] / 100)
+    national_avg_per_pupil = national_trends.get("per_pupil_spending", {}).get("national_average_2023", 20322)
 
     # Build state data context for LLM
     state_data_parts = []
@@ -262,6 +300,29 @@ async def generate_state_deck(
         state_data_parts.append(f"K-12 students: {k12_students:,.0f}")
     if per_pupil:
         state_data_parts.append(f"Per-pupil spending: ${per_pupil:,.0f}")
+        state_data_parts.append(f"National average per-pupil: ${national_avg_per_pupil:,.0f}")
+    if ss_data.get("spending_rank"):
+        state_data_parts.append(f"Spending rank: #{ss_data['spending_rank']} nationally")
+    if ss_data.get("avg_teacher_salary"):
+        state_data_parts.append(f"Avg teacher salary: ${ss_data['avg_teacher_salary']:,.0f}")
+    if ss_data.get("benefit_spending_per_pupil"):
+        state_data_parts.append(f"Benefit spending per pupil: ${ss_data['benefit_spending_per_pupil']:,.0f}")
+    if ss_data.get("instructional_spending_pct"):
+        state_data_parts.append(f"Instructional spending share: {ss_data['instructional_spending_pct']}%")
+    if ss_data.get("enrollment_change_2020_2023_pct"):
+        state_data_parts.append(f"Enrollment change (2020-2023): {ss_data['enrollment_change_2020_2023_pct']}%")
+    if ss_data.get("naep_4th_reading_proficient_pct"):
+        state_data_parts.append(
+            f"NAEP 4th grade: {ss_data['naep_4th_reading_proficient_pct']}% reading proficient, "
+            f"{ss_data.get('naep_4th_math_proficient_pct', 'N/A')}% math proficient"
+        )
+    if ss_data.get("naep_8th_reading_proficient_pct"):
+        state_data_parts.append(
+            f"NAEP 8th grade: {ss_data['naep_8th_reading_proficient_pct']}% reading proficient, "
+            f"{ss_data.get('naep_8th_math_proficient_pct', 'N/A')}% math proficient"
+        )
+    if ss_data.get("student_teacher_ratio"):
+        state_data_parts.append(f"Student-teacher ratio: {ss_data['student_teacher_ratio']}:1")
     if country_profile.education.pisa_scores:
         state_data_parts.append(f"Test scores: {country_profile.education.pisa_scores}")
     if country_profile.political_context.head_of_state:
@@ -269,6 +330,13 @@ async def generate_state_deck(
     if esa_data:
         state_data_parts.append(f"ESA program: {esa_data.get('program_name', 'Yes')}")
         state_data_parts.append(f"ESA amount: ${esa_data.get('esa_amount', 'N/A')}/student")
+    # Add national context from Spending Spotlight
+    state_data_parts.append(f"\n--- National Context (Spending Spotlight 2025) ---")
+    state_data_parts.append(f"Per-pupil spending rose 35.8% nationally (2002-2023) yet outcomes stagnated")
+    state_data_parts.append(f"Avg teacher salary fell 6.1% despite increased spending")
+    state_data_parts.append(f"Non-teaching staff grew 22.8% vs 4.1% enrollment growth")
+    state_data_parts.append(f"Benefit spending per pupil rose 81.1% (pension debt)")
+    state_data_parts.append(f"~40% of 4th graders below basic reading level (NAEP)")
 
     education_parts = []
     if education_analysis.system_diagnosis.primary_pain_points:
