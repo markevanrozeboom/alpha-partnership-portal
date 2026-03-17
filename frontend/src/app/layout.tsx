@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Alpha Market Entry Intelligence System",
-  description: "AI-powered country/state analysis for 2hr Learning market expansion",
+  title: "2hr Learning — Partnership Portal",
+  description: "Generate customized term sheets and proposal decks for 2hr Learning market expansion",
 };
 
 export default function RootLayout({
