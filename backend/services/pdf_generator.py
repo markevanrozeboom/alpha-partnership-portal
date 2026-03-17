@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 import unicodedata
 from datetime import datetime
 
@@ -51,7 +50,7 @@ def _clean_text(text: str) -> str:
         "\u2014": "-",   # em dash
         "\u2015": "-",   # horizontal bar
         "\u2012": "-",   # figure dash
-        "\u2026": "...", # ellipsis
+        "\u2026": "...",  # ellipsis
         "\u00a0": " ",   # non-breaking space
         "\u2002": " ",   # en space
         "\u2003": " ",   # em space
@@ -78,12 +77,12 @@ def _clean_text(text: str) -> str:
         "\u00d7": "x",   # multiplication sign
         "\u2192": "->",  # rightwards arrow
         "\u2190": "<-",  # leftwards arrow
-        "\u2194": "<->", # left right arrow
-        "\u2713": "[x]", # check mark
-        "\u2717": "[ ]", # ballot x
-        "\u20ac": "EUR", # euro sign
-        "\u00a3": "GBP", # pound sign
-        "\u00a5": "JPY", # yen sign
+        "\u2194": "<->",  # left right arrow
+        "\u2713": "[x]",  # check mark
+        "\u2717": "[ ]",  # ballot x
+        "\u20ac": "EUR",  # euro sign
+        "\u00a3": "GBP",  # pound sign
+        "\u00a5": "JPY",  # yen sign
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
@@ -206,15 +205,12 @@ def convert_docx_to_pdf(docx_path: str) -> str:
     # Detect document type from filename
     basename = os.path.basename(docx_path).lower()
     if "term_sheet" in basename:
-        doc_type = "term_sheet"
         cover_title = "INDICATIVE TERM SHEET"
         cover_subtitle = "Strategic Education Partnership"
     elif "investment_memorandum" in basename or "proposal" in basename:
-        doc_type = "proposal"
         cover_title = "INVESTMENT MEMORANDUM"
         cover_subtitle = "Strategic Partnership Proposal for Education Transformation"
     else:
-        doc_type = "document"
         cover_title = "DOCUMENT"
         cover_subtitle = ""
 
@@ -277,7 +273,7 @@ def convert_docx_to_pdf(docx_path: str) -> str:
         elif style_name.startswith("List Bullet"):
             pdf.set_font("Helvetica", "", 10)
             pdf.set_text_color(*TEXT_COLOR)
-            x = pdf.get_x()
+            pdf.get_x()
             pdf.cell(8, 6, "-")
             pdf.multi_cell(0, 6, text)
             pdf.ln(1)

@@ -10,7 +10,8 @@ Usage:
   python scripts/build_model.py --input research.json --templates us-state --output-dir outputs/
   python scripts/build_model.py --input research.json --templates lic-counterparty,lic-alpha --output-dir outputs/
   python scripts/build_model.py --input research.json --auto --output-dir outputs/
-  python scripts/build_model.py --input research.json --templates jv-counterparty,jv-alpha --premium-schools --output-dir outputs/
+  python scripts/build_model.py --input research.json --templates jv-counterparty,jv-alpha \
+    --premium-schools --output-dir outputs/
 
 Run via:
   uv run --directory plugins/do python skills/financial-model/scripts/build_model.py ...
@@ -18,7 +19,6 @@ Run via:
 
 import argparse
 import json
-import math
 import sys
 from pathlib import Path
 
@@ -210,81 +210,81 @@ ASSUMPTIONS_MAP = {
     # Row 1: header
     # Row 2: blank
     # Row 3: "Market & Scale" section header
-    "target_name":      4,
-    "tier":             5,
-    "gdp_per_capita":   6,
-    "school_age_pop":   7,
-    "ppp_factor":       8,   # formula: =MIN(1, B6/30000)
-    "demand_factor":    9,
-    "student_target":  10,   # formula: =MAX(5000, B7*0.01*B9)
+    "target_name": 4,
+    "tier": 5,
+    "gdp_per_capita": 6,
+    "school_age_pop": 7,
+    "ppp_factor": 8,   # formula: =MIN(1, B6/30000)
+    "demand_factor": 9,
+    "student_target": 10,   # formula: =MAX(5000, B7*0.01*B9)
     # Row 11: blank
     # Row 12: "Pricing & Revenue" section header
     "per_student_budget": 13,  # formula: =MAX(5000, MIN(30000, B14*0.8))
-    "avg_tuition":     14,
+    "avg_tuition": 14,
     "ancillary_per_student": 15,
     # Row 16: blank
     # Row 17: "Cost Structure" section header
-    "cost_pct_personnel":  18,
-    "cost_pct_timeback":   19,
+    "cost_pct_personnel": 18,
+    "cost_pct_timeback": 19,
     "cost_pct_real_estate": 20,
-    "cost_pct_curriculum":  21,
-    "cost_pct_programs":    22,
-    "cost_pct_admin":       23,
+    "cost_pct_curriculum": 21,
+    "cost_pct_programs": 22,
+    "cost_pct_admin": 23,
     # Row 24: blank
     # Row 25: "Fee Structure" section header
-    "mgmt_fee_pct":    26,
-    "timeback_pct":    27,
-    "upfront_ip_fee":  28,
-    "annual_support":  29,  # licensing only, 0 for JV
+    "mgmt_fee_pct": 26,
+    "timeback_pct": 27,
+    "upfront_ip_fee": 28,
+    "annual_support": 29,  # licensing only, 0 for JV
     # Row 30: blank
     # Row 31: "Valuation & Returns" section header
     "ebitda_multiple": 32,
-    "discount_rate":   33,
-    "target_irr":      34,
-    "exit_year":       35,
+    "discount_rate": 33,
+    "target_irr": 34,
+    "exit_year": 35,
     "avg_school_size": 36,
     "cost_per_school": 37,
     # Row 38: blank
     # Row 39: "Enrollment Phasing" section header
     # Row 40: enrollment Year 0-10 (B40:L40)
-    "enrollment_row":  40,
+    "enrollment_row": 40,
     # Row 41: fill rates Year 0-10 (B41:L41)
-    "fill_rate_row":   41,
+    "fill_rate_row": 41,
     # Row 42: blank
     # Row 43: "Alpha Cost Assumptions" section header (jv-alpha / lic-alpha)
-    "teacher_salary":  44,
+    "teacher_salary": 44,
     "guide_salary_multiplier": 45,  # 95th pctl = 1.3x
 }
 
 # Named ranges: name -> Assumptions sheet cell reference
 NAMED_RANGES = {
-    "ModelType":          f"'Assumptions'!$B${ASSUMPTIONS_MAP['tier']}",  # Row 5: now "Unified"
-    "GDPPerCapita":       f"'Assumptions'!$B${ASSUMPTIONS_MAP['gdp_per_capita']}",
-    "SchoolAgePop":       f"'Assumptions'!$B${ASSUMPTIONS_MAP['school_age_pop']}",
+    "ModelType": f"'Assumptions'!$B${ASSUMPTIONS_MAP['tier']}",  # Row 5: now "Unified"
+    "GDPPerCapita": f"'Assumptions'!$B${ASSUMPTIONS_MAP['gdp_per_capita']}",
+    "SchoolAgePop": f"'Assumptions'!$B${ASSUMPTIONS_MAP['school_age_pop']}",
     "PerStudentBudgetNat": f"'Assumptions'!$B${ASSUMPTIONS_MAP['ppp_factor']}",  # Row 8: now $25K fixed
     "MinStudentYearCommit": f"'Assumptions'!$B${ASSUMPTIONS_MAP['demand_factor']}",  # Row 9: now 100K fixed
-    "StudentTarget":      f"'Assumptions'!$B${ASSUMPTIONS_MAP['student_target']}",
-    "PerStudentBudget":   f"'Assumptions'!$B${ASSUMPTIONS_MAP['per_student_budget']}",
-    "AvgTuition":         f"'Assumptions'!$B${ASSUMPTIONS_MAP['avg_tuition']}",
+    "StudentTarget": f"'Assumptions'!$B${ASSUMPTIONS_MAP['student_target']}",
+    "PerStudentBudget": f"'Assumptions'!$B${ASSUMPTIONS_MAP['per_student_budget']}",
+    "AvgTuition": f"'Assumptions'!$B${ASSUMPTIONS_MAP['avg_tuition']}",
     "AncillaryPerStudent": f"'Assumptions'!$B${ASSUMPTIONS_MAP['ancillary_per_student']}",
-    "CostPctPersonnel":   f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_personnel']}",
-    "CostPctTimeback":    f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_timeback']}",
-    "CostPctRealEstate":  f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_real_estate']}",
-    "CostPctCurriculum":  f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_curriculum']}",
-    "CostPctPrograms":    f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_programs']}",
-    "CostPctAdmin":       f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_admin']}",
-    "MgmtFeePct":         f"'Assumptions'!$B${ASSUMPTIONS_MAP['mgmt_fee_pct']}",
-    "TimebackPct":        f"'Assumptions'!$B${ASSUMPTIONS_MAP['timeback_pct']}",
-    "UpfrontIPFee":       f"'Assumptions'!$B${ASSUMPTIONS_MAP['upfront_ip_fee']}",
-    "AnnualSupport":      f"'Assumptions'!$B${ASSUMPTIONS_MAP['annual_support']}",
-    "EBITDAMultiple":     f"'Assumptions'!$B${ASSUMPTIONS_MAP['ebitda_multiple']}",
-    "DiscountRate":       f"'Assumptions'!$B${ASSUMPTIONS_MAP['discount_rate']}",
-    "TargetIRR":          f"'Assumptions'!$B${ASSUMPTIONS_MAP['target_irr']}",
-    "ExitYear":           f"'Assumptions'!$B${ASSUMPTIONS_MAP['exit_year']}",
-    "AvgSchoolSize":      f"'Assumptions'!$B${ASSUMPTIONS_MAP['avg_school_size']}",
-    "CostPerSchool":      f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_per_school']}",
-    "TeacherSalary":      f"'Assumptions'!$B${ASSUMPTIONS_MAP['teacher_salary']}",
-    "GuideSalaryMult":    f"'Assumptions'!$B${ASSUMPTIONS_MAP['guide_salary_multiplier']}",
+    "CostPctPersonnel": f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_personnel']}",
+    "CostPctTimeback": f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_timeback']}",
+    "CostPctRealEstate": f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_real_estate']}",
+    "CostPctCurriculum": f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_curriculum']}",
+    "CostPctPrograms": f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_programs']}",
+    "CostPctAdmin": f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_pct_admin']}",
+    "MgmtFeePct": f"'Assumptions'!$B${ASSUMPTIONS_MAP['mgmt_fee_pct']}",
+    "TimebackPct": f"'Assumptions'!$B${ASSUMPTIONS_MAP['timeback_pct']}",
+    "UpfrontIPFee": f"'Assumptions'!$B${ASSUMPTIONS_MAP['upfront_ip_fee']}",
+    "AnnualSupport": f"'Assumptions'!$B${ASSUMPTIONS_MAP['annual_support']}",
+    "EBITDAMultiple": f"'Assumptions'!$B${ASSUMPTIONS_MAP['ebitda_multiple']}",
+    "DiscountRate": f"'Assumptions'!$B${ASSUMPTIONS_MAP['discount_rate']}",
+    "TargetIRR": f"'Assumptions'!$B${ASSUMPTIONS_MAP['target_irr']}",
+    "ExitYear": f"'Assumptions'!$B${ASSUMPTIONS_MAP['exit_year']}",
+    "AvgSchoolSize": f"'Assumptions'!$B${ASSUMPTIONS_MAP['avg_school_size']}",
+    "CostPerSchool": f"'Assumptions'!$B${ASSUMPTIONS_MAP['cost_per_school']}",
+    "TeacherSalary": f"'Assumptions'!$B${ASSUMPTIONS_MAP['teacher_salary']}",
+    "GuideSalaryMult": f"'Assumptions'!$B${ASSUMPTIONS_MAP['guide_salary_multiplier']}",
 }
 
 
@@ -326,7 +326,8 @@ def build_assumptions_sheet(template_id: str, scaling: dict, data: dict,
     # Row 5
     rows.append(["Model Type", "Unified (Operator & Licensor)", "Fixed — no tiers", "No"])
     # Row 6
-    rows.append(["GDP per Capita (USD)", data.get("economy", {}).get("gdp_per_capita", 0), "World Bank / IMF (color commentary only)", "No"])
+    rows.append(["GDP per Capita (USD)", data.get("economy", {}).get(
+        "gdp_per_capita", 0), "World Bank / IMF (color commentary only)", "No"])
     # Row 7
     rows.append(["School-Age Population", scaling["school_age_population"], "World Bank / UNESCO", "Yes"])
     # Row 8: Reserved (was PPP Factor — removed)
@@ -411,10 +412,10 @@ def build_assumptions_sheet(template_id: str, scaling: dict, data: dict,
 
     # Formulas for calculated cells
     formulas = {
-        f"B{AM['ppp_factor']}":       f"=MIN(1,B{AM['gdp_per_capita']}/30000)",
-        f"B{AM['student_target']}":    f"=MAX(5000,B{AM['school_age_pop']}*0.01*B{AM['demand_factor']})",
+        f"B{AM['ppp_factor']}": f"=MIN(1,B{AM['gdp_per_capita']}/30000)",
+        f"B{AM['student_target']}": f"=MAX(5000,B{AM['school_age_pop']}*0.01*B{AM['demand_factor']})",
         f"B{AM['per_student_budget']}": f"=MAX(5000,MIN(30000,B{AM['avg_tuition']}*0.8))",
-        f"B{AM['upfront_ip_fee']}":    f"=B{AM['student_target']}*B{AM['per_student_budget']}*0.30+25000000",
+        f"B{AM['upfront_ip_fee']}": f"=B{AM['student_target']}*B{AM['per_student_budget']}*0.30+25000000",
     }
 
     # --- IB Color Coding ---
@@ -627,7 +628,6 @@ def build_student_rollout_sheet(template_id: str) -> dict:
 
 def build_pnl_sheet(template_id: str, data: dict) -> dict:
     """Build P&L sheet with all formulas referencing Assumptions + Student Rollout."""
-    AM = ASSUMPTIONS_MAP
     SR = "'Student Rollout'"  # sheet ref prefix
 
     rows: list[list] = []
@@ -679,8 +679,8 @@ def build_pnl_sheet(template_id: str, data: dict) -> dict:
             formulas[f"{c}5"] = f"={c}3+{c}4"
             total_cells.append(f"{c}5")
 
-            formulas[f"{c}8"]  = f"={c}3*CostPctPersonnel"
-            formulas[f"{c}9"]  = f"={c}3*CostPctTimeback"
+            formulas[f"{c}8"] = f"={c}3*CostPctPersonnel"
+            formulas[f"{c}9"] = f"={c}3*CostPctTimeback"
             formulas[f"{c}10"] = f"={c}3*CostPctRealEstate"
             formulas[f"{c}11"] = f"={c}3*CostPctCurriculum"
             formulas[f"{c}12"] = f"={c}3*CostPctPrograms"
@@ -792,7 +792,7 @@ def build_pnl_sheet(template_id: str, data: dict) -> dict:
         rows.append(["Timeback License Fee (to Alpha)"] + [None] * 11)    # 9
         rows.append(["Real Estate — own expense"] + [None] * 11)          # 10
         rows.append(["Curriculum Delivery — own expense"] + [None] * 11)  # 11
-        rows.append(["Specialized Programs — own expense"] + [None] * 11) # 12
+        rows.append(["Specialized Programs — own expense"] + [None] * 11)  # 12
         rows.append(["Annual Support & Maintenance (to Alpha)"] + [None] * 11)  # 13
         rows.append(["Admin, Marketing, G&A"] + [None] * 11)              # 14
         rows.append(["Total Operating Costs"] + [None] * 11)              # 15
@@ -811,8 +811,8 @@ def build_pnl_sheet(template_id: str, data: dict) -> dict:
             formulas[f"{c}5"] = f"={c}3+{c}4"
             total_cells.append(f"{c}5")
 
-            formulas[f"{c}8"]  = f"={c}3*CostPctPersonnel"
-            formulas[f"{c}9"]  = f"={eff}*PerStudentBudget*TimebackPct"
+            formulas[f"{c}8"] = f"={c}3*CostPctPersonnel"
+            formulas[f"{c}9"] = f"={eff}*PerStudentBudget*TimebackPct"
             green_cells.append(f"{c}9")
             formulas[f"{c}10"] = f"={c}3*CostPctRealEstate"
             formulas[f"{c}11"] = f"={c}3*CostPctCurriculum"
@@ -862,15 +862,15 @@ def build_pnl_sheet(template_id: str, data: dict) -> dict:
 
             # Costs — lighter than JV
             if y == 0:
-                formulas[f"{c}9"]  = "=150000"
+                formulas[f"{c}9"] = "=150000"
                 formulas[f"{c}10"] = "=200000"
                 formulas[f"{c}11"] = "=300000"
             elif y == 1:
-                formulas[f"{c}9"]  = "=75000"
+                formulas[f"{c}9"] = "=75000"
                 formulas[f"{c}10"] = "=25000"
                 formulas[f"{c}11"] = "=200000"
             else:
-                formulas[f"{c}9"]  = "=75000"
+                formulas[f"{c}9"] = "=75000"
                 formulas[f"{c}10"] = "=25000"
                 formulas[f"{c}11"] = "=100000"
 
@@ -1035,8 +1035,8 @@ def build_capital_deployment_sheet(template_id: str) -> dict:
         rows.append(["IP Development & Localization"] + [None] * 11)  # 2
         rows.append(["Management Fee Prepayment"] + [None] * 11)      # 3
         rows.append(["Launch Capital"] + [None] * 11)                  # 4
-        rows.append(["RE Buildout (via dev partners)"] + [None] * 11) # 5
-        rows.append(["Scholarship / Backstop Funding"] + [None] * 11) # 6
+        rows.append(["RE Buildout (via dev partners)"] + [None] * 11)  # 5
+        rows.append(["Scholarship / Backstop Funding"] + [None] * 11)  # 6
         rows.append([])                                                 # 7
         rows.append(["Total Capital per Year"] + [None] * 11)         # 8
         rows.append(["Cumulative Capital Deployed"] + [None] * 11)    # 9
@@ -1237,7 +1237,7 @@ def build_returns_sheet(template_id: str) -> dict:
     rows.append([])                                      # 8
     rows.append(["Total Capital Invested", None])        # 9
     rows.append(["MOIC (Multiple on Invested Capital)", None])  # 10
-    rows.append(["IRR (Internal Rate of Return)", None]) # 11
+    rows.append(["IRR (Internal Rate of Return)", None])  # 11
     rows.append(["NPV", None])                           # 12
     rows.append([])                                      # 13
     rows.append(["VALUATION PARAMETERS", None])          # 14
@@ -1324,7 +1324,6 @@ def build_sensitivity_sheet(template_id: str, scaling: dict) -> dict:
     Uses direct formulas (not Excel DATA TABLEs) for portability.
     """
     PNL = "'P&L Projection'"
-    CF = "'Cash Flow'"
 
     if template_id in ("jv-counterparty", "lic-counterparty", "lic-alpha"):
         ebitda_pnl_row = 17
@@ -1398,7 +1397,7 @@ def build_sensitivity_sheet(template_id: str, scaling: dict) -> dict:
     if template_id.startswith("lic"):
         next_r = len(rows) + 1
         rows.append(["Timeback License %", None, None, None, None, None,
-                      "COGS (licensee) / Revenue (Alpha)"])
+                     "COGS (licensee) / Revenue (Alpha)"])
         formulas[f"B{next_r}"] = "=TimebackPct"
         green_cells.append(f"B{next_r}")
         formulas[f"C{next_r}"] = "=TimebackPct-0.05"
@@ -1408,7 +1407,7 @@ def build_sensitivity_sheet(template_id: str, scaling: dict) -> dict:
 
         next_r2 = len(rows) + 1
         rows.append(["Annual Support Fee", None, None, None, None, None,
-                      "COGS (licensee) / Revenue (Alpha)"])
+                     "COGS (licensee) / Revenue (Alpha)"])
         formulas[f"B{next_r2}"] = "=AnnualSupport"
         green_cells.append(f"B{next_r2}")
         formulas[f"C{next_r2}"] = "=AnnualSupport*0.75"
@@ -1439,11 +1438,11 @@ def build_sensitivity_sheet(template_id: str, scaling: dict) -> dict:
         "cell_formats": cell_formats,
         "freeze_panes": "A2",
         "number_formats": [
-            {"cells": [f"B3", "C3", "D3", "E3", "F3"], "format": CURRENCY_FMT},
-            {"cells": [f"B4", "C4", "D4", "E4", "F4"], "format": NUMBER_FMT},
-            {"cells": [f"B5", "C5", "D5", "E5", "F5",
-                        f"B7", "C7", "D7", "E7", "F7"], "format": PCT_FMT},
-            {"cells": [f"B6", "C6", "D6", "E6", "F6"], "format": RATIO_FMT},
+            {"cells": ["B3", "C3", "D3", "E3", "F3"], "format": CURRENCY_FMT},
+            {"cells": ["B4", "C4", "D4", "E4", "F4"], "format": NUMBER_FMT},
+            {"cells": ["B5", "C5", "D5", "E5", "F5",
+                       "B7", "C7", "D7", "E7", "F7"], "format": PCT_FMT},
+            {"cells": ["B6", "C6", "D6", "E6", "F6"], "format": RATIO_FMT},
         ],
         "conditional_formatting": [
             {
@@ -1480,11 +1479,11 @@ def build_us_state_model(data: dict) -> list[dict]:
     enrollment_micro[1] = 100
     enrollment_virtual[1] = 500
     for y in range(2, 6):
-        enrollment_micro[y] = int(enrollment_micro[y-1] * 2.5)
-        enrollment_virtual[y] = int(enrollment_virtual[y-1] * 2.0)
+        enrollment_micro[y] = int(enrollment_micro[y - 1] * 2.5)
+        enrollment_virtual[y] = int(enrollment_virtual[y - 1] * 2.0)
     for y in range(6, 11):
-        enrollment_micro[y] = int(enrollment_micro[y-1] * 1.10)
-        enrollment_virtual[y] = int(enrollment_virtual[y-1] * 1.10)
+        enrollment_micro[y] = int(enrollment_micro[y - 1] * 1.10)
+        enrollment_virtual[y] = int(enrollment_virtual[y - 1] * 1.10)
 
     fill_rates = compute_fill_rate_defaults()
     sheets = []
@@ -1570,26 +1569,26 @@ def build_us_state_model(data: dict) -> list[dict]:
 
     # --- US P&L ---
     pnl_rows = [[""] + YEAR_LABELS]  # 1
-    pnl_rows.append(["REVENUE"] + [None]*11)  # 2
-    pnl_rows.append(["Micro School Tuition"] + [None]*11)  # 3
-    pnl_rows.append(["Virtual Tuition"] + [None]*11)  # 4
-    pnl_rows.append(["Total Tuition Revenue"] + [None]*11)  # 5
-    pnl_rows.append(["Ancillary Revenue"] + [None]*11)  # 6
-    pnl_rows.append(["Total Revenue"] + [None]*11)  # 7
+    pnl_rows.append(["REVENUE"] + [None] * 11)  # 2
+    pnl_rows.append(["Micro School Tuition"] + [None] * 11)  # 3
+    pnl_rows.append(["Virtual Tuition"] + [None] * 11)  # 4
+    pnl_rows.append(["Total Tuition Revenue"] + [None] * 11)  # 5
+    pnl_rows.append(["Ancillary Revenue"] + [None] * 11)  # 6
+    pnl_rows.append(["Total Revenue"] + [None] * 11)  # 7
     pnl_rows.append([])  # 8
-    pnl_rows.append(["COGS"] + [None]*11)  # 9
-    pnl_rows.append(["Personnel (Guides)"] + [None]*11)  # 10
-    pnl_rows.append(["Timeback Platform (Internal COGS)"] + [None]*11)  # 11
-    pnl_rows.append(["Real Estate"] + [None]*11)  # 12
-    pnl_rows.append(["Curriculum Delivery"] + [None]*11)  # 13
-    pnl_rows.append(["Programs & Life Skills"] + [None]*11)  # 14
+    pnl_rows.append(["COGS"] + [None] * 11)  # 9
+    pnl_rows.append(["Personnel (Guides)"] + [None] * 11)  # 10
+    pnl_rows.append(["Timeback Platform (Internal COGS)"] + [None] * 11)  # 11
+    pnl_rows.append(["Real Estate"] + [None] * 11)  # 12
+    pnl_rows.append(["Curriculum Delivery"] + [None] * 11)  # 13
+    pnl_rows.append(["Programs & Life Skills"] + [None] * 11)  # 14
     pnl_rows.append([])  # 15
-    pnl_rows.append(["OPEX"] + [None]*11)  # 16
-    pnl_rows.append(["Admin, Marketing, G&A"] + [None]*11)  # 17
+    pnl_rows.append(["OPEX"] + [None] * 11)  # 16
+    pnl_rows.append(["Admin, Marketing, G&A"] + [None] * 11)  # 17
     pnl_rows.append([])  # 18
-    pnl_rows.append(["Total Costs"] + [None]*11)  # 19
-    pnl_rows.append(["EBITDA"] + [None]*11)  # 20
-    pnl_rows.append(["EBITDA Margin"] + [None]*11)  # 21
+    pnl_rows.append(["Total Costs"] + [None] * 11)  # 19
+    pnl_rows.append(["EBITDA"] + [None] * 11)  # 20
+    pnl_rows.append(["EBITDA Margin"] + [None] * 11)  # 21
 
     pnl_formulas = {}
     pnl_green = []
@@ -1642,15 +1641,15 @@ def build_us_state_model(data: dict) -> list[dict]:
 
     # --- US Student Rollout ---
     sr_rows = [[""] + YEAR_LABELS]  # 1
-    sr_rows.append(["Micro School Students"] + [None]*11)  # 2
-    sr_rows.append(["Virtual Students"] + [None]*11)  # 3
-    sr_rows.append(["Total Enrollment"] + [None]*11)  # 4
-    sr_rows.append(["Fill Rate"] + [None]*11)  # 5
-    sr_rows.append(["Effective Micro"] + [None]*11)  # 6
-    sr_rows.append(["Effective Virtual"] + [None]*11)  # 7
-    sr_rows.append(["Effective Total"] + [None]*11)  # 8
+    sr_rows.append(["Micro School Students"] + [None] * 11)  # 2
+    sr_rows.append(["Virtual Students"] + [None] * 11)  # 3
+    sr_rows.append(["Total Enrollment"] + [None] * 11)  # 4
+    sr_rows.append(["Fill Rate"] + [None] * 11)  # 5
+    sr_rows.append(["Effective Micro"] + [None] * 11)  # 6
+    sr_rows.append(["Effective Virtual"] + [None] * 11)  # 7
+    sr_rows.append(["Effective Total"] + [None] * 11)  # 8
     sr_rows.append([])  # 9
-    sr_rows.append(["Micro Schools Open"] + [None]*11)  # 10
+    sr_rows.append(["Micro Schools Open"] + [None] * 11)  # 10
 
     sr_formulas = {}
     sr_green = []
@@ -1753,12 +1752,12 @@ def build_us_state_model(data: dict) -> list[dict]:
 
     # --- US Capital Deployment ---
     cap_rows = [[""] + YEAR_LABELS]  # 1
-    cap_rows.append(["Micro School Buildout"] + [None]*11)  # 2
-    cap_rows.append(["Marketing / CAC Budget"] + [None]*11)  # 3
-    cap_rows.append(["Working Capital"] + [None]*11)  # 4
+    cap_rows.append(["Micro School Buildout"] + [None] * 11)  # 2
+    cap_rows.append(["Marketing / CAC Budget"] + [None] * 11)  # 3
+    cap_rows.append(["Working Capital"] + [None] * 11)  # 4
     cap_rows.append([])  # 5
-    cap_rows.append(["Total Capital per Year"] + [None]*11)  # 6
-    cap_rows.append(["Cumulative Capital"] + [None]*11)  # 7
+    cap_rows.append(["Total Capital per Year"] + [None] * 11)  # 6
+    cap_rows.append(["Cumulative Capital"] + [None] * 11)  # 7
 
     cap_formulas = {}
     cap_green = []
@@ -1795,12 +1794,12 @@ def build_us_state_model(data: dict) -> list[dict]:
 
     # --- US Cash Flow ---
     cf_rows = [[""] + YEAR_LABELS]  # 1
-    cf_rows.append(["EBITDA"] + [None]*11)  # 2
-    cf_rows.append(["Capital Expenditures"] + [None]*11)  # 3
-    cf_rows.append(["Free Cash Flow"] + [None]*11)  # 4
+    cf_rows.append(["EBITDA"] + [None] * 11)  # 2
+    cf_rows.append(["Capital Expenditures"] + [None] * 11)  # 3
+    cf_rows.append(["Free Cash Flow"] + [None] * 11)  # 4
     cf_rows.append([])  # 5
-    cf_rows.append(["Cumulative Cash Flow"] + [None]*11)  # 6
-    cf_rows.append(["Payback Period", None] + [None]*10)  # 7
+    cf_rows.append(["Cumulative Cash Flow"] + [None] * 11)  # 6
+    cf_rows.append(["Payback Period", None] + [None] * 10)  # 7
 
     cf_formulas = {}
     cf_green = []
@@ -1887,7 +1886,7 @@ def build_us_state_model(data: dict) -> list[dict]:
     sens_formulas = {
         "B2": "='Assumptions'!$B$11",
         "C2": "=B2*0.8", "D2": "=B2*1.2",
-        "B3": f"='Assumptions'!G34+'Assumptions'!G35",  # Y5 total
+        "B3": "='Assumptions'!G34+'Assumptions'!G35",  # Y5 total
         "C3": "=B3*0.7", "D3": "=B3*1.3",
         "B4": "='Assumptions'!$B$5",
         "C4": "=B4*0.8", "D4": "=B4*1.2",
@@ -1926,7 +1925,7 @@ def build_us_state_model(data: dict) -> list[dict]:
 
 def build_model(data: dict, template_id: str, premium_schools: bool = False) -> dict:
     """Build a complete spreadsheet spec for one template."""
-    target_name = data.get("target", {}).get("name", "unknown").replace(" ", "_").lower()
+    data.get("target", {}).get("name", "unknown").replace(" ", "_").lower()
 
     if template_id == "us-state":
         sheets = build_us_state_model(data)
@@ -1979,7 +1978,15 @@ def build_model(data: dict, template_id: str, premium_schools: bool = False) -> 
 
     return {
         "metadata": {
-            "title": f"Financial Model — {data.get('target', {}).get('name', 'Country')} — {perspective_labels.get(template_id, template_id)}",
+            "title": f"Financial Model — {
+                data.get(
+                    'target',
+                    {}).get(
+                    'name',
+                    'Country')} — {
+                        perspective_labels.get(
+                            template_id,
+                            template_id)}",
             "creator": "EduPitch / Alpha Holdings",
             "description": f"Unified model {template_id} financial model (formula-driven)",
         },
@@ -2038,7 +2045,7 @@ def main():
             rows = len(s.get("data", []))
             formulas_count = len(s.get("formulas", {}))
             cell_fmts = sum(len(cf.get("cells", [])) + len(cf.get("ranges", []))
-                           for cf in s.get("cell_formats", []))
+                            for cf in s.get("cell_formats", []))
             print(f"    - {s['name']}: {rows} rows, {formulas_count} formulas, {cell_fmts} styled cells")
 
     print(f"\nDone. {len(template_ids)} spec(s) written to {output_dir}/")

@@ -25,7 +25,6 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from models.schemas import (
     CountryProfile, TargetInfo, TargetType,
     Demographics, Economy, EducationData, Regulatory, PoliticalContext,
-    CompetitiveLandscape, USStateESA,
 )
 from services.llm import call_llm, call_llm_plain
 from services.perplexity import research_country, research_education, research_us_state
@@ -202,7 +201,8 @@ RULES:
 - Maximum ~500 words total
 """
 
-REPORT_REVISION_PROMPT = HEAD_OF_STATE_PREAMBLE + """You are revising a country/education briefing based on user feedback.
+REPORT_REVISION_PROMPT = HEAD_OF_STATE_PREAMBLE + \
+    """You are revising a country/education briefing based on user feedback.
 
 Here is the original report:
 
@@ -319,7 +319,8 @@ async def run_country_research(
                 profile.education.avg_public_spend_per_student = ss_data["per_pupil_spending"]
             if not profile.education.student_teacher_ratio and ss_data.get("student_teacher_ratio"):
                 profile.education.student_teacher_ratio = ss_data["student_teacher_ratio"]
-            if not profile.education.teacher_count and ss_data.get("k12_enrollment") and ss_data.get("student_teacher_ratio"):
+            if not profile.education.teacher_count and ss_data.get(
+                    "k12_enrollment") and ss_data.get("student_teacher_ratio"):
                 profile.education.teacher_count = round(
                     ss_data["k12_enrollment"] / ss_data["student_teacher_ratio"]
                 )
@@ -344,16 +345,24 @@ async def run_country_research(
                 f"- NAEP 8th grade math proficient: {ss_data.get('naep_8th_math_proficient_pct', 'N/A')}%\n"
             )
         if national:
+            nat_pp = national.get('per_pupil_spending', {})
+            nat_ts = national.get('teacher_salary', {})
+            nat_sf = national.get('staffing', {})
+            nat_en = national.get('enrollment', {})
+            nat_eb = national.get('employee_benefits', {})
+            nat_so = national.get('student_outcomes', {})
             spending_spotlight_context += (
                 f"\n**National Benchmarks (Spending Spotlight 2025):**\n"
-                f"- National avg per-pupil spending: ${national.get('per_pupil_spending', {}).get('national_average_2023', 20322):,}\n"
-                f"- Per-pupil spending rose {national.get('per_pupil_spending', {}).get('change_pct', 35.8)}% (2002-2023)\n"
-                f"- Avg teacher salary (national): ${national.get('teacher_salary', {}).get('avg_2022', 70548):,}\n"
-                f"- Teacher salary change: {national.get('teacher_salary', {}).get('change_pct', -6.1)}% (2002-2022)\n"
-                f"- Non-teaching staff growth: {national.get('staffing', {}).get('non_teaching_staff_growth_pct', 22.8)}% vs {national.get('enrollment', {}).get('change_2002_2023_pct', 4.1)}% enrollment growth\n"
-                f"- Benefit spending per pupil rose {national.get('employee_benefits', {}).get('change_pct', 81.1)}% (2002-2023)\n"
-                f"- {national.get('enrollment', {}).get('states_with_decline_2020_2023', 39)} states saw enrollment decline (2020-2023)\n"
-                f"- ~{national.get('student_outcomes', {}).get('naep_4th_grade_reading_below_basic_pct', 40)}% of 4th graders below basic reading level (NAEP)\n"
+                f"- National avg per-pupil spending: ${nat_pp.get('national_average_2023', 20322):,}\n"
+                f"- Per-pupil spending rose {nat_pp.get('change_pct', 35.8)}% (2002-2023)\n"
+                f"- Avg teacher salary (national): ${nat_ts.get('avg_2022', 70548):,}\n"
+                f"- Teacher salary change: {nat_ts.get('change_pct', -6.1)}% (2002-2022)\n"
+                f"- Non-teaching staff growth: {nat_sf.get('non_teaching_staff_growth_pct', 22.8)}%"
+                f" vs {nat_en.get('change_2002_2023_pct', 4.1)}% enrollment growth\n"
+                f"- Benefit spending per pupil rose {nat_eb.get('change_pct', 81.1)}% (2002-2023)\n"
+                f"- {nat_en.get('states_with_decline_2020_2023', 39)} states saw enrollment decline (2020-2023)\n"
+                f"- ~{nat_so.get('naep_4th_grade_reading_below_basic_pct', 40)}%"
+                f" of 4th graders below basic reading level (NAEP)\n"
             )
         if alpha_insights:
             disconnect = alpha_insights.get("spending_vs_outcomes_disconnect", {})

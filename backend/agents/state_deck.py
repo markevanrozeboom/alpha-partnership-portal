@@ -12,7 +12,6 @@ Adapted from the Oklahoma deck used for Gov Stitt.
 from __future__ import annotations
 
 import logging
-import os
 
 from models.schemas import (
     CountryProfile, EducationAnalysis, Strategy,
@@ -20,7 +19,6 @@ from models.schemas import (
 )
 from services.llm import call_llm_plain
 from services.gamma import generate_and_wait, _extract_gamma_url, _extract_export_url
-from config import OUTPUT_DIR
 from config.rules_loader import (
     get_esa_data,
     get_state_spending_data,
@@ -49,6 +47,9 @@ PRICING = {
     "mark_rober_science": 2_000,    # $/student/year for 1-hr block
     "timeback_pct": 20,             # % of per-pupil funding
 }
+
+# Fallback national average per-pupil spending (Reason Foundation Spending Spotlight 2025)
+NATIONAL_AVG_PER_PUPIL_FALLBACK = 20_322
 
 
 # ---------------------------------------------------------------------------
@@ -91,11 +92,15 @@ def _build_gamma_input(
     timeback_cost: int,
     esa_data: dict | None,
     llm_content: str,
+    ss_data: dict | None = None,
+    national_avg_per_pupil: float = NATIONAL_AVG_PER_PUPIL_FALLBACK,
 ) -> str:
     """Build the Gamma inputText with slide separators (\\n---\\n).
 
     Each section between separators becomes one slide/card in Gamma.
     """
+    if ss_data is None:
+        ss_data = {}
     slides: list[str] = []
 
     # --- Slide 1: Title ---
@@ -182,7 +187,7 @@ def _build_gamma_input(
         f"{state} spends ${per_pupil:,.0f}/student (national avg: ${national_avg_per_pupil:,.0f}).\n"
         f"Here's what Alpha costs:\n\n"
         f"- Intervention & Mark Rober Science: $2,000/student/year (outcomes-based)\n"
-        f"  - {round(2000/per_pupil*100)}% of current per-pupil spend for transformational outcomes\n"
+        f"  - {round(2000 / per_pupil * 100)}% of current per-pupil spend for transformational outcomes\n"
         f"- Full School Transformation: ~${timeback_cost:,}/student (20% of per-pupil)\n"
         f"  - Remaining 80% (${per_pupil - timeback_cost:,.0f}) covers guides, life skills, facility, ops\n"
         f"  - Same total budget. World-class outcomes."
@@ -290,7 +295,9 @@ async def generate_state_deck(
         or 500_000
     )
     timeback_cost = round(per_pupil * PRICING["timeback_pct"] / 100)
-    national_avg_per_pupil = national_trends.get("per_pupil_spending", {}).get("national_average_2023", 20322)
+    national_avg_per_pupil = national_trends.get(
+        "per_pupil_spending", {}
+    ).get("national_average_2023", NATIONAL_AVG_PER_PUPIL_FALLBACK)
 
     # Build state data context for LLM
     state_data_parts = []
@@ -331,18 +338,20 @@ async def generate_state_deck(
         state_data_parts.append(f"ESA program: {esa_data.get('program_name', 'Yes')}")
         state_data_parts.append(f"ESA amount: ${esa_data.get('esa_amount', 'N/A')}/student")
     # Add national context from Spending Spotlight
-    state_data_parts.append(f"\n--- National Context (Spending Spotlight 2025) ---")
-    state_data_parts.append(f"Per-pupil spending rose 35.8% nationally (2002-2023) yet outcomes stagnated")
-    state_data_parts.append(f"Avg teacher salary fell 6.1% despite increased spending")
-    state_data_parts.append(f"Non-teaching staff grew 22.8% vs 4.1% enrollment growth")
-    state_data_parts.append(f"Benefit spending per pupil rose 81.1% (pension debt)")
-    state_data_parts.append(f"~40% of 4th graders below basic reading level (NAEP)")
+    state_data_parts.append("\n--- National Context (Spending Spotlight 2025) ---")
+    state_data_parts.append("Per-pupil spending rose 35.8% nationally (2002-2023) yet outcomes stagnated")
+    state_data_parts.append("Avg teacher salary fell 6.1% despite increased spending")
+    state_data_parts.append("Non-teaching staff grew 22.8% vs 4.1% enrollment growth")
+    state_data_parts.append("Benefit spending per pupil rose 81.1% (pension debt)")
+    state_data_parts.append("~40% of 4th graders below basic reading level (NAEP)")
 
     education_parts = []
     if education_analysis.system_diagnosis.primary_pain_points:
-        education_parts.append("Pain points: " + "; ".join(education_analysis.system_diagnosis.primary_pain_points[:5]))
+        pain_pts = "; ".join(education_analysis.system_diagnosis.primary_pain_points[:5])
+        education_parts.append("Pain points: " + pain_pts)
     if education_analysis.system_diagnosis.government_pain_points:
-        education_parts.append("Gov pain points: " + "; ".join(education_analysis.system_diagnosis.government_pain_points[:5]))
+        education_parts.append("Gov pain points: " +
+                               "; ".join(education_analysis.system_diagnosis.government_pain_points[:5]))
 
     strategy_parts = []
     if strategy.key_asks:
@@ -363,6 +372,7 @@ async def generate_state_deck(
     # Build the Gamma input text
     input_text = _build_gamma_input(
         state, per_pupil, k12_students, timeback_cost, esa_data, llm_content,
+        ss_data=ss_data, national_avg_per_pupil=national_avg_per_pupil,
     )
 
     # Generate via Gamma API

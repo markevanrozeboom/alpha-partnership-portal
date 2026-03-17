@@ -19,8 +19,8 @@ from docx.shared import Pt as DocxPt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from models.schemas import (
-    EducationAnalysis, SystemDiagnosis, ReformLandscape, TwoHrLearningFit,
-    EntryMode, CountryProfile, TargetType,
+    EducationAnalysis, SystemDiagnosis, TwoHrLearningFit, EntryMode,
+    CountryProfile,
 )
 from services.llm import call_llm, call_llm_plain
 from config import OUTPUT_DIR
@@ -141,7 +141,11 @@ async def run_education_research(
     # --- Structured analysis (single call) ---
     try:
         analysis: EducationAnalysis = await call_llm(
-            system_prompt=HEAD_OF_STATE_PREAMBLE + "\nExtract structured education analysis from the country data. Focus on system diagnosis, reform landscape, and Alpha model fit.",
+            system_prompt=(
+                HEAD_OF_STATE_PREAMBLE
+                + "\nExtract structured education analysis from the country data. "
+                "Focus on system diagnosis, reform landscape, and Alpha model fit."
+            ),
             user_prompt=f"Context:\n{data_context}",
             output_schema=EducationAnalysis,
         )

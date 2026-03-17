@@ -70,7 +70,6 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Clean up background tasks on app shutdown."""
-    global _spotlight_refresh_task
     if _spotlight_refresh_task and not _spotlight_refresh_task.done():
         _spotlight_refresh_task.cancel()
         logger.info("Spending Spotlight background refresh task cancelled")

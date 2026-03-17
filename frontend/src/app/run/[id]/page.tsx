@@ -115,9 +115,12 @@ export default function RunPage() {
 
   // Start polling on mount
   useEffect(() => {
-    fetchStatus();
+    const initialTimer = setTimeout(fetchStatus, 0);
     pollRef.current = setInterval(fetchStatus, 3000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      clearTimeout(initialTimer);
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [fetchStatus]);
 
   // Stop polling at review gates, completed, or error

@@ -22,7 +22,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 
 from models.schemas import (
     CountryProfile, EducationAnalysis, Strategy,
-    FinancialModel, FinancialAssumptions, FinancialAssumption, TargetType,
+    FinancialModel, FinancialAssumptions, FinancialAssumption,
 )
 from services.llm import call_llm_plain
 from config import OUTPUT_DIR
@@ -188,7 +188,10 @@ def generate_term_sheet_assumptions(
             value=0,
             min_val=0, max_val=0, step=1,
             unit="%", category="deal",
-            description="Alpha owns 0% equity — operates as exclusive Operator & Licensor (Marriott model). Non-negotiable.",
+            description=(
+                "Alpha owns 0% equity — operates as exclusive Operator & Licensor "
+                "(Marriott model). Non-negotiable."
+            ),
             locked=True,
         ),
         FinancialAssumption(
@@ -231,13 +234,21 @@ def generate_term_sheet_assumptions(
             value=250,
             min_val=250, max_val=250, step=1,
             unit="$M", category="fees",
-            description="R&D for country-specific life skills curriculum (AsasCore equivalent). FIXED $250M — does not scale.",
+            description=(
+                "R&D for country-specific life skills curriculum (AsasCore equivalent). "
+                "FIXED $250M — does not scale."
+            ),
             locked=True,
         ),
         FinancialAssumption(
             key="ts_upfront_mgmt_fee",
             label="Upfront Management Fee ($M)",
-            value=round(financial_model.upfront_mgmt_fee / 1_000_000) if financial_model.upfront_mgmt_fee > 1_000_000 else max(1, round(financial_model.upfront_mgmt_fee)),
+            value=round(
+                financial_model.upfront_mgmt_fee /
+                1_000_000) if financial_model.upfront_mgmt_fee > 1_000_000 else max(
+                1,
+                round(
+                    financial_model.upfront_mgmt_fee)),
             min_val=1, max_val=500, step=5,
             unit="$M", category="fees",
             description="Target Students Y5 × Per-Student Budget × 10%",
@@ -245,7 +256,12 @@ def generate_term_sheet_assumptions(
         FinancialAssumption(
             key="ts_upfront_timeback_fee",
             label="Upfront Timeback Fee ($M)",
-            value=round(financial_model.upfront_timeback_fee / 1_000_000) if financial_model.upfront_timeback_fee > 1_000_000 else max(1, round(financial_model.upfront_timeback_fee)),
+            value=round(
+                financial_model.upfront_timeback_fee /
+                1_000_000) if financial_model.upfront_timeback_fee > 1_000_000 else max(
+                1,
+                round(
+                    financial_model.upfront_timeback_fee)),
             min_val=1, max_val=1000, step=5,
             unit="$M", category="fees",
             description="Target Students Y5 × Per-Student Budget × 20%",
@@ -264,7 +280,10 @@ def generate_term_sheet_assumptions(
             value=mgmt_pct,
             min_val=5, max_val=20, step=1,
             unit="%", category="fees",
-            description="Alpha's ongoing management fee. 10% floor is non-negotiable. ⚠️ Changes recalculate financial model.",
+            description=(
+                "Alpha's ongoing management fee. 10% floor is non-negotiable. "
+                "⚠️ Changes recalculate financial model."
+            ),
             locked=True,
         ),
         FinancialAssumption(
@@ -273,7 +292,10 @@ def generate_term_sheet_assumptions(
             value=timeback_pct,
             min_val=10, max_val=30, step=1,
             unit="%", category="fees",
-            description="Alpha's technology/IP licensing fee. 20% floor is non-negotiable. ⚠️ Changes recalculate financial model.",
+            description=(
+                "Alpha's technology/IP licensing fee. 20% floor is non-negotiable. "
+                "⚠️ Changes recalculate financial model."
+            ),
             locked=True,
         ),
         FinancialAssumption(
@@ -323,7 +345,10 @@ def generate_term_sheet_assumptions(
             value=100_000,
             min_val=40_000, max_val=100_000, step=5_000,
             unit="$", category="school_portfolio",
-            description="Annual tuition for flagship Alpha schools (Prong 1). Range: $40K-$100K, set using AGI of top 20% families.",
+            description=(
+                "Annual tuition for flagship Alpha schools (Prong 1). "
+                "Range: $40K-$100K, set using AGI of top 20% families."
+            ),
         ),
         FinancialAssumption(
             key="ts_min_student_year_commit",
@@ -426,7 +451,8 @@ ABSOLUTE RULES:
 10. Every artifact must be suitable for immediate external presentation without editing
 """
 
-TERM_SHEET_PROMPT = HEAD_OF_STATE_PREAMBLE + """You are a senior M&A lawyer at Sullivan & Cromwell drafting a non-binding
+TERM_SHEET_PROMPT = HEAD_OF_STATE_PREAMBLE + (
+    """You are a senior M&A lawyer at Sullivan & Cromwell drafting a non-binding
 indicative term sheet for a strategic education partnership between 2hr Learning (Alpha Holdings)
 and {target}.
 
@@ -548,8 +574,10 @@ Every term should be SPECIFIC — no placeholder ranges, commit to the exact num
 
 ---
 
-*This Indicative Term Sheet is for discussion purposes only and does not constitute a binding offer or commitment. All terms are subject to final negotiation and execution of definitive agreements.*
+*This Indicative Term Sheet is for discussion purposes only and does not constitute a binding offer
+or commitment. All terms are subject to final negotiation and execution of definitive agreements.*
 """
+)
 
 
 async def generate_term_sheet(
@@ -594,16 +622,39 @@ async def generate_term_sheet(
     exclusivity_years = int(ts.get("ts_exclusivity_years", 25))
     upfront_ip = ts.get("ts_upfront_ip_fee", round(financial_model.upfront_ip_fee / 1_000_000))
     # Upfront breakdown ($M values)
-    upfront_alphacore = ts.get("ts_upfront_alphacore_license", round(financial_model.upfront_alphacore_license / 1_000_000) if financial_model.upfront_alphacore_license > 0 else 250)
-    upfront_app_rd = ts.get("ts_upfront_app_content_rd", round(financial_model.upfront_app_content_rd / 1_000_000) if financial_model.upfront_app_content_rd > 0 else 250)
-    upfront_lifeskills_rd = ts.get("ts_upfront_lifeskills_rd", round(financial_model.upfront_lifeskills_rd / 1_000_000) if financial_model.upfront_lifeskills_rd > 0 else 250)
-    upfront_mgmt = ts.get("ts_upfront_mgmt_fee", round(financial_model.upfront_mgmt_fee / 1_000_000) if financial_model.upfront_mgmt_fee > 0 else 0)
-    upfront_timeback = ts.get("ts_upfront_timeback_fee", round(financial_model.upfront_timeback_fee / 1_000_000) if financial_model.upfront_timeback_fee > 0 else 0)
+    upfront_alphacore = ts.get(
+        "ts_upfront_alphacore_license",
+        round(
+            financial_model.upfront_alphacore_license /
+            1_000_000) if financial_model.upfront_alphacore_license > 0 else 250)
+    upfront_app_rd = ts.get(
+        "ts_upfront_app_content_rd",
+        round(
+            financial_model.upfront_app_content_rd /
+            1_000_000) if financial_model.upfront_app_content_rd > 0 else 250)
+    upfront_lifeskills_rd = ts.get(
+        "ts_upfront_lifeskills_rd",
+        round(
+            financial_model.upfront_lifeskills_rd /
+            1_000_000) if financial_model.upfront_lifeskills_rd > 0 else 250)
+    upfront_mgmt = ts.get(
+        "ts_upfront_mgmt_fee",
+        round(
+            financial_model.upfront_mgmt_fee /
+            1_000_000) if financial_model.upfront_mgmt_fee > 0 else 0)
+    upfront_timeback = ts.get(
+        "ts_upfront_timeback_fee",
+        round(
+            financial_model.upfront_timeback_fee /
+            1_000_000) if financial_model.upfront_timeback_fee > 0 else 0)
     mgmt_pct = int(ts.get("ts_management_fee_pct", round(financial_model.management_fee_pct * 100)))
     timeback_pct = int(ts.get("ts_timeback_license_pct", round(financial_model.timeback_license_pct * 100)))
     prepay_years = int(ts.get("ts_mgmt_fee_prepay_years", 2))
     prepay_amount = ts.get("ts_mgmt_fee_prepay_amount", 10) * 1_000_000
-    students_y5 = int(ts.get("ts_students_year5", financial_model.pnl_projection[-1].students if financial_model.pnl_projection else 100_000))
+    students_y5 = int(ts.get(
+        "ts_students_year5",
+        financial_model.pnl_projection[-1].students if financial_model.pnl_projection else 100_000,
+    ))
     per_student = ts.get("ts_per_student_budget", 25_000)
     num_flagship = int(ts.get("ts_num_flagship_schools", 2))
     flagship_tuition = ts.get("ts_flagship_tuition", 100_000)
@@ -882,7 +933,7 @@ def _add_markdown_table(doc: DocxDocument, table_lines: list[str]) -> None:
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
     # Set column widths — distribute evenly
-    total_width = DocxInches(6.5)
+    DocxInches(6.5)
     col_width = DocxInches(6.5 / num_cols)
 
     for ri, row_data in enumerate(rows):
@@ -905,7 +956,7 @@ def _add_markdown_table(doc: DocxDocument, table_lines: list[str]) -> None:
             if ri == 0:
                 # Dark background for header
                 from docx.oxml.ns import qn
-                shading = p._element.get_or_add_pPr()
+                p._element.get_or_add_pPr()
                 tc = cell._element
                 tc_pr = tc.get_or_add_tcPr()
                 shading_el = tc_pr.makeelement(qn("w:shd"), {

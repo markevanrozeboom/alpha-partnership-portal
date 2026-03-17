@@ -16,7 +16,7 @@ from enum import Enum
 
 import httpx
 
-from config import PERPLEXITY_API_KEY, PERPLEXITY_BASE_URL, PERPLEXITY_MODEL
+from config import PERPLEXITY_API_KEY, PERPLEXITY_BASE_URL
 
 logger = logging.getLogger(__name__)
 

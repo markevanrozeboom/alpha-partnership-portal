@@ -21,7 +21,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from models.schemas import (
     Strategy, CountryProfile, EducationAnalysis,
-    EntryMode, PartnershipType, TargetType,
+    EntryMode, TargetType,
 )
 from services.llm import call_llm, call_llm_plain
 from config import OUTPUT_DIR
