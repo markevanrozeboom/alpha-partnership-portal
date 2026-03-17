@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowRight, Globe, GraduationCap, TrendingUp, Shield, Sparkles } from "lucide-react";
+import { Loader2, ArrowRight, Globe, FileText, Presentation } from "lucide-react";
 import { PerplexityAttribution } from "@/components/PerplexityAttribution";
 
 export default function HomePage() {
@@ -28,18 +28,18 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Hero */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-20">
         <div className="max-w-xl w-full space-y-10 text-center">
-          {/* Logo mark */}
+          {/* Brand mark */}
           <div className="inline-flex items-center gap-2.5 rounded-full bg-primary/10 border border-primary/20 px-5 py-2">
             <div className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
             </div>
             <span className="text-sm font-medium text-primary tracking-wide">
-              2hr Learning
+              Alpha Education
             </span>
           </div>
 
@@ -48,12 +48,11 @@ export default function HomePage() {
               className="text-xl font-semibold tracking-tight leading-tight"
               data-testid="text-hero-title"
             >
-              Partnership Intelligence Portal
+              National Partnership Portal
             </h1>
             <p className="text-muted-foreground max-w-md mx-auto leading-relaxed text-sm">
-              Enter a country or US state. Receive an instant market briefing
-              with key education data, a partnership narrative, and deal
-              economics.
+              Enter a country or US state. Receive a complete Term Sheet and
+              Pitch Deck ready for sovereign presentation.
             </p>
           </div>
 
@@ -66,7 +65,7 @@ export default function HomePage() {
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-                placeholder="e.g. United Arab Emirates, Texas, Rwanda..."
+                placeholder="e.g. United Arab Emirates, Rwanda, Texas..."
                 className="pl-11 pr-4 h-12 text-sm bg-card border-border rounded-md"
                 disabled={loading}
                 data-testid="input-country"
@@ -81,11 +80,11 @@ export default function HomePage() {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Generating...
+                  Generating Documents...
                 </>
               ) : (
                 <>
-                  Generate Briefing
+                  Generate Term Sheet & Pitch Deck
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </>
               )}
@@ -101,10 +100,9 @@ export default function HomePage() {
           {/* Feature pills */}
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             {[
-              { icon: GraduationCap, label: "Education data" },
-              { icon: TrendingUp, label: "Market context" },
-              { icon: Shield, label: "Deal economics" },
-              { icon: Sparkles, label: "AI-powered" },
+              { icon: FileText, label: "Term Sheet" },
+              { icon: Presentation, label: "Pitch Deck" },
+              { icon: Globe, label: "Country-specific" },
             ].map(({ icon: Icon, label }) => (
               <div
                 key={label}
@@ -121,7 +119,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t py-4 px-6 text-center">
         <p className="text-xs text-muted-foreground mb-2">
-          CONFIDENTIAL — 2hr Learning (Alpha) — Partnership Portal
+          CONFIDENTIAL — Alpha Education — National Partnership Portal
         </p>
         <PerplexityAttribution />
       </footer>

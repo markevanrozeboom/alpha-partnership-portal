@@ -1,10 +1,10 @@
-import type { CountryFacts } from "@shared/schema";
+import type { GenerationResult } from "@shared/schema";
 
 export interface RunData {
   id: string;
   target: string;
   status: "pending" | "generating" | "completed" | "error";
-  result: CountryFacts | null;
+  result: GenerationResult | null;
   error: string | null;
   createdAt: Date;
 }

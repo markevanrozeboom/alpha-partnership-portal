@@ -1,40 +1,53 @@
-import { useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Loader2,
-  Users,
-  DollarSign,
-  GraduationCap,
-  Landmark,
-  Lightbulb,
-  Handshake,
-  Building2,
-  TrendingUp,
-  Shield,
-  Briefcase,
+  FileText,
+  Presentation,
+  Download,
   RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 import { PerplexityAttribution } from "@/components/PerplexityAttribution";
-import type { CountryFacts } from "@shared/schema";
+import type { GenerationResult } from "@shared/schema";
 
 interface RunData {
   id: string;
   target: string;
   status: "pending" | "generating" | "completed" | "error";
-  result: CountryFacts | null;
+  result: GenerationResult | null;
   error: string | null;
+}
+
+function downloadHtml(html: string, filename: string) {
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function openInNewTab(html: string) {
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
 }
 
 export default function ResultPage() {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const id = params.id;
+  const [activeTab, setActiveTab] = useState("termsheet");
 
   const { data, isLoading, error } = useQuery<RunData>({
     queryKey: ["/api/runs", id],
@@ -53,11 +66,23 @@ export default function ResultPage() {
   const isGenerating = data?.status === "pending" || data?.status === "generating";
   const isComplete = data?.status === "completed";
   const isError = data?.status === "error";
-  const facts = data?.result;
+  const result = data?.result;
+
+  const handleDownloadTermSheet = useCallback(() => {
+    if (!result) return;
+    const name = result.context.localizedProgramName || result.context.country;
+    downloadHtml(result.termSheetHtml, `${name}-Term-Sheet.html`);
+  }, [result]);
+
+  const handleDownloadPitchDeck = useCallback(() => {
+    if (!result) return;
+    const name = result.context.localizedProgramName || result.context.country;
+    downloadHtml(result.pitchDeckHtml, `${name}-Pitch-Deck.html`);
+  }, [result]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
@@ -65,8 +90,8 @@ export default function ResultPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6">
-        <p className="text-destructive text-sm">Failed to load run data.</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 bg-background">
+        <p className="text-destructive text-sm">Failed to load.</p>
         <Button variant="outline" size="sm" onClick={() => navigate("/")}>
           <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Back
         </Button>
@@ -75,10 +100,10 @@ export default function ResultPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="border-b px-6 py-3">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
+      <header className="border-b px-6 py-3 bg-card">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
@@ -87,16 +112,16 @@ export default function ResultPage() {
             data-testid="button-back"
           >
             <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-            New Search
+            New Country
           </Button>
           <span className="text-xs text-muted-foreground font-medium tracking-wide">
-            2hr Learning
+            Alpha Education — National Partnership Portal
           </span>
         </div>
       </header>
 
-      <main className="flex-1 px-6 py-10">
-        <div className="max-w-3xl mx-auto space-y-8">
+      <main className="flex-1 px-6 py-8">
+        <div className="max-w-5xl mx-auto">
           {/* Generating state */}
           {isGenerating && (
             <div className="flex flex-col items-center justify-center py-24 gap-5" data-testid="status-generating">
@@ -107,8 +132,8 @@ export default function ResultPage() {
                 </div>
               </div>
               <div className="text-center space-y-1.5">
-                <p className="text-sm font-medium">Generating briefing for {data?.target}...</p>
-                <p className="text-xs text-muted-foreground">This typically takes 10-15 seconds</p>
+                <p className="text-sm font-medium">Generating documents for {data?.target}...</p>
+                <p className="text-xs text-muted-foreground">Researching country context and building term sheet & pitch deck</p>
               </div>
             </div>
           )}
@@ -122,7 +147,7 @@ export default function ResultPage() {
               <div className="text-center space-y-2">
                 <p className="text-sm font-medium text-destructive">Generation failed</p>
                 <p className="text-xs text-muted-foreground max-w-sm">
-                  {data?.error || "An unexpected error occurred. Please try again."}
+                  {data?.error || "An unexpected error occurred."}
                 </p>
               </div>
               <Button variant="outline" size="sm" onClick={() => navigate("/")}>
@@ -131,131 +156,102 @@ export default function ResultPage() {
             </div>
           )}
 
-          {/* Results */}
-          {isComplete && facts && (
-            <div className="space-y-8 animate-in fade-in duration-500" data-testid="status-completed">
+          {/* Complete — show documents */}
+          {isComplete && result && (
+            <div className="space-y-6 animate-in fade-in duration-500" data-testid="status-completed">
               {/* Country header */}
-              <div className="text-center space-y-2">
-                <span className="text-4xl" data-testid="text-flag">{facts.flagEmoji}</span>
-                <h1 className="text-xl font-semibold tracking-tight" data-testid="text-country">
-                  {facts.formalName}
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  {facts.headOfStateTitle}: {facts.headOfState}
-                </p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{result.context.flagEmoji}</span>
+                  <div>
+                    <h1 className="text-lg font-semibold tracking-tight" data-testid="text-country">
+                      {result.context.localizedProgramName || result.context.country}
+                    </h1>
+                    <p className="text-xs text-muted-foreground">
+                      {result.context.formalName} — {result.context.headOfStateTitle}: {result.context.headOfState}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadTermSheet}
+                    data-testid="button-download-termsheet"
+                  >
+                    <Download className="h-3.5 w-3.5 mr-1.5" />
+                    Term Sheet
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleDownloadPitchDeck}
+                    data-testid="button-download-pitchdeck"
+                  >
+                    <Download className="h-3.5 w-3.5 mr-1.5" />
+                    Pitch Deck
+                  </Button>
+                </div>
               </div>
 
-              <Separator />
-
-              {/* 5 Key Data Points */}
-              <section className="space-y-4">
-                <h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">
-                  Market Snapshot
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <FactCard
-                    icon={Users}
-                    label="School-Age Population"
-                    value={facts.facts.schoolAgePopulation}
-                  />
-                  <FactCard
-                    icon={DollarSign}
-                    label="GDP per Capita"
-                    value={facts.facts.gdpPerCapita}
-                  />
-                  <FactCard
-                    icon={GraduationCap}
-                    label="Government Education Spend"
-                    value={facts.facts.govEducationSpend}
-                  />
-                  <FactCard
-                    icon={Landmark}
-                    label="National Education Vision"
-                    value={facts.facts.nationalEdVision}
-                  />
-                  <FactCard
-                    icon={Lightbulb}
-                    label="Key Opportunity"
-                    value={facts.facts.keyOpportunity}
-                    className="sm:col-span-2"
-                  />
-                </div>
-              </section>
-
-              <Separator />
-
-              {/* Sales Pitch */}
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">
-                  Partnership Narrative
-                </h2>
-                <Card className="bg-primary/5 border-primary/15">
-                  <CardContent className="p-5">
-                    <div className="flex gap-3">
-                      <Handshake className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                      <p className="text-sm leading-relaxed" data-testid="text-pitch">
-                        {facts.salesPitch}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </section>
-
-              <Separator />
-
-              {/* Fixed Economics */}
-              <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">
-                    Deal Economics
-                  </h2>
-                  <span className="text-[10px] text-muted-foreground bg-muted rounded-full px-2 py-0.5">
-                    Fixed structure
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <EconCard
-                    icon={Building2}
-                    label="Flagship School"
-                    value={facts.economics.flagshipSchoolFee}
-                  />
-                  <EconCard
-                    icon={Shield}
-                    label="National Program"
-                    value={facts.economics.nationalProgramFee}
-                  />
-                  <EconCard
-                    icon={Briefcase}
-                    label="Development Investment"
-                    value={facts.economics.devInvestment}
-                  />
-                  <EconCard
-                    icon={Handshake}
-                    label="Equity Model"
-                    value={facts.economics.equityModel}
-                  />
+              {/* Tabs: Preview */}
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <div className="flex items-center justify-between mb-3">
+                  <TabsList>
+                    <TabsTrigger value="termsheet" className="text-xs gap-1.5" data-testid="tab-termsheet">
+                      <FileText className="h-3.5 w-3.5" />
+                      Term Sheet
+                    </TabsTrigger>
+                    <TabsTrigger value="pitchdeck" className="text-xs gap-1.5" data-testid="tab-pitchdeck">
+                      <Presentation className="h-3.5 w-3.5" />
+                      Pitch Deck
+                    </TabsTrigger>
+                  </TabsList>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground"
+                    onClick={() => {
+                      const html = activeTab === "termsheet" ? result.termSheetHtml : result.pitchDeckHtml;
+                      openInNewTab(html);
+                    }}
+                    data-testid="button-open-new-tab"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                    Open in New Tab
+                  </Button>
                 </div>
 
-                {/* Upside narrative */}
-                <Card className="bg-accent/5 border-accent/15">
-                  <CardContent className="p-5">
-                    <div className="flex gap-3">
-                      <TrendingUp className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-xs font-medium text-accent mb-1">Upside Potential</p>
-                        <p className="text-sm leading-relaxed" data-testid="text-upside">
-                          {facts.economics.upsideNarrative}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </section>
+                <TabsContent value="termsheet">
+                  <Card className="overflow-hidden">
+                    <CardContent className="p-0">
+                      <iframe
+                        srcDoc={result.termSheetHtml}
+                        className="w-full border-0"
+                        style={{ height: "700px" }}
+                        title="Term Sheet Preview"
+                        data-testid="iframe-termsheet"
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-              <Separator />
+                <TabsContent value="pitchdeck">
+                  <Card className="overflow-hidden">
+                    <CardContent className="p-0">
+                      <iframe
+                        srcDoc={result.pitchDeckHtml}
+                        className="w-full border-0"
+                        style={{ height: "700px" }}
+                        title="Pitch Deck Preview"
+                        data-testid="iframe-pitchdeck"
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
 
               {/* Generate another */}
-              <div className="text-center py-4">
+              <div className="text-center py-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -263,7 +259,7 @@ export default function ResultPage() {
                   data-testid="button-new-search"
                 >
                   <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                  Generate Another Briefing
+                  Generate for Another Country
                 </Button>
               </div>
             </div>
@@ -274,70 +270,10 @@ export default function ResultPage() {
       {/* Footer */}
       <footer className="border-t py-4 px-6 text-center">
         <p className="text-xs text-muted-foreground mb-2">
-          CONFIDENTIAL — 2hr Learning (Alpha) — Partnership Portal
+          CONFIDENTIAL — Alpha Education — National Partnership Portal
         </p>
         <PerplexityAttribution />
       </footer>
     </div>
-  );
-}
-
-/* -- Data point card -- */
-function FactCard({
-  icon: Icon,
-  label,
-  value,
-  className = "",
-}: {
-  icon: typeof Users;
-  label: string;
-  value: string;
-  className?: string;
-}) {
-  return (
-    <Card className={`${className}`}>
-      <CardContent className="p-4 flex gap-3">
-        <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <Icon className="h-4 w-4 text-primary" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-0.5">
-            {label}
-          </p>
-          <p className="text-sm leading-snug" data-testid={`text-fact-${label.toLowerCase().replace(/\s+/g, "-")}`}>
-            {value}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-/* -- Economics card -- */
-function EconCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Building2;
-  label: string;
-  value: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="p-4 flex gap-3">
-        <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-0.5">
-            {label}
-          </p>
-          <p className="text-sm leading-snug" data-testid={`text-econ-${label.toLowerCase().replace(/\s+/g, "-")}`}>
-            {value}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
