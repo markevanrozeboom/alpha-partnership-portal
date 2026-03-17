@@ -1,10 +1,15 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { storage } from "./storage";
+import { buildTermSheetDocx } from "./docx-builder";
 import type { CountryContext, GenerationResult } from "@shared/schema";
 
-const client = new Anthropic();
+const client = new Anthropic({
+  defaultHeaders: { "anthropic-version": "2023-06-01" },
+});
+const openai = new OpenAI();
 
 // ─── SYSTEM PROMPT: Country Research ─────────────────────────────────────────
 
@@ -331,10 +336,10 @@ function generateTermSheetHtml(ctx: CountryContext): string {
     </div>
   </div>
 
+  <div class="section-label">Commercial Structure</div>
   <div class="two-col">
     <div>
       <div class="section-box">
-        <div class="section-label">Commercial Structure</div>
         <div class="section-title">Upfront</div>
         <table>
           <thead><tr><th>Item</th><th>Amount</th><th>Recipient</th></tr></thead>
@@ -994,16 +999,27 @@ function generatePitchDeckHtml(ctx: CountryContext): string {
 
 async function generateDocuments(target: string): Promise<GenerationResult> {
   // Step 1: Get country context from Claude
-  const message = await client.messages.create({
-    model: "claude_sonnet_4_6",
-    max_tokens: 2000,
-    system: RESEARCH_PROMPT,
-    messages: [
-      { role: "user", content: `Generate the country context profile for: ${target}` },
-    ],
-  });
+  // Try Claude first, fallback to OpenAI Responses API
+  let text = "";
+  try {
+    const message = await client.messages.create({
+      model: "claude_sonnet_4_6",
+      max_tokens: 2000,
+      system: RESEARCH_PROMPT,
+      messages: [
+        { role: "user", content: `Generate the country context profile for: ${target}` },
+      ],
+    });
+    text = message.content[0].type === "text" ? message.content[0].text : "";
+  } catch (e: any) {
+    console.error("Claude failed, trying OpenAI:", e.message);
+    const response = await openai.responses.create({
+      model: "gpt_5_1",
+      input: `${RESEARCH_PROMPT}\n\nGenerate the country context profile for: ${target}`,
+    });
+    text = typeof response.output_text === "string" ? response.output_text : "";
+  }
 
-  const text = message.content[0].type === "text" ? message.content[0].text : "";
   const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   const ctx: CountryContext = JSON.parse(cleaned);
 
@@ -1048,6 +1064,30 @@ export function registerRoutes(server: Server, app: Express) {
       return;
     }
     res.json(run);
+  });
+
+  // DOCX download endpoint
+  app.get("/api/runs/:id/docx", async (req, res) => {
+    const run = storage.getRun(req.params.id);
+    if (!run || run.status !== "completed" || !run.result) {
+      res.status(404).json({ error: "Run not found or not complete" });
+      return;
+    }
+
+    try {
+      const ctx = run.result.context;
+      const buffer = await buildTermSheetDocx(ctx);
+      const programName = ctx.localizedProgramName || ctx.country;
+      const filename = `${programName}-Term-Sheet.docx`;
+
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Length", buffer.length);
+      res.send(buffer);
+    } catch (err) {
+      console.error("DOCX generation error:", err);
+      res.status(500).json({ error: "Failed to generate DOCX" });
+    }
   });
 
   app.get("/api/health", (_req, res) => {

@@ -13,6 +13,7 @@ import {
   Download,
   RefreshCw,
   ExternalLink,
+  FileDown,
 } from "lucide-react";
 import { PerplexityAttribution } from "@/components/PerplexityAttribution";
 import type { GenerationResult } from "@shared/schema";
@@ -79,6 +80,16 @@ export default function ResultPage() {
     const name = result.context.localizedProgramName || result.context.country;
     downloadHtml(result.pitchDeckHtml, `${name}-Pitch-Deck.html`);
   }, [result]);
+
+  const handleDownloadDocx = useCallback(() => {
+    if (!id) return;
+    const link = document.createElement("a");
+    link.href = `/api/runs/${id}/docx`;
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [id]);
 
   if (isLoading) {
     return (
@@ -176,11 +187,20 @@ export default function ResultPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={handleDownloadDocx}
+                    data-testid="button-download-docx"
+                  >
+                    <FileDown className="h-3.5 w-3.5 mr-1.5" />
+                    Term Sheet (.docx)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleDownloadTermSheet}
                     data-testid="button-download-termsheet"
                   >
                     <Download className="h-3.5 w-3.5 mr-1.5" />
-                    Term Sheet
+                    Term Sheet (.html)
                   </Button>
                   <Button
                     size="sm"
