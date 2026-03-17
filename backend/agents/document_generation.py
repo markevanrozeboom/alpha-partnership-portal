@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import os
+import asyncio
 from datetime import datetime
 
 from services.gamma import generate_and_wait, _extract_gamma_url, _extract_export_url
@@ -611,9 +612,8 @@ async def _build_investment_memorandum(
         ("appendices", "IX. APPENDICES"),
     ]
 
-    for section_key, section_title in section_configs:
+    async def _generate_section(section_key: str, section_title: str) -> tuple[str, str]:
         prompt_template = IM_SECTION_PROMPTS[section_key]
-
         formatted_prompt = prompt_template.format(
             target=target,
             context=context,
@@ -622,22 +622,25 @@ async def _build_investment_memorandum(
             strategy_data=strategy_data,
             financial_data=financial_data,
         )
-
-        # Add revision notes if provided
         user_prompt = f"Write the {section_title} section now."
         if revision_notes:
             user_prompt += f"\n\nAdditional revision notes from the user: {revision_notes}"
-
         try:
-            section_content = await call_llm_plain(
+            content = await call_llm_plain(
                 system_prompt=formatted_prompt,
                 user_prompt=user_prompt,
             )
-            sections.append((section_title, section_content))
-            logger.info("Generated section: %s (%d chars)", section_title, len(section_content))
+            logger.info("Generated section: %s (%d chars)", section_title, len(content))
+            return (section_title, content)
         except Exception as exc:
             logger.error("Failed to generate section %s: %s", section_title, exc)
-            sections.append((section_title, f"[Section generation failed: {exc}]"))
+            return (section_title, f"[Section generation failed: {exc}]")
+
+    sections = list(
+        await asyncio.gather(
+            *[_generate_section(key, title) for key, title in section_configs]
+        )
+    )
 
     # --- Build the DOCX ---
     doc = DocxDocument()

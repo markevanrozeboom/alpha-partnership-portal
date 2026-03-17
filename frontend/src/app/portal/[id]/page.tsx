@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -32,6 +32,7 @@ export default function PortalRunPage() {
 
   const [data, setData] = useState<ExpressRunStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Poll for status updates
   const fetchStatus = useCallback(async () => {
@@ -46,16 +47,14 @@ export default function PortalRunPage() {
 
   useEffect(() => {
     fetchStatus();
-    const interval = setInterval(() => {
-      fetchStatus();
-    }, 3000);
-    return () => clearInterval(interval);
+    pollRef.current = setInterval(fetchStatus, 3000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchStatus]);
 
   // Stop polling when complete or error
   useEffect(() => {
     if (data?.status === "completed" || data?.status === "error") {
-      // No need to keep polling
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     }
   }, [data?.status]);
 

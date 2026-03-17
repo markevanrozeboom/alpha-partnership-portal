@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Optional
 
@@ -110,15 +111,15 @@ async def get_country_data(country_name: str) -> dict:
     """Fetch key economic and demographic indicators for a country.
 
     Returns a dict with indicator names as keys and float values (or None).
+    All indicators are fetched concurrently to minimize latency.
     """
     code = COUNTRY_CODES.get(country_name.lower())
     if not code:
         logger.warning("No ISO code for '%s', skipping World Bank data.", country_name)
         return {}
 
-    results = {}
-    for name, indicator_code in INDICATORS.items():
-        value = await _fetch_indicator(code, indicator_code)
-        results[name] = value
-
-    return results
+    names = list(INDICATORS.keys())
+    values = await asyncio.gather(
+        *[_fetch_indicator(code, INDICATORS[name]) for name in names]
+    )
+    return dict(zip(names, values))
