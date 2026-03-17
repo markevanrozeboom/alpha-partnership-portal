@@ -948,6 +948,13 @@ function generatePitchDeckHtml(ctx: CountryContext): string {
       </table>
     </div>
   </div>
+
+  <div class="callout-box" style="margin-top: 16px; display: flex; align-items: center; gap: 16px;">
+    <div style="font-size: 28px; font-weight: 800; color: #1a56db; white-space: nowrap;">${ctx.schoolAgePopulation}</div>
+    <div>
+      <p style="font-size: 13px; line-height: 1.5; color: #2d3748;"><strong>Significant room to scale.</strong> The initial 5-year plan targets 200k students — a fraction of ${ctx.country}'s school-age population. As the program proves results, there is substantial opportunity to expand well beyond the initial communities with the same per-student economics already in place.</p>
+    </div>
+  </div>
   
   <div class="slide-footer">
     <span class="brand">ALPHA</span>
