@@ -1,4 +1,5 @@
 services:
+  # ── FastAPI backend ──────────────────────────────────────────────────────────
   - type: web
     name: alpha-pipeline-api
     runtime: python
@@ -16,3 +17,26 @@ services:
         sync: false
       - key: PYTHON_VERSION
         value: 3.12.3
+
+  # ── Customer portal (Express + Vite SPA) ─────────────────────────────────────
+  - type: web
+    name: alpha-portal
+    runtime: node
+    rootDir: portal
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alpha-portal-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+
+  # ── PostgreSQL database (portal) ─────────────────────────────────────────────
+databases:
+  - name: alpha-portal-db
+    databaseName: portal
+    user: portal
