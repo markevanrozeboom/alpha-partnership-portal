@@ -15,22 +15,21 @@ class TargetType(str, Enum):
     US_STATE = "us_state"
 
 
-class TierClassification(int, Enum):
-    TIER_1 = 1
-    TIER_2 = 2
-    TIER_3 = 3
+# TierClassification REMOVED — workshop decision March 16, 2026
+# All countries use unified model. No tiers.
 
 
 class EntryMode(str, Enum):
     PRIVATE = "private"
     GOVERNMENT = "government"
     HYBRID = "hybrid"
+    OPERATOR_LICENSOR = "operator_licensor"  # Default: Marriott model (100/0)
 
 
 class PartnershipType(str, Enum):
-    JV = "jv"
+    OPERATOR_LICENSOR = "operator_licensor"  # Default: Alpha operates, counterparty owns 100%
+    JV = "jv"                                # Legacy — kept for US state compatibility
     LICENSING = "licensing"
-    FRANCHISE = "franchise"
     DIRECT = "direct"
 
 
@@ -68,7 +67,7 @@ class TargetInfo(BaseModel):
     name: str = ""
     type: TargetType = TargetType.SOVEREIGN_NATION
     region: str = ""
-    tier: Optional[TierClassification] = None
+    # tier field REMOVED — unified model, no tiers (workshop March 16, 2026)
 
 
 class Demographics(BaseModel):
@@ -331,19 +330,25 @@ class FinancialModel(BaseModel):
     capital_deployment: list[CapitalDeployment] = Field(default_factory=list)
     returns_analysis: ReturnsAnalysis = Field(default_factory=ReturnsAnalysis)
     sensitivity: list[SensitivityScenario] = Field(default_factory=list)
-    # Scaling formula inputs
-    ppp_factor: float = 1.0
-    demand_factor: float = 1.0
+    # Fixed model parameters (no PPP, no tiers — workshop March 16, 2026)
     management_fee_pct: float = 0.10
     timeback_license_pct: float = 0.20
+    # Upfront fees — FIXED (not country-scaled)
     upfront_ip_fee: float = 25_000_000
-    upfront_alphacore_license: float = 0
-    upfront_app_content_rd: float = 0
-    upfront_lifeskills_rd: float = 0
+    upfront_alphacore_license: float = 250_000_000
+    upfront_app_content_rd: float = 250_000_000
+    upfront_lifeskills_rd: float = 250_000_000
     upfront_mgmt_fee: float = 0
     upfront_timeback_fee: float = 0
     total_management_fee_revenue: float = 0
     total_timeback_license_revenue: float = 0
+    # Two-prong model
+    flagship_tuition: float = 0
+    flagship_students: int = 0
+    flagship_revenue: float = 0
+    national_per_student_budget: float = 25_000
+    national_students: int = 0
+    national_revenue: float = 0
 
 
 # ---------------------------------------------------------------------------
@@ -445,7 +450,7 @@ class RunStatusResponse(BaseModel):
     run_id: str
     status: PipelineStatus
     target: str
-    tier: Optional[int] = None
+    # tier field REMOVED — unified model, no tiers
     target_type: Optional[str] = None
     agent_logs: list[str] = Field(default_factory=list)
 

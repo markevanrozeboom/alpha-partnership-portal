@@ -15,7 +15,7 @@ from docx.shared import Pt as DocxPt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from models.schemas import (
-    CountryProfile, TargetInfo, TargetType, TierClassification,
+    CountryProfile, TargetInfo, TargetType,
     Demographics, Economy, EducationData, Regulatory, PoliticalContext,
     CompetitiveLandscape, USStateESA,
 )
@@ -52,15 +52,10 @@ def _detect_target_type(target: str) -> TargetType:
     return TargetType.SOVEREIGN_NATION
 
 
-def _classify_tier(gdp_per_capita: float | None, population: float | None) -> TierClassification:
-    if gdp_per_capita is None:
-        return TierClassification.TIER_2
-    if gdp_per_capita > 30_000 and (population is None or population > 1_000_000):
-        return TierClassification.TIER_1
-    elif gdp_per_capita >= 10_000 or (population is not None and population > 50_000_000):
-        return TierClassification.TIER_2
-    else:
-        return TierClassification.TIER_3
+def _classify_tier(gdp_per_capita: float | None, population: float | None) -> None:
+    """DEPRECATED: Tier classification removed per workshop decision (March 16, 2026).
+    All countries use unified model. Returns None always."""
+    return None
 
 
 SYNTHESIS_PROMPT = """You are a senior research analyst at Goldman Sachs synthesising country data
@@ -480,14 +475,8 @@ async def run_country_research(
     except Exception as exc:
         logger.warning("Structured synthesis failed: %s", exc)
 
-    # Tier classification — use YAML config first, fallback to heuristic
-    if target_type == TargetType.SOVEREIGN_NATION:
-        yaml_tier = classify_country_tier(
-            target, profile.economy.gdp_per_capita, profile.demographics.total_population
-        )
-        profile.target.tier = yaml_tier or _classify_tier(
-            profile.economy.gdp_per_capita, profile.demographics.total_population
-        )
+    # Tier classification REMOVED — unified model, no tiers (workshop March 16, 2026)
+    # All countries use the same deal structure
     if not profile.target.region:
         profile.target.region = "North America" if target_type == TargetType.US_STATE else ""
 
@@ -582,7 +571,7 @@ async def run_country_research(
     # --- Save report as DOCX ---
     docx_path = _save_report_docx(target, report_md, "Country Research Report")
 
-    logger.info("Country research complete: %s (tier=%s)", target, profile.target.tier)
+    logger.info("Country research complete: %s (unified model)", target)
     return profile, report_md, docx_path
 
 

@@ -1,5 +1,9 @@
 """Strategy Agent — produces McKinsey/VC quality 15-20 page market-entry strategy.
 
+Post-workshop (March 16, 2026): No tiers. One model for all sovereign nations.
+Two-prong structure: Flagship ($40K-$100K) + National ($25K fixed).
+100/0 equity: counterparty owns 100%, Alpha is exclusive operator & licensor.
+
 Synthesises country research and education analysis into a comprehensive
 go-to-market strategy. Uses multi-call generation for exhaustive depth.
 """
@@ -43,10 +47,19 @@ institutional investors.
 - **Three commitments**: Children love school | Learn 2x faster | Future-ready skills
 - **UAE deal (Ed71/Next71)**: $1.5B upfront, 200K students over 5 years, $25K/student budget,
   Alpha holds 0% equity — serves as exclusive operator & licensor; local entity (Next71) owns 100%,
-  JV with AsasOne (local cultural IP layer), Emirati Guide cohort
-- **Revenue model**: Management fees (10% school revenue), Timeback License (20% per-student
-  budget), upfront IP fee ($25M+), Guide School fees
-- **Fee floor**: Minimum $15K per student
+  cultural IP layer via AsasOne (local partner), Emirati Guide cohort
+
+## Two-Prong Model (applies to ALL sovereign deals)
+- **Prong 1 — Flagship Schools**: Tuition $40K-$100K (set by AGI of top 20% families).
+  Located in capital city + 1-2 biggest cities. 50% backstop on enrollment.
+  2-3 schools. Premium experience, proof-of-concept, brand anchor.
+- **Prong 2 — National Schools**: FIXED $25K per-student budget (non-negotiable).
+  100,000 student-year minimum commitment. Broad national rollout.
+- **Equity**: 100/0 — Counterparty owns 100%, Alpha owns 0%. Alpha is exclusive operator & licensor (Marriott model).
+- **Revenue model**: Management fee 10% of combined revenue (non-negotiable),
+  Timeback License 20% of combined revenue (non-negotiable).
+- **Fixed upfront development costs**: $250M AlphaCore License + $250M EdTech App R&D + $250M LifeSkills R&D = $750M total (non-negotiable).
+- **Prepaid fees**: Management fee + Timeback fee prepaid (scales by student count).
 
 ## Country & Education Context
 {country_context}
@@ -60,8 +73,9 @@ institutional investors.
 ## 1. Executive Summary
 Write 6-8 paragraphs covering:
 - The strategic opportunity in {target} (quantified)
-- Recommended entry mode and partnership structure
-- Proposed deal parameters (commitment size, student count, per-student budget)
+- Recommended entry mode and operator & licensor structure (NOT a JV — Alpha is operator & licensor, counterparty owns 100%)
+- The two-prong model: Flagship schools (tuition $40K-$100K) + National schools ($25K/student fixed)
+- Proposed deal parameters (commitment size, student count, fixed upfront fees)
 - Phased rollout plan summary
 - Financial return thesis (IRR, MOIC range)
 - Key risks and why the opportunity justifies them
@@ -78,7 +92,8 @@ Create a detailed TAM calculation table:
 | Total K-12 students | ... | ... | ... |
 | % in target income segments | ... | ... | ... |
 | # of addressable students | ... | ... | ... |
-| Blended revenue per student | ... | ... | PPP-adjusted |
+| Flagship addressable (top 20% AGI) | ... | ... | ... |
+| National addressable | ... | ... | ... |
 | **Total TAM** | **$...** | ... | ... |
 
 ### 2.2 Serviceable Market
@@ -86,8 +101,8 @@ Create SAM table:
 
 | Filter | Students | Revenue | Rationale |
 |--------|----------|---------|-----------|
-| Income-qualified | ... | ... | ... |
-| Geographically accessible | ... | ... | ... |
+| Income-qualified (Flagship) | ... | ... | ... |
+| Geographically accessible (National) | ... | ... | ... |
 | Innovation-receptive | ... | ... | ... |
 | Regulatory-feasible | ... | ... | ... |
 | **SAM** | **...** | **$...** | ... |
@@ -95,11 +110,11 @@ Create SAM table:
 ### 2.3 Penetration Scenarios
 Create scenarios table:
 
-| Scenario | Market Share | Students (Yr 5) | Revenue (Yr 5) | Commitment Ask | Assumptions |
-|----------|-------------|-----------------|-----------------|---------------|-------------|
-| Conservative | ...% | ... | $... | $... | ... |
-| Base Case | ...% | ... | $... | $... | ... |
-| Aggressive | ...% | ... | $... | $... | ... |
+| Scenario | Flagship Students | National Students | Combined Revenue (Yr 5) | Total Upfront Ask | Assumptions |
+|----------|------------------|------------------|------------------------|------------------|-------------|
+| Conservative | ... | 100,000 | $... | $... | ... |
+| Base Case | ... | 150,000 | $... | $... | ... |
+| Aggressive | ... | 250,000 | $... | $... | ... |
 
 ### 2.4 Comparison to UAE Benchmark
 
@@ -108,12 +123,17 @@ Create scenarios table:
 | Population | 10M | ... | ... | ... |
 | GDP/Capita | $44K | ... | ... | ... |
 | Student Commitment | 200K | ... | ... | ... |
-| Per-Student Budget | $25K | ... | PPP-adjusted | ... |
-| Upfront Commitment | $1.5B | ... | ... | ... |
-| JV Structure | 0/100 (Alpha operates, local owns) | ... | ... | ... |
+| Per-Student Budget (National) | $25K | $25K (FIXED) | 1.0x | Non-negotiable |
+| Flagship Tuition | N/A | $...K | ... | Based on AGI top 20% |
+| Upfront Development | $750M+ | $750M (FIXED) | 1.0x | Non-negotiable |
+| Structure | 0/100 (Alpha operates, local owns) | 100/0 — Counterparty 100%, Alpha 0% | Same | Operator & Licensor |
 
 Write 5-6 paragraphs on market sizing methodology, key assumptions, and why the numbers
 are achievable based on the country research.
+
+**NOTE**: Financial numbers ($25K national budget, $750M development) are FIXED. Strategy should
+focus on positioning, cultural fit, regulatory pathway, and national vision alignment — NOT
+on deriving financial numbers from country data.
 
 **🎯 Strategic Priority:** Quantify the specific opportunity with confidence intervals.
 
@@ -149,6 +169,13 @@ Writing sections 4-7.
 
 {education_context}
 
+## Key Model Parameters (for reference — these are FIXED, not to be derived)
+- Equity: 100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor
+- Prong 1 (Flagship): Tuition $40K-$100K, 2-3 schools in capital + biggest cities
+- Prong 2 (National): FIXED $25K per-student budget, 100K student-year minimum
+- Fixed development: $250M each (AlphaCore, App R&D, LifeSkills) = $750M total
+- Management fee: 10%, Timeback: 20% (both non-negotiable)
+
 ## Write EXACTLY these sections:
 
 ## 4. Partnership Structure
@@ -164,35 +191,37 @@ Create a table of potential partner types:
 | Private Conglomerate | ... | ... | ... | ... |
 | Education Foundation | ... | ... | ... | ... |
 
-### 4.2 JV Structure Design
-Based on the AsasOne model from the UAE deal:
+### 4.2 Operator & Licensor Structure Design
+Based on the UAE model — Alpha holds 0% equity, counterparty owns 100%:
 
-| Structural Element | UAE (AsasOne) | {target} (Proposed) | Rationale |
+| Structural Element | UAE (Ed71/Next71) | {target} (Proposed) | Rationale |
 |-------------------|---------------|-------------------|-----------|
 | Entity Name | Ed71 / Next71 | ... (suggest 2-3 options) | ... |
-| Ownership Split | Alpha 0% equity (Operator & Licensor) / Local 100% | ... | ... |
+| Ownership Split | 100/0 — Local 100%, Alpha 0% | 100/0 — Counterparty 100%, Alpha 0% | Marriott model |
 | Board Composition | ... | ... | ... |
-| IP Ownership | Alpha retains core IP | ... | ... |
+| IP Ownership | Alpha retains core IP, licenses exclusively | ... | ... |
 | Cultural IP Layer | AsasOne | ... | ... |
-| Management Control | Alpha operational control | ... | ... |
-| Revenue Distribution | ... | ... | ... |
+| Operational Control | Alpha as exclusive operator | ... | ... |
+| Revenue Distribution | 10% mgmt + 20% timeback to Alpha | Same | Non-negotiable |
 | Exit Mechanism | ... | ... | ... |
 | Non-Compete | ... | ... | ... |
 | Dispute Resolution | ... | ... | ... |
 
-Write 5-6 paragraphs on the partnership structure rationale, governance design,
-IP protection strategy, and cultural IP layer development.
+Write 5-6 paragraphs on the operator & licensor structure rationale, governance design,
+IP protection strategy, and cultural IP layer development. Emphasize this is NOT a JV —
+Alpha operates, counterparty owns.
 
 ### 4.3 Cultural IP Layer Design
 How to localise Alpha's model while preserving national identity, cultural values,
 and local curriculum requirements. Reference the AsasOne approach.
+Propose specific cultural life-skills ideas relevant to {target}'s heritage and values.
 
 **🎯 Strategic Priority:** The local entity name and structure is critical for political buy-in.
 
 ## 5. Brand & Positioning
 
 ### 5.1 Brand Architecture
-Suggest 3-4 JV entity names (following the Ed71/Next71 naming pattern):
+Suggest 3-4 local entity names (following the Ed71/Next71 naming pattern):
 
 | Name Option | Meaning/Rationale | Positioning | Target Association |
 |------------|-------------------|------------|-------------------|
@@ -208,51 +237,55 @@ Create a messaging matrix:
 | Head of State | ... | ... | ... |
 | Education Minister | ... | ... | ... |
 | Sovereign Fund | ... | ... | ... |
-| Parents (Affluent) | ... | ... | ... |
-| Parents (Middle Class) | ... | ... | ... |
+| Parents (Affluent — Flagship) | ... | ... | ... |
+| Parents (National Schools) | ... | ... | ... |
 | Students | ... | ... | ... |
 | Teachers | ... | ... | ... |
 | Media | ... | ... | ... |
 
-Write 3-4 paragraphs on brand positioning strategy.
+Write 3-4 paragraphs on brand positioning strategy, including how to differentiate
+Flagship schools (Prong 1) from National schools (Prong 2) in public perception.
 
 ## 6. School Type Portfolio
 
-### 6.1 Recommended School Types
-Create a detailed table for each school type:
+### 6.1 Two-Prong School Architecture
 
-| Dimension | Flagship Premium | Innovation Academy | Community School | Specialised (STEM/Arts) |
-|-----------|-----------------|-------------------|-----------------|----------------------|
-| Target Segment | Top 5% income | Top 15% income | Top 30% income | Talent-identified |
-| Annual Tuition | $... | $... | $... | $... (subsidised) |
-| Capacity | ... students | ... students | ... students | ... students |
-| Location Type | CBD/Prime | Suburban | Urban fringe | Various |
-| Curriculum Mix | 2hr core + specialisations | ... | ... | ... |
-| Teacher Model | All Guides | Mix | ... | ... |
-| Physical Model | Premium campus | Modern | Efficient | Purpose-built |
-| Technology | Full Timeback + eduLLM | Full Timeback | Timeback | Full suite |
-| Year 1 Target | ... schools | ... schools | ... schools | ... schools |
-| Year 5 Target | ... schools | ... schools | ... schools | ... schools |
+| Dimension | Prong 1: Flagship | Prong 2: National |
+|-----------|------------------|-------------------|
+| Target Segment | Top 20% by AGI | Broad national population |
+| Annual Tuition/Budget | $40K-$100K (set by AGI) | $25K (FIXED) |
+| Capacity | 800-1,500 per school | 800 per school |
+| Location Type | Capital city + 1-2 biggest cities | Nationwide |
+| Curriculum Mix | 2hr core + premium specialisations | 2hr core + national specialisations |
+| Teacher Model | All Guides (premium) | All Guides |
+| Physical Model | Premium campus | Modern, efficient |
+| Technology | Full Timeback + eduLLM | Full Timeback + eduLLM |
+| Year 1 Target | 2-3 schools | Ramp begins |
+| Year 5 Target | 3-5 schools | 100K+ students |
+| Purpose | Proof of concept, brand anchor | Scale, national impact |
 
-Write 4-5 paragraphs on the portfolio strategy, pricing rationale (PPP-adjusted),
-sequencing, and how each type serves a different market need.
+Write 4-5 paragraphs on the two-prong portfolio strategy, why Flagship precedes National,
+how each prong serves a different strategic purpose, and how success in Prong 1
+de-risks Prong 2.
 
 ### 6.2 Pricing Strategy
-PPP-adjusted pricing analysis with comparison to local competitors and the UAE benchmark.
+Flagship pricing is set by AGI of top 20% families ($40K-$100K range).
+National budget is FIXED at $25K — this is not derived from country data.
+Discuss how these price points compare to existing private education options.
 
-**🎯 Strategic Priority:** Pricing must be above the $15K floor while being competitive locally.
+**🎯 Strategic Priority:** Flagship success is the proof-of-concept that unlocks National scale.
 
 ## 7. Phased Rollout Plan
 
 ### 7.1 Five-Year Rollout
 
-| Phase | Timeline | Schools | Students | Revenue | Key Milestones | Decision Gate |
-|-------|----------|---------|----------|---------|---------------|--------------|
-| Pre-Launch | M1-M12 | 0 | 0 | $0 | ... | Go/No-Go |
-| Phase 1: Flagship | Yr 1 | ... | ... | $... | ... | Phase 2 approval |
-| Phase 2: Expansion | Yr 2-3 | ... | ... | $... | ... | Phase 3 approval |
-| Phase 3: Scale | Yr 4-5 | ... | ... | $... | ... | Continuation |
-| **Total** | **5 years** | **...** | **...** | **$...** | ... | ... |
+| Phase | Timeline | Prong | Schools | Students | Revenue | Key Milestones | Decision Gate |
+|-------|----------|-------|---------|----------|---------|---------------|--------------|
+| Pre-Launch | M1-M12 | — | 0 | 0 | $0 | ... | Go/No-Go |
+| Phase 1: Flagship | Yr 1 | 1 | 2-3 | ... | $... | ... | National approval |
+| Phase 2: National Ramp | Yr 2-3 | 1+2 | ... | ... | $... | ... | Scale approval |
+| Phase 3: Full Scale | Yr 4-5 | 1+2 | ... | 100K+ | $... | ... | Continuation |
+| **Total** | **5 years** | **Both** | **...** | **...** | **$...** | ... | ... |
 
 ### 7.2 Pre-Launch Workstreams (18-month timeline)
 
@@ -269,7 +302,8 @@ PPP-adjusted pricing analysis with comparison to local competitors and the UAE b
 
 Write 4-5 paragraphs on the rollout strategy, critical path, and decision gates.
 
-**🎯 Strategic Priority:** Phase 1 flagship success is the make-or-break moment.
+**🎯 Strategic Priority:** Flagship (Prong 1) success is the make-or-break moment that
+unlocks National (Prong 2) commitment.
 
 IMPORTANT: Minimum 3,000 words. Specific, actionable, investment-thesis quality."""
 
@@ -280,6 +314,13 @@ Writing sections 8-12 (final sections).
 {country_context}
 
 {education_context}
+
+## Key Model Parameters (for reference — these are FIXED, not to be derived)
+- Equity: 100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor
+- Prong 1 (Flagship): Tuition $40K-$100K, 2-3 flagship schools
+- Prong 2 (National): FIXED $25K per-student budget, 100K student-year minimum
+- Fixed development: $250M each (AlphaCore, App R&D, LifeSkills) = $750M total
+- Management fee: 10%, Timeback: 20% (both non-negotiable)
 
 ## Write EXACTLY these sections:
 
@@ -299,14 +340,14 @@ Write 3-4 paragraphs covering:
 - "Children will love school" — engagement and happiness metrics
 - "Learn 2x faster" — academic outcomes evidence
 - "Future-ready skills" — specialisations, AI-age preparation
-- Premium experience at competitive price points
+- Flagship: world-class premium experience; National: transformative quality at accessible price
 - University placement outcomes
 
 ### 8.3 Investor Value Proposition
 Write 3-4 paragraphs covering:
 - Returns thesis (IRR, MOIC expectations)
-- Capital deployment efficiency
-- Recurring revenue model
+- Capital deployment efficiency (counterparty funds 100%, Alpha operates)
+- Recurring revenue model (10% mgmt + 20% timeback)
 - Scale optionality (domestic expansion + regional)
 - Exit pathways (IPO, strategic sale, sovereign buyout)
 
@@ -318,7 +359,8 @@ Create a value proposition summary table:
 | Education Minister | ... | ... | ... | ... |
 | Finance Minister | ... | ... | ... | ... |
 | Sovereign Fund | ... | ... | ... | ... |
-| Parents | ... | ... | ... | ... |
+| Parents (Flagship) | ... | ... | ... | ... |
+| Parents (National) | ... | ... | ... | ... |
 | Students | ... | ... | ... | ... |
 | Teachers | ... | ... | ... | ... |
 | Employers | ... | ... | ... | ... |
@@ -367,13 +409,14 @@ dealbreakers — address them head-on.
 
 | Term | UAE Reference | {target} Proposal | Rationale |
 |------|-------------|-------------------|-----------|
-| Upfront Commitment | $1.5B | $... | ... |
-| Per-Student Budget | $25K | $... | PPP-adjusted |
-| Student Count (5yr) | 200K | ... | ... |
-| IP Development Fee | $25M | $... | ... |
+| Ownership | 100/0 (Local 100%, Alpha 0%) | 100/0 (Counterparty 100%, Alpha 0%) | Operator & Licensor model |
+| Upfront Development | $750M | $750M (FIXED) | Non-negotiable |
+| Per-Student Budget (National) | $25K | $25K (FIXED) | Non-negotiable |
+| Flagship Tuition | N/A | $...K (set by AGI) | Top 20% families |
+| National Student Count (5yr) | 200K | 100K minimum | Minimum commit |
 | Management Fee | 10% | 10% | Non-negotiable |
 | Timeback License | 20% | 20% | Non-negotiable |
-| JV Ownership | 0/100 (Alpha operates, local entity owns) | ... | ... |
+| Prepaid Mgmt + Timeback | Variable | Variable (scales by students) | Calculated |
 | Exclusivity | UAE | {target} + ... | ... |
 | Duration | 10 years | ... | ... |
 | Performance Guarantees | ... | ... | ... |
@@ -394,104 +437,6 @@ Table of all key assumptions used in this strategy.
 
 IMPORTANT: Minimum 3,000 words. This completes a document that will be read by heads
 of state and VC managing directors. Every recommendation must be data-backed."""
-
-TIER_23_PROMPT = """You are a senior partner at McKinsey & Company advising Alpha Holdings
-(2hr Learning) on a market entry into **{target}**.
-
-This is a **Tier {tier}** country — NOT a Tier 1 sovereign deal. Alpha's Group CFO has directed
-that for Tier 2/3 countries the strategy should focus on ONE question:
-
-**How many 25,000-student cohorts could the government (or private sector) realistically support?**
-
-Each cohort = 25,000 students at $25K/student budget (PPP-adjusted to ${ppp_adjusted_budget:,.0f}).
-
-## About Alpha / 2hr Learning
-- Timeback: AI compresses core academics into 2 hours/day
-- Three commitments: Children love school | Learn 2x faster | Future-ready skills
-- UAE reference: $1.5B upfront, 200K students (= 8 cohorts of 25K), $25K/student
-- Revenue model: 10% management fee, 20% Timeback license, upfront IP fee
-- Fee floor: $15K/student minimum
-
-## Country Context
-{country_context}
-
-## Education Context
-{education_context}
-
-## Write EXACTLY these sections:
-
-# {target} — Cohort-Based Proposal
-
-## 1. Executive Summary
-- This is a Tier {tier} opportunity with a cohort-based deal structure
-- Each cohort = 25,000 students at ${ppp_adjusted_budget:,.0f}/student (PPP-adjusted)
-- Total commitment = # cohorts × 25,000 × ${ppp_adjusted_budget:,.0f}
-
-## 2. Demand Analysis: How Many 25K Cohorts?
-
-### 2.1 Government-Funded Pathway
-Assess the government's capacity to fund 25K-student cohorts:
-- Current education budget and spend per student
-- Appetite for large-scale education reform
-- Fiscal headroom (% of GDP spent on education vs regional peers)
-- Existing public-private partnership precedent
-- Political will for 2hr Learning model
-
-| Cohort | Funding Source | Students | Per-Student Budget | Total Commitment | Feasibility |
-|--------|--------------|----------|-------------------|-----------------|-------------|
-| Gov Cohort 1 | ... | 25,000 | ... | ... | High/Med/Low |
-| Gov Cohort 2 | ... | 25,000 | ... | ... | High/Med/Low |
-| ... | ... | ... | ... | ... | ... |
-
-### 2.2 Private-Sector Pathway
-Assess the private market's capacity for 25K-student cohorts:
-- Size of affluent / upper-middle-class families
-- Current private school penetration and tuition levels
-- Demand for premium / innovation-driven education
-- Ability for private operators or investors to fund cohorts
-
-| Cohort | Funding Source | Students | Per-Student Budget | Total Commitment | Feasibility |
-|--------|--------------|----------|-------------------|-----------------|-------------|
-| Private Cohort 1 | ... | 25,000 | ... | ... | High/Med/Low |
-| Private Cohort 2 | ... | 25,000 | ... | ... | High/Med/Low |
-| ... | ... | ... | ... | ... | ... |
-
-### 2.3 Combined Proposal
-Total realistic cohorts and deal size:
-
-| Pathway | Cohorts | Students | Commitment | Confidence |
-|---------|---------|----------|-----------|------------|
-| Government | ... | ... | $... | ...% |
-| Private | ... | ... | $... | ...% |
-| **Total** | **...** | **...** | **$...** | ... |
-
-## 3. Deal Structure
-- Entry mode: {entry_recommendation}
-- Partnership: Licensing or lightweight JV (no heavy local entity)
-- Alpha management fee: 10%
-- Timeback license: 20%
-- Upfront IP fee: scaled to # cohorts
-- Phased rollout: 1 cohort in Year 1, scale based on results
-
-## 4. Financial Summary (Per Cohort)
-
-| Metric | Per Cohort | Notes |
-|--------|-----------|-------|
-| Students | 25,000 | Fixed cohort size |
-| Per-Student Budget | ${ppp_adjusted_budget:,.0f} | PPP-adjusted from $25K |
-| Total Revenue | ${cohort_revenue:,.0f} | 25K × budget |
-| Alpha Mgmt Fee (10%) | ${mgmt_fee:,.0f} | Per year |
-| Timeback License (20%) | ${timeback_fee:,.0f} | Per year |
-| Alpha Total Revenue/yr | ${alpha_rev:,.0f} | Combined |
-
-## 5. Key Asks
-List 5-6 specific asks from the government / private partner.
-
-## 6. Risks & Considerations
-Key risks specific to this Tier {tier} market.
-
-IMPORTANT: Be realistic about the number of cohorts. Don't over-promise.
-Data-driven. This will be reviewed by the Group CFO."""
 
 REPORT_REVISION_PROMPT = """You are revising a market-entry strategy based on executive feedback.
 
@@ -522,30 +467,55 @@ async def run_strategy(
     # --- Detect US state ---
     is_us_state = country_profile.target.type == TargetType.US_STATE
 
-    # --- Compute minimum Y5 student target (10% of school-age population) ---
-    school_age_pop = (
-        country_profile.demographics.population_0_18
-        or country_profile.education.k12_enrolled
-        or 500_000
-    )
-    min_y5_students = max(5_000, int(school_age_pop * 0.10))
+    # --- Minimum student target ---
+    # Sovereign nations: 100K student-year minimum for national schools
+    # US states: 10% of school-age population
+    if is_us_state:
+        school_age_pop = (
+            country_profile.demographics.population_0_18
+            or country_profile.education.k12_enrolled
+            or 500_000
+        )
+        min_y5_students = max(5_000, int(school_age_pop * 0.10))
+    else:
+        min_y5_students = 100_000  # Workshop decision: 100K student-year minimum
 
     # --- Structured strategy ---
-    structured_prompt = (
-        "You are a senior VC/McKinsey strategist advising Alpha Holdings (2hr Learning) "
-        "on a market-entry deal.\n\n"
-        "CRITICAL DEAL PARAMETERS (non-negotiable):\n"
-        "- Alpha holds 0% equity in the local entity. Alpha is the exclusive operator & licensor. "
-        "The local entity owns 100% of equity. This is the UAE (Ed71/Next71) model.\n"
-        f"- The Year 5 student target must be AT LEAST {min_y5_students:,} "
-        f"(≥ 10% of the school-age population of {school_age_pop:,}).\n"
-        "- Management fee: 10% of school revenue (non-negotiable)\n"
-        "- Timeback license: 20% of per-student budget (non-negotiable)\n"
-        "- Minimum per-student budget: $15,000\n\n"
-        "Set partnership_structure.ownership_split to "
-        "'0/100 — Alpha operates as exclusive operator & licensor; local entity owns 100%'.\n\n"
-        "Produce a structured strategy."
-    )
+    if is_us_state:
+        structured_prompt = (
+            "You are a senior VC/McKinsey strategist advising Alpha Holdings (2hr Learning) "
+            "on a market-entry deal for a US state.\n\n"
+            "CRITICAL DEAL PARAMETERS (non-negotiable):\n"
+            "- Alpha holds 0% equity in the local entity. Alpha is the exclusive operator & licensor. "
+            "The local entity owns 100% of equity.\n"
+            f"- The Year 5 student target must be AT LEAST {min_y5_students:,} "
+            f"(>= 10% of the school-age population).\n"
+            "- Management fee: 10% of school revenue (non-negotiable)\n"
+            "- Timeback license: 20% of per-student budget (non-negotiable)\n\n"
+            "Set partnership_structure.ownership_split to "
+            "'0/100 — Alpha operates as exclusive operator & licensor; local entity owns 100%'.\n\n"
+            "Produce a structured strategy."
+        )
+    else:
+        structured_prompt = (
+            "You are a senior VC/McKinsey strategist advising Alpha Holdings (2hr Learning) "
+            "on a sovereign market-entry deal.\n\n"
+            "CRITICAL DEAL PARAMETERS (non-negotiable):\n"
+            "- TWO-PRONG MODEL:\n"
+            "  Prong 1 (Flagship): Tuition $40K-$100K set by AGI of top 20% families. "
+            "Capital city + 1-2 biggest cities. 2-3 schools. 50% backstop.\n"
+            "  Prong 2 (National): FIXED $25K per-student budget. "
+            f"Minimum {min_y5_students:,} student-year commitment.\n"
+            "- Equity: 100/0 — Counterparty owns 100%, Alpha owns 0%. "
+            "Alpha is exclusive operator & licensor (Marriott model).\n"
+            "- Management fee: 10% of combined revenue (non-negotiable)\n"
+            "- Timeback license: 20% of combined revenue (non-negotiable)\n"
+            "- Fixed upfront development: $250M AlphaCore + $250M App R&D + $250M LifeSkills = $750M (non-negotiable)\n"
+            "- Prepaid management + timeback fees scale by student count\n\n"
+            "Set partnership_structure to operator_licensor.\n"
+            "Set ownership_split to '100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor'.\n\n"
+            "Produce a structured strategy."
+        )
     try:
         strategy: Strategy = await call_llm(
             system_prompt=structured_prompt,
@@ -565,21 +535,22 @@ async def run_strategy(
     # --- Enforce non-negotiable deal parameters on the structured object ---
     if not is_us_state:
         strategy.partnership_structure.ownership_split = (
+            "100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor"
+        )
+    else:
+        strategy.partnership_structure.ownership_split = (
             "0/100 — Alpha operates as exclusive operator & licensor; local entity owns 100%"
         )
+
     # Enforce Y5 student floor
     if strategy.target_student_count_year5 and strategy.target_student_count_year5 < min_y5_students:
         logger.info(
-            "Overriding Y5 student target from %s to %s (10%% floor)",
+            "Overriding Y5 student target from %s to %s (minimum floor)",
             strategy.target_student_count_year5, min_y5_students,
         )
         strategy.target_student_count_year5 = min_y5_students
     elif not strategy.target_student_count_year5:
         strategy.target_student_count_year5 = min_y5_students
-
-    # --- Determine tier for routing ---
-    tier = country_profile.target.tier if country_profile.target.tier else None
-    is_tier_23 = tier is not None and tier in (2, 3) and country_profile.target.type == TargetType.SOVEREIGN_NATION
 
     # --- Narrative report ---
     if feedback and previous_report:
@@ -589,33 +560,8 @@ async def run_strategy(
             ),
             user_prompt=f"Revise the strategy for {target}.",
         )
-    elif is_tier_23:
-        # Tier 2/3: cohort-based proposal
-        gdp_cap = country_profile.economy.gdp_per_capita or 15_000
-        ppp_adjusted = max(15_000, round(25_000 * max(0.3, min(2.0, gdp_cap / 50_000)) / 500) * 500)
-        cohort_rev = 25_000 * ppp_adjusted
-        mgmt_fee = round(cohort_rev * 0.10)
-        timeback_fee = round(cohort_rev * 0.20)
-        alpha_rev = mgmt_fee + timeback_fee
-        entry_rec = entry_mode.value if entry_mode else "licensing or lightweight JV"
-
-        logger.info("Generating Tier %s cohort-based strategy for %s", tier, target)
-        report_md = await call_llm_plain(
-            system_prompt=TIER_23_PROMPT.format(
-                target=target, tier=tier,
-                ppp_adjusted_budget=ppp_adjusted,
-                cohort_revenue=cohort_rev,
-                mgmt_fee=mgmt_fee,
-                timeback_fee=timeback_fee,
-                alpha_rev=alpha_rev,
-                entry_recommendation=entry_rec,
-                country_context=country_ctx,
-                education_context=education_ctx,
-            ),
-            user_prompt=f"Produce the cohort-based strategy for {target}.",
-        )
     else:
-        # Tier 1 / US State: full strategy
+        # Full strategy: all countries and US states go through the same pipeline
         entry_note = f"\nEntry mode preference: {entry_mode.value}" if entry_mode else ""
 
         logger.info("Generating strategy section 1/3 for %s", target)
@@ -657,8 +603,6 @@ async def run_strategy(
 
 def _build_country_context(p: CountryProfile) -> str:
     parts = [f"**Country Profile: {p.target.name}**"]
-    if p.target.tier:
-        parts.append(f"- Tier: {p.target.tier}")
     if p.demographics.total_population:
         parts.append(f"- Population: {p.demographics.total_population:,.0f}")
     if p.demographics.population_0_18:

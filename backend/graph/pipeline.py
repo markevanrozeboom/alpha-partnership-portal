@@ -114,7 +114,7 @@ async def _run_country_research(state: dict) -> None:
     state["country_report"] = report_md
     state["country_report_docx_path"] = docx_path
     state["status"] = PipelineStatus.REVIEW_COUNTRY_REPORT.value
-    _log(state, f"Country research complete. Tier: {profile.target.tier}, Type: {profile.target.type.value}")
+    _log(state, f"Country research complete. Type: {profile.target.type.value} (unified model — no tiers)")
 
 
 async def _run_education_research(state: dict) -> None:

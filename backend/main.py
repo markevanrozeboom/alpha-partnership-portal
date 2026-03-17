@@ -113,7 +113,7 @@ async def get_run(run_id: str):
         try:
             cp = CountryProfile(**cp_data)
             resp.country_profile = cp
-            resp.tier = cp.target.tier if cp.target.tier else None
+            resp.tier = None  # Tier classification removed — unified model
             resp.target_type = cp.target.type.value
         except Exception:
             pass

@@ -422,8 +422,7 @@ async def run_education_research(
 
     # --- Build context ---
     ctx_parts = [f"Target: {target}", f"Type: {country_profile.target.type.value}"]
-    if country_profile.target.tier:
-        ctx_parts.append(f"Tier: {country_profile.target.tier}")
+    # Tier classification removed — unified model (workshop March 16, 2026)
     if country_profile.demographics.total_population:
         ctx_parts.append(f"Population: {country_profile.demographics.total_population:,.0f}")
     if country_profile.economy.gdp_per_capita:

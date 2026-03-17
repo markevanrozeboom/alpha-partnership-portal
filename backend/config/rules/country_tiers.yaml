@@ -1,61 +1,99 @@
-# Country Tiering System (SPECS.md Section 2A)
-# Every country is automatically classified into one of three tiers based on
-# GDP per capita, population, and private-school market maturity.
+# =============================================================================
+# Unified Country Deal Model (Workshop Decision — March 16, 2026)
+# =============================================================================
+# NO TIERS. One model for all countries.
+# Andy Price (CFO): "I do not want to overthink different variants.
+#   I want to get UAE model genericized first. Don't want three different things. I want one."
+#
+# Equity: 100/0 — Counterparty owns 100%, Alpha owns 0% (Marriott model)
+# Andy: "For the version 1, it's equity is 100, 0"
+# =============================================================================
 
-tier_1:
-  name: "UAE-Scale"
-  description: "Full joint-venture model. The local entity owns schools; Alpha operates and licenses IP."
-  examples:
-    - "Saudi Arabia"
-    - "Qatar"
-    - "Singapore"
-    - "Switzerland"
-  criteria:
-    gdp_per_capita_min: 30000
-    population_min: 1000000
-  deal_structure:
-    model: "Full joint-venture"
-    upfront_range: [500000000, 1500000000]  # $500M - $1.5B (scaled by school-age population)
-    per_student_budget_range: [20000, 30000]  # $20K - $30K
-    target_students_5yr: [50000, 200000]
-    structure: "Local entity owns schools; Alpha operates & licenses IP"
-    local_ip_layer: "Equivalent of AsasOne - 100% owned by local JV entity"
-  demand_factor: 1.0
+unified_model:
+  name: "Alpha Education Partnership"
+  description: >
+    Single universal deal model for all countries.
+    Counterparty owns 100% of the local entity; Alpha operates as
+    exclusive operator & licensor (0% equity). Two-prong structure:
+    Flagship schools + National/Public schools.
 
-tier_2:
-  name: "Mid-Market"
-  description: "Scaled JV or licensing model. Same fee percentages on a lower per-student budget, adjusted for PPP."
-  examples:
-    - "Brazil"
-    - "Mexico"
-    - "UK"
-    - "South Korea"
-  criteria:
-    gdp_per_capita_range: [10000, 30000]
-    # OR: population > 50M with private school market
-    population_alt_min: 50000000
-  deal_structure:
-    model: "Scaled JV or licensing"
-    upfront_range: [100000000, 500000000]  # $100M - $500M (PPP-adjusted)
-    per_student_budget_range: [8000, 20000]  # $8K - $20K (PPP-adjusted)
-    target_students_5yr: [20000, 100000]
-    structure: "JV with local partner or pure licensing"
-  demand_factor: 0.5
+  equity_structure:
+    alpha_equity_pct: 0        # Alpha holds 0%
+    counterparty_equity_pct: 100  # Counterparty owns 100%
+    model: "Operator & Licensor (Marriott model)"
+    description: >
+      Alpha is the exclusive operator and IP licensor.
+      The local entity (counterparty) owns 100% of equity.
+      This follows the Ed71/Next71 UAE structure.
 
-tier_3:
-  name: "Emerging / Government"
-  description: "Licensing or government partnership model. Government pays; Alpha provides the system. Scale is potentially massive."
-  examples:
-    - "India"
-    - "Nigeria"
-    - "Kenya"
-  criteria:
-    gdp_per_capita_max: 10000
-  deal_structure:
-    model: "Licensing or government partnership"
-    upfront_range: [25000000, 100000000]  # $25M - $100M (mostly IP licensing + development)
-    per_student_license_fee_range: [50, 200]  # $50 - $200/year per student
-    target_students_5yr: [100000, 1000000]
-    structure: "Government operates schools; Alpha licenses IP + manages"
-    guide_school: "Established locally; trains government teachers as Guides"
-  demand_factor: 0.2
+  # ---------------------------------------------------------------------------
+  # Prong 1: Alpha Flagship Schools
+  # ---------------------------------------------------------------------------
+  prong_1_flagship:
+    description: >
+      Premium flagship schools in capital city + 1-2 largest cities.
+      Tuition set using AGI of top 20% wealthiest families.
+    tuition_min: 40000         # $40K minimum
+    tuition_max: 100000        # $100K maximum
+    tuition_optimization: "Optimize total revenue within $40K-$100K range"
+    tuition_method: "AGI (adjusted gross income) of top 20% wealthiest families"
+    location: "Capital city + 1-2 of the country's biggest cities"
+    real_estate_sourced_by: "counterparty"
+    capacity_backstop_pct: 0.50  # 50% backstop, same as UAE
+    backstop_duration_years: 5
+
+  # ---------------------------------------------------------------------------
+  # Prong 2: National / Public Schools (Ed71 model)
+  # ---------------------------------------------------------------------------
+  prong_2_national:
+    description: >
+      National-scale public school transformation.
+      Fixed per-student budget — does NOT vary by country GDP or PPP.
+    per_student_budget: 25000   # $25K FIXED — Andy: "can't run one of these schools for less than 20 bucks"
+    re_and_surplus_assumption: 5000  # $5K for real estate + operating surplus (asterisk note)
+    min_student_year_commit: 100000  # 100K student-years minimum
+    pricing_note: >
+      Counterparty pays the difference between $25K and their current
+      per-student government funding. Andy: "100,000 students, take
+      the difference between 25K and their current funding"
+    budget_is_fixed: true       # NOT variable by country PPP/GDP
+
+  # ---------------------------------------------------------------------------
+  # Fee Structure (non-negotiable)
+  # ---------------------------------------------------------------------------
+  fee_structure:
+    management_fee_pct: 0.10    # 10% of per-student budget
+    timeback_license_pct: 0.20  # 20% of per-student budget
+    management_fee_floor_per_student: 2500  # $2,500 minimum
+    timeback_fee_floor_per_student: 5000    # $5,000 minimum
+
+  # ---------------------------------------------------------------------------
+  # Upfront Fees — FIXED, not country-scaled
+  # Neeraj: "I don't see how these things scale"
+  # ---------------------------------------------------------------------------
+  upfront_fees:
+    alphacore_license: 250000000         # $250M — FIXED for all countries
+    edtech_app_content_rd: 250000000     # $250M — FIXED for all countries
+    lifeskills_rd: 250000000             # $250M — FIXED for all countries
+    total_fixed_development: 750000000   # $750M total fixed costs
+    note: >
+      AlphaCore license, country-specific workshops, and edtech app fees
+      are FIXED amounts — they do NOT scale by country GDP, population,
+      or any other metric. Only management fee prepay and Timeback prepay
+      scale (based on student count × budget).
+
+  # Prepaid fees — these CAN scale (based on student commitment)
+  prepaid_fees:
+    management_fee_prepay_formula: "student_years × per_student_budget × 10%"
+    timeback_fee_prepay_formula: "student_years × per_student_budget × 20%"
+    management_fee_prepay_min_years: 2
+    description: "Prepaid commitments scale with student count. Fixed fees do not."
+
+
+# =============================================================================
+# DEPRECATED — Tier system removed per workshop decision
+# Keeping as comment for historical reference only
+# =============================================================================
+# tier_1:  REMOVED — was "UAE-Scale" ($500M-$1.5B upfront, $20K-$30K/student)
+# tier_2:  REMOVED — was "Mid-Market" ($100M-$500M upfront, $8K-$20K/student)
+# tier_3:  REMOVED — was "Emerging" ($25M-$100M upfront, $50-$200/student)

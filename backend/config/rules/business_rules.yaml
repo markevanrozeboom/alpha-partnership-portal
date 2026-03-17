@@ -1,9 +1,33 @@
-# Universal Deal Structure Rules (SPECS.md Section 2C)
+# =============================================================================
+# Universal Deal Structure Rules (Workshop Decision — March 16, 2026)
+# =============================================================================
 # These are NON-NEGOTIABLE. Every proposal must satisfy all rules.
+# Key change: ONE model, NO tiers, FIXED pricing, 100/0 equity.
+# =============================================================================
 
 universal_rules:
+  # ---------------------------------------------------------------------------
+  # Equity & Ownership — 100/0 (Marriott Model)
+  # Andy: "for the version 1, it's equity is 100, 0"
+  # ---------------------------------------------------------------------------
+  equity_structure:
+    alpha_equity_pct: 0
+    counterparty_equity_pct: 100
+    model: "Operator & Licensor"
+    description: >
+      Counterparty owns 100% of the local entity. Alpha owns 0%.
+      Alpha operates as exclusive operator & licensor (Marriott hotel model).
+      This is the Ed71/Next71 UAE structure — not a JV, not a partnership.
+    enforceable: true
+    exceptions: none
+
+  # ---------------------------------------------------------------------------
+  # IP Ownership — Alpha retains all core IP
+  # ---------------------------------------------------------------------------
   ip_ownership:
-    description: "Alpha ALWAYS retains IP ownership of Timeback, AlphaCore, Guide School, and Incept eduLLM. No exceptions."
+    description: >
+      Alpha ALWAYS retains IP ownership of Timeback, AlphaCore,
+      Guide School, and Incept eduLLM. No exceptions.
     enforceable: true
     exceptions: none
     ip_assets:
@@ -12,10 +36,19 @@ universal_rules:
       - "Guide School"
       - "Incept eduLLM"
 
+  # ---------------------------------------------------------------------------
+  # Local IP Layer — 100% owned by local entity
+  # ---------------------------------------------------------------------------
   local_ip_layer:
-    description: "A local IP layer (equivalent of AsasOne in UAE) is always created and 100% owned by the local entity. It covers national identity, cultural values, and mandatory local curriculum."
+    description: >
+      A local IP layer (equivalent of AsasOne in UAE) is always created
+      and 100% owned by the local entity. Covers national identity,
+      cultural values, and mandatory local curriculum.
     enforceable: true
 
+  # ---------------------------------------------------------------------------
+  # Local Partner Responsibilities
+  # ---------------------------------------------------------------------------
   local_partner_funds:
     description: "Local partners or government funds real estate, marketing, and enrollment infrastructure."
     enforceable: true
@@ -24,35 +57,124 @@ universal_rules:
       - "marketing"
       - "enrollment infrastructure"
 
+  # ---------------------------------------------------------------------------
+  # Fee Structure — NON-NEGOTIABLE
+  # ---------------------------------------------------------------------------
   management_fee:
     floor_percent: 0.10  # 10% of per-student budget
-    description: "Management fee floor: 10% of per-student budget. Non-negotiable."
+    floor_per_student: 2500  # $2,500 minimum per student
+    description: "Management fee: 10% of per-student budget. Non-negotiable."
+    enforceable: true
 
   timeback_license_fee:
     floor_percent: 0.20  # 20% of per-student budget
-    description: "Timeback license fee floor: 20% of per-student budget. Non-negotiable."
-
-  upfront_ip_fee:
-    minimum_usd: 25000000  # $25M
-    description: "Minimum $25M total upfront ask. Composed of: (1) AlphaCore License, (2) Customized Country-Specific App Content R&D, (3) Customized Country-Specific LifeSkills R&D, (4) Upfront Management Fee (10% × Students × Budget), (5) Upfront Timeback Fee (20% × Students × Budget)."
-    fixed_development_costs:
-      tier_1: 750000000  # $250M × 3 (AlphaCore + App Content R&D + LifeSkills R&D)
-      tier_2: 450000000  # $150M × 3
-      tier_3: 300000000  # $100M × 3
+    floor_per_student: 5000  # $5,000 minimum per student
+    description: "Timeback license fee: 20% of per-student budget. Non-negotiable."
+    enforceable: true
 
   management_fee_prepayment:
     minimum_years: 2
     description: "Minimum 2 years management fee prepaid before Alpha begins operations."
 
+  # ---------------------------------------------------------------------------
+  # Upfront IP Fee — FIXED development costs (NOT country-scaled)
+  # Neeraj: "I don't see how these things scale"
+  # ---------------------------------------------------------------------------
+  upfront_ip_fee:
+    minimum_usd: 25000000  # $25M floor
+    description: >
+      Upfront fees composed of FIXED development costs plus variable prepaid fees.
+      Fixed costs: AlphaCore License ($250M) + App Content R&D ($250M) +
+      LifeSkills R&D ($250M) = $750M total.
+      Variable: Mgmt Fee Prepay + Timeback Fee Prepay (scale with student count).
+    fixed_development_costs:
+      alphacore_license: 250000000         # $250M — FIXED for all countries
+      edtech_app_content_rd: 250000000     # $250M — FIXED for all countries
+      lifeskills_rd: 250000000             # $250M — FIXED for all countries
+      total: 750000000                     # $750M total — does NOT vary
+
+  # ---------------------------------------------------------------------------
+  # Two-Prong School Model
+  # ---------------------------------------------------------------------------
+  prong_1_flagship:
+    description: >
+      Alpha Flagship Schools — premium schools in capital city + 1-2 largest cities.
+      Tuition optimized for maximum revenue within $40K-$100K range.
+    tuition_min: 40000
+    tuition_max: 100000
+    tuition_method: "AGI of top 20% wealthiest families"
+    real_estate: "Sourced by counterparty"
+    capacity_backstop_pct: 0.50
+    backstop_duration_years: 5
+
+  prong_2_national:
+    description: >
+      National/Public Schools — fixed $25K per-student budget.
+      Counterparty pays gap between $25K and current gov per-student funding.
+    per_student_budget: 25000
+    re_surplus_assumption: 5000
+    min_student_year_commit: 100000
+    budget_is_fixed: true
+    pricing_note: >
+      Andy: "100,000 students, take the difference between 25K and their current funding"
+
+  # ---------------------------------------------------------------------------
+  # School Types — minimum 2 (flagship + national)
+  # ---------------------------------------------------------------------------
   school_types:
     minimum: 2
-    description: "Every proposal offers at least two school types (e.g., Flagship + Virtual, STEM + Sports)."
+    types:
+      - "Alpha Flagship School (Prong 1)"
+      - "National/Public School (Prong 2)"
+    description: "Every proposal offers both Flagship and National school types."
 
+  # ---------------------------------------------------------------------------
+  # Guide School
+  # ---------------------------------------------------------------------------
   guide_school:
     timeline_months: 12
-    description: "Guide School must be established locally within the first 12 months. Local educators are trained as Guides before student enrollment begins."
+    description: >
+      Guide School must be established locally within the first 12 months.
+      Local educators are trained as Guides before student enrollment begins.
 
+  # ---------------------------------------------------------------------------
+  # Three Commitments
+  # ---------------------------------------------------------------------------
   three_commitments:
     - "Children will love school"
     - "Children will learn 2x faster"
     - "Children will develop life skills for the AI age"
+
+  # ---------------------------------------------------------------------------
+  # Research Role — Color Commentary Only
+  # Andy: "the model's fixed... your job is to change the words to feel right for the country"
+  # ---------------------------------------------------------------------------
+  research_role:
+    purpose: "color_commentary"
+    description: >
+      Research is for narrative/color commentary ONLY — it does NOT drive
+      financial model numbers. The model is FIXED. Research provides:
+      local regulatory info, cultural life-skills ideas (cricket academy,
+      winemaking, etc.), language needs, and national strategy alignment.
+    does_not_drive:
+      - "per_student_budget"
+      - "upfront_fees"
+      - "fee_percentages"
+      - "student_targets"
+    does_drive:
+      - "cultural_lifeskills_ideas"
+      - "language_localization"
+      - "regulatory_requirements"
+      - "national_vision_alignment"
+      - "flagship_tuition_optimization"  # AGI of top 20% families
+
+  # ---------------------------------------------------------------------------
+  # Output Format — ONE combined document
+  # ---------------------------------------------------------------------------
+  output_format:
+    type: "single_document"
+    description: >
+      Output is ONE document combining narrative + financial tables.
+      Not a separate term sheet. Use Ed71 slide 8 as deck template.
+    deck_template: "Ed71 slide 8"
+    target_countries: 4  # Run for 4 countries + UAE comparison

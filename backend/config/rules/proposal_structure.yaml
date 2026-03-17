@@ -1,20 +1,22 @@
-# Proposal Output Requirements (SPECS.md Section 2E + Section 4.6)
-# Every generated proposal must include these sections.
+# Proposal Output Requirements — Post-Workshop March 16, 2026
+# Single combined document output (not separate term sheet + memorandum)
+# Uses Ed71 slide 8 as deck template, conformed to local market
 
-# DOCX Narrative Proposal Structure
+# SINGLE COMBINED DOCUMENT (Investment Memorandum + Term Sheet merged)
+# Per Andy Price workshop directive: "One document, not separate pieces"
 proposal_sections:
   - section_number: 1
     title: "Executive Summary"
-    description: "Three commitments and a headline financial ask."
+    description: "Three commitments, headline financial ask, Operator & Licensor (Marriott) model overview."
     required_data_fields:
       - "three_commitments"
       - "upfront_ask"
       - "target_students_5yr"
-      - "entry_mode"
+      - "partnership_model"  # Always: Operator & Licensor
 
   - section_number: 2
     title: "Country/State Education System Diagnosis"
-    description: "What is broken, what the government is trying to fix, where Alpha's model creates the sharpest wedge."
+    description: "What is broken, what the government is trying to fix, where Alpha's model creates the sharpest wedge. Color commentary only — does NOT drive financial model."
     required_data_fields:
       - "system_diagnosis"
       - "reform_landscape"
@@ -25,21 +27,31 @@ proposal_sections:
     description: "How Timeback, AlphaCore, Guide School, and Incept eduLLM solve their specific problems. Includes the local IP layer concept."
     required_data_fields:
       - "local_ip_layer"
-      - "school_types"
+      - "two_prong_model"
       - "localization_requirements"
 
   - section_number: 4
-    title: "Proposed Deal Structure"
-    description: "School types, phased rollout plan (Phase 0 through Phase 3), and ownership/partnership structure."
+    title: "Two-Prong School Model"
+    description: "Prong 1 (Flagship Alpha Schools: $40K-$100K tuition, AGI top 20%, capital cities) + Prong 2 (National/Public Schools: $25K fixed budget, 100K student-year min)."
     required_data_fields:
-      - "school_types"
+      - "flagship_schools"
+      - "national_schools"
       - "phased_rollout"
       - "partnership_structure"
-      - "entry_mode"
 
   - section_number: 5
+    title: "Deal Structure & Commercial Terms"
+    description: "Operator & Licensor model (100/0 equity), upfront fees ($750M fixed dev costs), ongoing fee structure (10% mgmt, 20% Timeback), counterparty commitments."
+    required_data_fields:
+      - "equity_structure"
+      - "upfront_fees"
+      - "ongoing_fees"
+      - "counterparty_commitments"
+      - "alpha_commitments"
+
+  - section_number: 6
     title: "Financial Summary"
-    description: "Upfront ask, ongoing fee structure, projected student enrollment, revenue at scale, and return profile (IRR/MOIC for investor audiences)."
+    description: "Upfront ask, ongoing fee structure, projected student enrollment, revenue at scale, and return profile."
     required_data_fields:
       - "upfront_ask"
       - "fee_structure"
@@ -47,48 +59,50 @@ proposal_sections:
       - "revenue_at_scale"
       - "returns"
 
-  - section_number: 6
+  - section_number: 7
     title: "The Ask"
-    description: "Exactly what Alpha needs from the counterparty: regulatory access, tuition/subsidy approval, real estate, scholarship funding, and sovereign/political sponsorship."
+    description: "Exactly what Alpha needs from the counterparty: regulatory access, tuition/subsidy approval, real estate for flagships, scholarship funding, 100K student-year commitment, sovereign/political sponsorship."
     required_data_fields:
       - "key_asks"
 
-# PPTX Deck Structure (SPECS.md Section 4.6)
+# PPTX Deck Structure — Based on Ed71 Slide 8 template
+# Conformed to local market per Andy's directive
 deck_structure:
+  template_reference: "Ed71 slide 8 — The World's First AI-Native National Education System"
   standard_slides:
     - slide_number: 0
       title_pattern: "Title"
-      content: "Country branding, partnership name, audience"
-      content_varies_by: "Country branding, partnership name, audience"
+      content: "Country branding, partnership name, Operator & Licensor model"
+      content_varies_by: "Country branding, partnership name"
 
     - slide_number: 1
       title_pattern: "Vision & Executive Summary"
-      content: "National vision alignment, three commitments"
-      content_varies_by: "National vision alignment, three commitments"
+      content: "National vision alignment, three commitments, two-prong model overview"
+      content_varies_by: "National vision alignment, cultural context"
 
     - slide_number: 2
       title_pattern: "Proof - Alpha Outcomes"
       content: "Same global proof points, contextualized for local concerns"
-      content_varies_by: "Same global proof points, contextualised for local concerns"
+      content_varies_by: "Local concerns and priorities"
 
     - slide_number: 3
-      title_pattern: "The System"
-      content: "IP stack + local sovereignty layer (equivalent of AsasOne)"
-      content_varies_by: "IP stack + local sovereignty layer (equivalent of AsasOne)"
+      title_pattern: "The System — Two-Prong Model"
+      content: "Prong 1 (Flagship) + Prong 2 (National) structure, IP stack, local sovereignty layer"
+      content_varies_by: "Local IP layer, cultural life-skills (color commentary)"
 
     - slide_number: 4
       title_pattern: "Scope, Timeline & Economics"
-      content: "Country-specific financials from Financial Agent"
-      content_varies_by: "Country-specific financials from Financial Agent"
+      content: "Fixed financial model ($750M dev costs, $25K national budget, 100K student-year min)"
+      content_varies_by: "Flagship tuition (AGI-based), local regulatory timeline"
 
     - slide_number: 5
       title_pattern: "The Ask & Next Steps"
-      content: "Tailored asks (regulatory, funding, partnership terms)"
-      content_varies_by: "Tailored asks (regulatory, funding, partnership terms)"
+      content: "Tailored asks (regulatory, funding, real estate, 100K commitment)"
+      content_varies_by: "Country-specific regulatory and funding requirements"
 
   appendix_slides:
     range: "A1-A10"
-    content: "Country-specific deep dives"
+    content: "Country-specific deep dives (color commentary)"
 
   audience_variations:
     royal:

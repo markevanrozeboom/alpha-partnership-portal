@@ -1,64 +1,81 @@
-# Scaling Formulas (SPECS.md Section 2D)
-# The system uses these formulas to calculate the headline numbers for any country.
-# All are user-overridable at HITL decision gates.
+# =============================================================================
+# Financial Formulas (Workshop Decision — March 16, 2026)
+# =============================================================================
+# PPP scaling REMOVED. Tier-based cost scaling REMOVED.
+# The model is FIXED. Research is for "color commentary" only.
+# Andy: "the model's fixed... your job is to change the words to feel right for the country"
+# =============================================================================
 
 formulas:
-  ppp_factor:
-    formula: "min(1.0, gdp_per_capita / 30000)"
-    description: "Purchasing Power Parity factor, capped at 1.0"
-    reference_gdp: 30000
-
+  # ---------------------------------------------------------------------------
+  # Upfront Ask — FIXED development costs + variable prepaid fees
+  # ---------------------------------------------------------------------------
   upfront_ask:
-    formula: "alphacore_license + app_content_rd + lifeskills_rd + (student_target_5yr * per_student_budget * 0.10) + (student_target_5yr * per_student_budget * 0.20)"
-    description: "Fixed development costs (AlphaCore License + App Content R&D + LifeSkills R&D) + variable fees (Management Fee 10% + Timeback 20% of students × budget)"
+    formula: "fixed_development_total + mgmt_fee_prepay + timeback_fee_prepay"
+    description: >
+      Fixed development costs ($750M) plus variable prepaid fees.
+      Fixed costs do NOT scale by country. Prepaid fees scale by student commitment.
     components:
-      alphacore_license:
-        tier_1: 250000000
-        tier_2: 150000000
-        tier_3: 100000000
-      app_content_rd:
-        tier_1: 250000000
-        tier_2: 150000000
-        tier_3: 100000000
-      lifeskills_rd:
-        tier_1: 250000000
-        tier_2: 150000000
-        tier_3: 100000000
-      management_fee_upfront: "student_target_5yr * per_student_budget * 0.10"
-      timeback_upfront: "student_target_5yr * per_student_budget * 0.20"
-    fixed_dev_costs:
-      tier_1: 750000000  # $250M × 3
-      tier_2: 450000000  # $150M × 3
-      tier_3: 300000000  # $100M × 3
-    minimum: 25000000  # $25M floor
+      # FIXED — same for every country (Neeraj: "I don't see how these things scale")
+      alphacore_license: 250000000        # $250M — to Alpha Holdings
+      edtech_app_content_rd: 250000000    # $250M — local expense
+      lifeskills_rd: 250000000            # $250M — local expense
+      fixed_development_total: 750000000  # $750M total
+      # VARIABLE — scales with student commitment
+      mgmt_fee_prepay: "min_student_years × per_student_budget × 0.10 × prepay_years"
+      timeback_fee_prepay: "min_student_years × per_student_budget × 0.20 × prepay_years"
+    minimum: 25000000  # $25M floor (kept from original rules)
 
-  student_target_5yr:
-    formula: "max(5000, school_age_pop * 0.10)"
-    description: "Target student count at Year 5 — must be no less than 10% of market size (school-age population)"
-    minimum: 5000
-    penetration_rate: 0.10  # 10% of school-age population (market size floor)
+  # ---------------------------------------------------------------------------
+  # Student Target — 100K minimum for national schools
+  # ---------------------------------------------------------------------------
+  student_target:
+    national_min_student_years: 100000   # Andy: "100,000 students"
+    description: >
+      Minimum 100K student-year commitment for national/public schools (Prong 2).
+      Flagship schools (Prong 1) are separate and additive.
 
+  # ---------------------------------------------------------------------------
+  # Per-Student Budget — FIXED at $25K for national schools
+  # ---------------------------------------------------------------------------
   per_student_budget:
-    formula: "max(5000, min(30000, private_school_avg_tuition * 0.8))"
-    description: "Per-student budget, bounded between $5K and $30K"
-    minimum: 5000
-    maximum: 30000
-    tuition_multiplier: 0.8  # 80% of average private school tuition
+    national_schools: 25000  # FIXED — Andy: "can't run one of these schools for less than 20 bucks"
+    re_and_surplus: 5000     # $5K assumption for RE + operating surplus (asterisk)
+    is_fixed: true           # NOT variable by country
+    description: >
+      Per-student budget for national/public schools is FIXED at $25K.
+      Does not vary by country GDP, PPP, or any other metric.
+      The $5K RE + surplus is noted separately with an asterisk.
 
+  # ---------------------------------------------------------------------------
+  # Flagship Tuition — variable within $40K-$100K range
+  # ---------------------------------------------------------------------------
+  flagship_tuition:
+    minimum: 40000    # $40K floor
+    maximum: 100000   # $100K ceiling
+    optimization: "Maximize total revenue within range"
+    method: "Set using AGI of top 20% wealthiest families in target country"
+    description: >
+      Flagship school tuition is the ONE variable that depends on country data.
+      Use adjusted gross income of top 20% families to set optimal tuition.
+
+  # ---------------------------------------------------------------------------
+  # Fee Revenue Calculations
+  # ---------------------------------------------------------------------------
   management_fee_rev:
-    formula: "students * per_student_budget * 0.10 * 5"
-    description: "Management fee revenue over 5 years"
+    formula: "total_students × per_student_budget × 0.10 × years"
+    description: "Management fee: 10% of per-student budget, ongoing"
     fee_pct: 0.10
-    years: 5
 
   timeback_license_rev:
-    formula: "students * per_student_budget * 0.20 * 5"
-    description: "Timeback license fee revenue over 5 years"
+    formula: "total_students × per_student_budget × 0.20 × years"
+    description: "Timeback license fee: 20% of per-student budget, ongoing"
     fee_pct: 0.20
-    years: 5
 
-demand_factor_defaults:
-  tier_1: 1.0
-  tier_2: 0.5
-  tier_3: 0.2
-  description: "Derived from private school enrollment rate, government reform appetite, and competitive density."
+
+# =============================================================================
+# DEPRECATED — removed per workshop decision
+# =============================================================================
+# ppp_factor:        REMOVED — no longer used to adjust pricing
+# demand_factor:     REMOVED — no longer used
+# per_student_budget formula (PPP-adjusted): REMOVED — now fixed at $25K

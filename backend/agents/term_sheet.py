@@ -39,15 +39,12 @@ UAE_HOT_REFERENCE = """
 This is the actual deal structure used for the UAE partnership. Use it as a
 template and calibrate all new term sheets to this standard.
 
-### 1. Strategic Investments (optional, illustrative)
-| Investment        | Amount | Valuation | Stake | Timing |
-|-------------------|--------|-----------|-------|--------|
-| Incept Labs       | $1B    | $10B      | 10%   | 2026   |
-| Alpha Holdings    | $100M  | $10B      | 1%    | 2026   |
-| Alpha Holdings    | $1B    | $100B     | 1%    | 2027   |
-| TimeBack EdGame   | $20M   | $1B       | 2%    | 2025   |
+### 1. Equity Structure
+- Counterparty owns 100% of the local entity
+- Alpha owns 0% equity — operates as exclusive operator & licensor (Marriott model)
+- This is the standard structure for ALL countries
 
-### 2a. Alpha Schools — Original Scope
+### 2a. Alpha Flagship Schools (Prong 1)
 2 Flagships ($100k tuition, 2k students) + 20 Branded ($50k tuition, 20k students) = 22,000 students.
 
 | Item                          | Up-Front | Ongoing  | Recipient      |
@@ -174,25 +171,25 @@ def generate_term_sheet_assumptions(
     backstop_annual = round(0.5 * y5_students * per_student / 1_000_000)  # $M
     mgmt_fee_prepay_m = round(min(5000, y5_students) * per_student * (mgmt_pct / 100) * 2 / 1_000_000)
 
-    is_us_state = country_profile.target.type == TargetType.US_STATE
-
     assumptions = [
         # --- Deal Structure ---
         FinancialAssumption(
             key="ts_partnership_type",
             label="Partnership Structure",
-            value=1,  # 1=JV, 2=Licensing, 3=Direct
-            min_val=1, max_val=3, step=1,
+            value=1,  # 1=Operator & Licensor (only option)
+            min_val=1, max_val=1, step=1,
             unit="type", category="deal",
-            description="1 = Joint Venture, 2 = Licensing, 3 = Direct Operation",
+            description="Operator & Licensor model (Marriott model). Counterparty owns 100%, Alpha operates.",
+            locked=True,
         ),
         FinancialAssumption(
             key="ts_alpha_ownership_pct",
             label="Alpha Ownership / Control (%)",
-            value=0 if not is_us_state else 100,
-            min_val=0, max_val=100, step=1,
+            value=0,
+            min_val=0, max_val=0, step=1,
             unit="%", category="deal",
-            description="Alpha's equity stake in the JV. 0% = Operator & Licensor model (UAE structure). 100% for direct.",
+            description="Alpha owns 0% equity — operates as exclusive Operator & Licensor (Marriott model). Non-negotiable.",
+            locked=True,
         ),
         FinancialAssumption(
             key="ts_term_years",
@@ -209,30 +206,33 @@ def generate_term_sheet_assumptions(
             description="Alpha has exclusive rights to the 2hr Learning model in the territory",
         ),
 
-        # --- Upfront Payment Breakdown (overlaps with financial model) ---
+        # --- Upfront Payment Breakdown (FIXED — do not scale by country) ---
         FinancialAssumption(
             key="ts_upfront_alphacore_license",
             label="AlphaCore License ($M)",
-            value=round(financial_model.upfront_alphacore_license / 1_000_000) if financial_model.upfront_alphacore_license > 1_000_000 else round(financial_model.upfront_alphacore_license),
-            min_val=10, max_val=500, step=10,
+            value=250,
+            min_val=250, max_val=250, step=1,
             unit="$M", category="fees",
-            description="AlphaCore curriculum OS and learning management system license",
+            description="AlphaCore curriculum OS and learning management system license. FIXED $250M — does not scale.",
+            locked=True,
         ),
         FinancialAssumption(
             key="ts_upfront_app_content_rd",
             label="Customized Country-Specific App Content R&D ($M)",
-            value=round(financial_model.upfront_app_content_rd / 1_000_000) if financial_model.upfront_app_content_rd > 1_000_000 else round(financial_model.upfront_app_content_rd),
-            min_val=10, max_val=500, step=10,
+            value=250,
+            min_val=250, max_val=250, step=1,
             unit="$M", category="fees",
-            description="R&D for country-specific EdTech app content and localization",
+            description="R&D for country-specific EdTech app content and localization. FIXED $250M — does not scale.",
+            locked=True,
         ),
         FinancialAssumption(
             key="ts_upfront_lifeskills_rd",
             label="Customized Country-Specific LifeSkills R&D ($M)",
-            value=round(financial_model.upfront_lifeskills_rd / 1_000_000) if financial_model.upfront_lifeskills_rd > 1_000_000 else round(financial_model.upfront_lifeskills_rd),
-            min_val=10, max_val=500, step=10,
+            value=250,
+            min_val=250, max_val=250, step=1,
             unit="$M", category="fees",
-            description="R&D for country-specific life skills curriculum (AsasCore equivalent)",
+            description="R&D for country-specific life skills curriculum (AsasCore equivalent). FIXED $250M — does not scale.",
+            locked=True,
         ),
         FinancialAssumption(
             key="ts_upfront_mgmt_fee",
@@ -303,26 +303,36 @@ def generate_term_sheet_assumptions(
         ),
         FinancialAssumption(
             key="ts_per_student_budget",
-            label="Per-Student Annual Tuition / Budget ($)",
-            value=round(per_student),
-            min_val=5_000, max_val=100_000, step=500,
+            label="National School Per-Student Budget ($)",
+            value=25_000,
+            min_val=25_000, max_val=25_000, step=1,
             unit="$", category="school_portfolio",
-            description="Blended annual tuition per student. ⚠️ Changes recalculate financial model.",
+            description="FIXED $25K per student for national/public schools (Prong 2). Non-negotiable floor.",
+            locked=True,
         ),
         FinancialAssumption(
             key="ts_num_flagship_schools",
-            label="Flagship Alpha Schools",
-            value=2, min_val=0, max_val=10, step=1,
+            label="Flagship Alpha Schools (Prong 1)",
+            value=2, min_val=1, max_val=10, step=1,
             unit="schools", category="school_portfolio",
-            description="Premium flagship schools ($100K+ tuition) for halo effect",
+            description="Premium flagship schools in capital + major cities for halo effect",
         ),
         FinancialAssumption(
             key="ts_flagship_tuition",
             label="Flagship School Tuition ($)",
-            value=100_000 if not is_us_state else 50_000,
-            min_val=25_000, max_val=200_000, step=5_000,
+            value=100_000,
+            min_val=40_000, max_val=100_000, step=5_000,
             unit="$", category="school_portfolio",
-            description="Annual tuition for flagship Alpha schools",
+            description="Annual tuition for flagship Alpha schools (Prong 1). Range: $40K-$100K, set using AGI of top 20% families.",
+        ),
+        FinancialAssumption(
+            key="ts_min_student_year_commit",
+            label="Minimum Student-Year Commitment",
+            value=100_000,
+            min_val=100_000, max_val=100_000, step=1,
+            unit="student-years", category="school_portfolio",
+            description="100K student-year minimum commitment for national schools (Prong 2). Non-negotiable.",
+            locked=True,
         ),
         FinancialAssumption(
             key="ts_num_schools",
@@ -398,6 +408,14 @@ TERM_SHEET_PROMPT = """You are a senior M&A lawyer at Sullivan & Cromwell drafti
 indicative term sheet for a strategic education partnership between 2hr Learning (Alpha Holdings)
 and {target}.
 
+IMPORTANT: This uses the Operator & Licensor model (Marriott hotel model).
+- Counterparty owns 100% of the local entity
+- Alpha owns 0% equity — operates as exclusive operator & licensor
+- Two-prong school model: Flagship (Prong 1) + National/Public (Prong 2)
+- All development costs are FIXED at $250M each (3 items = $750M total)
+- National school budget is FIXED at $25K per student
+- 100K student-year minimum commitment for national schools
+
 {uae_reference}
 
 Context:
@@ -410,17 +428,19 @@ Write a PROFESSIONAL TERM SHEET with the following exact sections. Use crisp leg
 Every term should be SPECIFIC — no placeholder ranges, commit to the exact numbers from the deal parameters.
 
 ## PARTIES
-- Alpha Holdings / 2hr Learning ("Alpha")
-- The counterparty (government ministry, sovereign entity, or private partner)
+- Alpha Holdings / 2hr Learning ("Alpha") — Exclusive Operator & Licensor
+- The counterparty (government ministry, sovereign entity, or private partner) — 100% Entity Owner
 
 ## TRANSACTION OVERVIEW
-- 2-3 sentence description of the deal
+- 2-3 sentence description of the deal emphasizing the Operator & Licensor (Marriott) model
+- Highlight the two-prong approach: premium flagship schools + national public schools
 
 ## KEY COMMERCIAL TERMS
 
-### Partnership Structure
+### Partnership Structure (Operator & Licensor — Marriott Model)
 - Entity type: {partnership_type}
-- Alpha ownership/control: {alpha_ownership}%
+- Counterparty ownership: 100% of local entity
+- Alpha ownership: {alpha_ownership}% — operates as exclusive Operator & Licensor
 - Governance (board composition, voting rights, reserved matters)
 
 ### Upfront Payments
@@ -538,16 +558,15 @@ async def generate_term_sheet(
         context_parts.append(f"K-12 students: {country_profile.education.k12_enrolled:,.0f}")
     if country_profile.economy.gdp_per_capita:
         context_parts.append(f"GDP/capita: ${country_profile.economy.gdp_per_capita:,.0f}")
-    if country_profile.target.tier:
-        context_parts.append(f"Tier: {country_profile.target.tier}")
+    # Unified model — no tier classification
     if strategy.entry_mode:
         context_parts.append(f"Entry mode: {strategy.entry_mode.value}")
     if strategy.partnership_structure.type:
         context_parts.append(f"Partnership: {strategy.partnership_structure.type.value}")
 
     # Deal parameters from term sheet assumptions
-    partnership_map = {1: "Joint Venture (JV)", 2: "Licensing Agreement", 3: "Direct Operation"}
-    partnership_type = partnership_map.get(int(ts.get("ts_partnership_type", 1)), "Joint Venture (JV)")
+    # Single structure: Operator & Licensor (Marriott model)
+    partnership_type = "Operator & Licensor (Marriott model)"
     alpha_ownership = int(ts.get("ts_alpha_ownership_pct", 0))
     term_years = int(ts.get("ts_term_years", 25))
     exclusivity_years = int(ts.get("ts_exclusivity_years", 25))

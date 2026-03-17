@@ -93,56 +93,47 @@ RATIO_FMT = "0.0x"
 
 
 # ---------------------------------------------------------------------------
-# Tier classification & scaling (unchanged — used for default values)
+# Unified model — no tiers, fixed costs (post-workshop March 16, 2026)
 # ---------------------------------------------------------------------------
-
-def classify_tier(data: dict) -> int:
-    gdp_pc = data.get("economy", {}).get("gdp_per_capita", 0)
-    if gdp_pc > 30000:
-        return 1
-    elif gdp_pc >= 10000:
-        return 2
-    else:
-        return 3
-
 
 def is_us_state(data: dict) -> bool:
     return data.get("target", {}).get("type") == "us_state"
 
 
-def compute_scaling(data: dict, tier: int) -> dict:
-    """Compute default values for the Assumptions sheet."""
-    econ = data.get("economy", {})
+def compute_scaling(data: dict, tier: int = 1) -> dict:
+    """Compute default values for the Assumptions sheet.
+
+    Post-workshop: ONE model for all countries. No tiers.
+    - Fixed dev costs: $250M each x 3 = $750M (does NOT scale by country)
+    - Fixed per-student budget: $25K for national schools
+    - No PPP adjustment
+    - 100K student-year minimum commitment
+    """
     demo = data.get("demographics", {})
-    edu = data.get("education", {})
     overrides = data.get("overrides", {})
 
-    gdp_pc = econ.get("gdp_per_capita", 15000)
     school_age_pop = demo.get("school_age_population", 1000000)
-    avg_tuition = edu.get("avg_private_school_tuition", 12000)
 
-    demand_factors = {1: 1.0, 2: 0.5, 3: 0.2}
-    demand_factor = overrides.get("demand_factor", demand_factors.get(tier, 0.5))
+    # Student target: at least 100K (minimum commitment), or 1% of school-age pop
+    student_target_5yr = max(100_000, int(school_age_pop * 0.01))
+    student_target_5yr = overrides.get("student_target_5yr", student_target_5yr)
 
-    ppp_factor = min(1.0, gdp_pc / 30000)
-    student_target_5yr = max(5000, int(school_age_pop * 0.01 * demand_factor))
-    per_student_budget = max(5000, min(30000, avg_tuition * 0.8))
-    # Fixed development cost per line item: Tier 1 = $250M, Tier 2 = $150M, Tier 3 = $100M (×3 items each)
-    tier_item_costs = {1: 250_000_000, 2: 150_000_000, 3: 100_000_000}
-    item_cost = tier_item_costs.get(tier, 250_000_000)
-    fixed_dev_cost = item_cost * 3  # total: T1=$750M, T2=$450M, T3=$300M
-    # AlphaCore License (Alpha Holdings), App Content R&D + LifeSkills R&D (local expense)
+    # FIXED per-student budget for national schools (Prong 2)
+    per_student_budget = 25_000  # Non-negotiable
+
+    # FIXED development costs — $250M each, does NOT scale by country
+    item_cost = 250_000_000
+    fixed_dev_cost = item_cost * 3  # $750M total
     alphacore_license = item_cost
     app_content_rd = item_cost
     lifeskills_rd = item_cost
-    # Variable upfront: Mgmt Fee = students × budget × 10%, Timeback = students × budget × 20%
+
+    # Variable upfront: Mgmt Fee = students x budget x 10%, Timeback = students x budget x 20%
     upfront_mgmt_fee = student_target_5yr * per_student_budget * 0.10
     upfront_timeback_fee = student_target_5yr * per_student_budget * 0.20
     upfront_ask = fixed_dev_cost + upfront_mgmt_fee + upfront_timeback_fee
 
     return {
-        "tier": tier,
-        "ppp_factor": round(ppp_factor, 3),
         "upfront_ask": round(upfront_ask),
         "alphacore_license": round(alphacore_license),
         "app_content_rd": round(app_content_rd),
@@ -150,11 +141,8 @@ def compute_scaling(data: dict, tier: int) -> dict:
         "upfront_mgmt_fee": round(upfront_mgmt_fee),
         "upfront_timeback_fee": round(upfront_timeback_fee),
         "student_target_5yr": student_target_5yr,
-        "per_student_budget": round(per_student_budget),
-        "demand_factor": demand_factor,
-        "gdp_per_capita": gdp_pc,
+        "per_student_budget": per_student_budget,
         "school_age_population": school_age_pop,
-        "avg_private_tuition": avg_tuition,
     }
 
 
@@ -270,11 +258,11 @@ ASSUMPTIONS_MAP = {
 
 # Named ranges: name -> Assumptions sheet cell reference
 NAMED_RANGES = {
-    "Tier":               f"'Assumptions'!$B${ASSUMPTIONS_MAP['tier']}",
+    "ModelType":          f"'Assumptions'!$B${ASSUMPTIONS_MAP['tier']}",  # Row 5: now "Unified"
     "GDPPerCapita":       f"'Assumptions'!$B${ASSUMPTIONS_MAP['gdp_per_capita']}",
     "SchoolAgePop":       f"'Assumptions'!$B${ASSUMPTIONS_MAP['school_age_pop']}",
-    "PPPFactor":          f"'Assumptions'!$B${ASSUMPTIONS_MAP['ppp_factor']}",
-    "DemandFactor":       f"'Assumptions'!$B${ASSUMPTIONS_MAP['demand_factor']}",
+    "PerStudentBudgetNat": f"'Assumptions'!$B${ASSUMPTIONS_MAP['ppp_factor']}",  # Row 8: now $25K fixed
+    "MinStudentYearCommit": f"'Assumptions'!$B${ASSUMPTIONS_MAP['demand_factor']}",  # Row 9: now 100K fixed
     "StudentTarget":      f"'Assumptions'!$B${ASSUMPTIONS_MAP['student_target']}",
     "PerStudentBudget":   f"'Assumptions'!$B${ASSUMPTIONS_MAP['per_student_budget']}",
     "AvgTuition":         f"'Assumptions'!$B${ASSUMPTIONS_MAP['avg_tuition']}",
@@ -336,17 +324,17 @@ def build_assumptions_sheet(template_id: str, scaling: dict, data: dict,
         "User input", "No"
     ])
     # Row 5
-    rows.append(["Tier Classification", scaling["tier"], "Calculated from GDP/cap", "No"])
+    rows.append(["Model Type", "Unified (Operator & Licensor)", "Fixed — no tiers", "No"])
     # Row 6
-    rows.append(["GDP per Capita (USD)", scaling["gdp_per_capita"], "World Bank / IMF", "Yes"])
+    rows.append(["GDP per Capita (USD)", data.get("economy", {}).get("gdp_per_capita", 0), "World Bank / IMF (color commentary only)", "No"])
     # Row 7
     rows.append(["School-Age Population", scaling["school_age_population"], "World Bank / UNESCO", "Yes"])
-    # Row 8: PPP Factor — FORMULA
-    rows.append(["PPP Factor", None, "Calculated: MIN(1, GDP/30000)", "No"])
-    # Row 9
-    rows.append(["Demand Factor", scaling["demand_factor"], "Derived / overridable", "Yes"])
-    # Row 10: Student Target — FORMULA
-    rows.append(["Student Target (Year 5)", None, "Calculated: MAX(5000, Pop*0.01*Demand)", "No"])
+    # Row 8: Reserved (was PPP Factor — removed)
+    rows.append(["Per-Student Budget (National)", 25_000, "FIXED $25K — non-negotiable", "No"])
+    # Row 9: Reserved (was Demand Factor — removed)
+    rows.append(["Min Student-Year Commitment", 100_000, "100K minimum — non-negotiable", "No"])
+    # Row 10: Student Target
+    rows.append(["Student Target (Year 5)", scaling["student_target_5yr"], "MAX(100K, Pop*0.01)", "Yes"])
     # Row 11: blank
     rows.append([])
     # Row 12: section header
@@ -1952,8 +1940,7 @@ def build_model(data: dict, template_id: str, premium_schools: bool = False) -> 
             "named_ranges": [],
         }
 
-    tier = classify_tier(data)
-    scaling = compute_scaling(data, tier)
+    scaling = compute_scaling(data)
     enrollment = compute_enrollment_defaults(scaling)
     fill_rates = compute_fill_rate_defaults()
 
@@ -1994,7 +1981,7 @@ def build_model(data: dict, template_id: str, premium_schools: bool = False) -> 
         "metadata": {
             "title": f"Financial Model — {data.get('target', {}).get('name', 'Country')} — {perspective_labels.get(template_id, template_id)}",
             "creator": "EduPitch / Alpha Holdings",
-            "description": f"Tier {tier} {template_id} financial model (formula-driven)",
+            "description": f"Unified model {template_id} financial model (formula-driven)",
         },
         "sheets": sheets,
         "named_ranges": named_ranges_list,
@@ -2026,14 +2013,9 @@ def main():
         if is_us_state(data):
             template_ids = ["us-state"]
         else:
-            tier = classify_tier(data)
-            if tier == 1:
-                template_ids = ["jv-counterparty", "jv-alpha"]
-            elif tier == 3:
-                template_ids = ["lic-counterparty", "lic-alpha"]
-            else:
-                template_ids = ["jv-counterparty", "jv-alpha"]
-            print(f"Auto-selected tier {tier}: {', '.join(template_ids)}")
+            # Unified model — always use JV (Operator & Licensor)
+            template_ids = ["jv-counterparty", "jv-alpha"]
+            print(f"Auto-selected unified model: {', '.join(template_ids)}")
     else:
         template_ids = [t.strip() for t in args.templates.split(",")]
 

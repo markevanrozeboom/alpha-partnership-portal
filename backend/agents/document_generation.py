@@ -1,9 +1,15 @@
 """Document Generation Agent — produces executive-quality investor deck and
 investment memorandum (proposal document).
 
+Post-workshop (March 16, 2026): Unified two-prong model for all sovereign nations.
+No tiers. No PPP scaling. Operator & Licensor (Marriott model). 100/0 equity.
+Output is a single combined document: investment memorandum with embedded deal terms.
+
 Generates slide decks via Gamma API and DOCX with appendices, formatted for
 C-suite / head-of-state audiences.  The DOCX proposal is structured as a full
 investment memorandum modelled after Goldman Sachs / Morgan Stanley deal books.
+Deck generation uses the Ed71 slide 8 format as the template reference
+(see: Ed71_ The World's First AI-Native National Education System.pptx).
 """
 
 from __future__ import annotations
@@ -44,6 +50,19 @@ IM_SECTION_PROMPTS = {
 Write the EXECUTIVE SUMMARY section of an investment memorandum for a strategic education
 partnership between 2hr Learning (Alpha) and {target}.
 
+IMPORTANT DEAL MODEL:
+- Operator & Licensor structure (Marriott hotel model) — NOT a joint venture
+- Counterparty owns 100% of the local entity, Alpha owns 0% equity
+- Alpha is the exclusive operator & licensor
+- Two-prong school model:
+  Prong 1 (Flagship): $40K-$100K tuition, capital city + biggest cities, 2-3 schools, 50% backstop
+  Prong 2 (National): FIXED $25K per-student budget, 100K student-year minimum commitment
+- Fixed upfront development: $250M AlphaCore + $250M App R&D + $250M LifeSkills = $750M total (non-negotiable)
+- Management fee: 10% of combined revenue (non-negotiable)
+- Timeback license: 20% of combined revenue (non-negotiable)
+- NOTE: The term sheet / deal terms should be embedded as a section within this document,
+  producing ONE combined investment memorandum (not a separate deliverable).
+
 Context:
 {context}
 
@@ -51,12 +70,14 @@ Write 1,500-2,000 words covering:
 - Transaction overview and key investment highlights (5-7 bullet points at the top)
 - The opportunity: why this market, why now
 - Brief description of 2hr Learning / Alpha model
-- Proposed deal structure and partnership model
+- Proposed Operator & Licensor structure (Marriott model) with 100/0 equity
+- Two-prong model: Flagship schools + National schools
 - Key financial highlights (revenue, EBITDA, IRR, MOIC)
 - Risk/reward assessment summary
 - Recommended next steps
 
-Use formal investment banking prose. Include data points. Be specific and quantitative.""",
+Use formal investment banking prose. Include data points. Be specific and quantitative.
+Research data provides color commentary and narrative context — financial figures are FIXED.""",
 
     "market_overview": """You are a VP at Goldman Sachs' Global Markets Research Division.
 Write the MARKET OVERVIEW & MACRO ANALYSIS section of an investment memorandum for an
@@ -74,7 +95,7 @@ Write 2,000-2,500 words covering:
 2. DEMOGRAPHIC PROFILE — Population, youth bulge, urbanisation, middle-class growth,
    household income distribution
 3. POLITICAL & REGULATORY LANDSCAPE — Government structure, stability, education governance,
-   foreign investment regulations, PPP frameworks
+   foreign investment regulations, public-private partnership frameworks
 4. NATIONAL VISION & REFORM AGENDA — Vision plans, education modernisation targets,
    digital transformation initiatives
 5. COMPETITIVE LANDSCAPE — Existing private education operators, international schools,
@@ -131,6 +152,17 @@ Be specific about outcomes data and the UAE reference deal.""",
 Write the PROPOSED DEAL STRUCTURE & PARTNERSHIP MODEL section of an investment memorandum
 for the 2hr Learning × {target} partnership.
 
+IMPORTANT: This uses the Operator & Licensor model (Marriott hotel model) — NOT a JV.
+- Counterparty owns 100% of the local entity, Alpha owns 0% equity
+- Alpha is the exclusive operator & licensor
+- Two-prong school model:
+  Prong 1 (Flagship): $40K-$100K tuition, 2-3 schools in capital + biggest cities, 50% backstop
+  Prong 2 (National): FIXED $25K per-student budget, 100K student-year minimum commitment
+- Fixed upfront development costs: $250M each (AlphaCore, App R&D, LifeSkills) = $750M total (non-negotiable)
+- Management fee: 10% of combined revenue (non-negotiable)
+- Timeback license: 20% of combined revenue (non-negotiable)
+- Prepaid management + timeback fees scale by student count
+
 Context:
 {context}
 
@@ -138,24 +170,32 @@ Strategy Data:
 {strategy_data}
 
 Write 1,500-2,000 words covering:
-1. PARTNERSHIP STRUCTURE — JV/licensing/franchise structure, rationale for chosen structure,
-   ownership split, governance framework, board composition
-2. IP LICENSING & FEE STRUCTURE — Upfront IP licensing fee, ongoing management fees,
-   Timeback license fees, fee escalation mechanisms, minimum guarantees
-3. CAPITAL STRUCTURE — Total capital requirement, deployment phasing, funding sources,
-   equity vs debt mix, potential co-investors
-4. SCHOOL PORTFOLIO STRATEGY — School types (premium/mid/accessible), capacity per school,
-   geographic rollout sequence, site selection criteria
+1. PARTNERSHIP STRUCTURE — Operator & Licensor (Marriott model), rationale for 100/0 ownership,
+   governance framework, board composition. NOT a JV — counterparty owns 100%, Alpha operates.
+2. TWO-PRONG SCHOOL MODEL — Prong 1 (Flagship) as proof-of-concept/brand anchor,
+   Prong 2 (National) for scale. How the two prongs interact strategically.
+3. IP LICENSING & FEE STRUCTURE — FIXED $750M upfront development costs ($250M × 3),
+   ongoing management fees (10%), Timeback license fees (20%), prepaid fee structure
+4. CAPITAL STRUCTURE — Total capital requirement, deployment phasing, counterparty funds
+   100% of entity, Alpha contributes operational expertise and IP
 5. GOVERNANCE & CONTROLS — Decision rights, quality assurance, curriculum oversight,
    brand protection, exit provisions
 6. RISK ALLOCATION — How risks are shared between parties, insurance, force majeure,
    regulatory change provisions
 
-Include a fee structure summary table. Be specific about numbers.""",
+Include a fee structure summary table. Be specific about numbers.
+NOTE: Financial figures are FIXED — do not derive them from country research data.""",
 
     "financial_analysis": """You are a Managing Director at Morgan Stanley's Financial Sponsors Group.
 Write the FINANCIAL ANALYSIS section of an investment memorandum for the 2hr Learning × {target}
 partnership.
+
+IMPORTANT: Financial parameters are FIXED — do not derive from country GDP or PPP data.
+- Prong 1 (Flagship): $40K-$100K tuition (set by AGI of top 20% families)
+- Prong 2 (National): FIXED $25K per-student budget (non-negotiable)
+- Fixed development costs: $250M each × 3 = $750M total (non-negotiable)
+- Management fee: 10%, Timeback: 20% (both non-negotiable)
+- Research data is "color commentary" for narrative context only
 
 Context:
 {context}
@@ -164,18 +204,20 @@ Financial Data:
 {financial_data}
 
 Write 2,500-3,000 words covering:
-1. KEY ASSUMPTIONS — Enrollment ramp, pricing by school type, cost structure,
-   capital expenditure, working capital, PPP adjustments
+1. KEY ASSUMPTIONS — Enrollment ramp (Prong 1 flagship + Prong 2 national), pricing
+   (FIXED $25K national, $40K-$100K flagship), cost structure, capital expenditure,
+   working capital. No PPP/GDP scaling — all financial figures are fixed.
 2. 5-YEAR P&L PROJECTION — Year-by-year walkthrough of students, schools, revenue, COGS,
    gross margin, OPEX, EBITDA, net income, FCF. Include commentary on drivers and inflection points.
-3. UNIT ECONOMICS — Per-student revenue, cost, and margin by school type.
-   Compare to industry benchmarks.
-4. REVENUE STREAMS — Management fees, Timeback license revenue, upfront IP fee.
-   Break down Alpha's revenue vs JV entity revenue.
+   Show Prong 1 and Prong 2 revenue separately where relevant.
+3. UNIT ECONOMICS — Per-student revenue, cost, and margin by school type
+   (Flagship vs National). Compare to industry benchmarks.
+4. REVENUE STREAMS — Management fees (10% of combined revenue), Timeback license (20%),
+   FIXED $750M upfront development fees. Break down Alpha's operator revenue vs local entity revenue.
 5. RETURNS ANALYSIS — IRR, MOIC, payback period, enterprise value at exit.
    Include sensitivity analysis on key variables.
-6. CAPITAL DEPLOYMENT — Year-by-year capex schedule, IP development costs, launch capital,
-   real estate/infrastructure.
+6. CAPITAL DEPLOYMENT — Year-by-year capex schedule, FIXED $750M development costs,
+   launch capital, real estate/infrastructure.
 7. VALUATION & COMPARABLE TRANSACTIONS — How this deal compares to recent education sector
    M&A and partnerships globally. EV/EBITDA, EV/Revenue multiples.
 
@@ -368,8 +410,6 @@ def _build_context(cp: CountryProfile, strategy: Strategy, model: FinancialModel
         parts.append(f"GDP growth: {cp.economy.gdp_growth_rate}%")
     if cp.economy.credit_rating:
         parts.append(f"Sovereign rating: {cp.economy.credit_rating}")
-    if cp.target.tier:
-        parts.append(f"Tier: {cp.target.tier}")
     if strategy.entry_mode:
         parts.append(f"Entry mode: {strategy.entry_mode.value}")
     if strategy.partnership_structure.type:
@@ -462,7 +502,7 @@ def _build_strategy_data(s: Strategy) -> str:
     if s.partnership_structure.type: parts.append(f"Partnership: {s.partnership_structure.type.value}")
     if s.partnership_structure.ownership_split: parts.append(f"Ownership: {s.partnership_structure.ownership_split}")
     if s.partnership_structure.ip_structure: parts.append(f"IP: {s.partnership_structure.ip_structure}")
-    if s.brand.jv_name_suggestion: parts.append(f"JV name: {s.brand.jv_name_suggestion}")
+    if s.brand.jv_name_suggestion: parts.append(f"Local entity name: {s.brand.jv_name_suggestion}")
     if s.school_types:
         for st in s.school_types[:4]:
             parts.append(f"School type: {st.name} — {st.focus or ''} — {st.tuition or ''}")
@@ -860,17 +900,25 @@ drafting an investor/government presentation deck outline for a {audience_label}
 Target market: {target}
 {context}
 
+IMPORTANT: Use the Ed71 deck (slide 8) as the template reference for deal structure presentation.
+Reference file: Ed71_ The World's First AI-Native National Education System.pptx
+
+Deal model:
+- Operator & Licensor (Marriott model) — NOT a JV. Counterparty owns 100%, Alpha operates.
+- Two-prong: Flagship ($40K-$100K) + National ($25K FIXED, 100K student-year min)
+- Fixed development: $750M total ($250M × 3). Management fee 10%, Timeback 20%.
+
 Produce a detailed slide-by-slide outline for a {slide_count}-slide presentation deck
 covering:
 1. Title slide with tagline
 2. Executive summary (2 slides)
 3. Market opportunity (2 slides) — macro data, education market sizing
 4. The Alpha Model — how 2hr Learning works, key outcomes data
-5. Deal structure — partnership model, JV structure, revenue split
-6. School portfolio — school types with pricing and capacity
+5. Deal structure — Operator & Licensor model, 100/0 ownership, revenue split
+6. Two-prong school model — Flagship (Prong 1) + National (Prong 2) with pricing
 7. 5-year rollout plan with milestones
 8. Financial overview — P&L summary, returns, unit economics
-9. Capital deployment — where the money goes
+9. Capital deployment — FIXED $750M development + school buildout
 10. Risk mitigation
 11. The team (placeholder)
 12. Key asks and next steps
@@ -1152,7 +1200,8 @@ def _build_pptx(
 
     exec_lines = [
         f"• Transform K-12 education in {target} through AI-powered learning",
-        f"• {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} structure with local entity",
+        f"• Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
+        "• Two-prong: Flagship schools ($40K-$100K) + National schools ($25K fixed)",
         "• Proven model: UAE deal ($1.5B, 200K students) as reference",
     ]
     _add_body(s, exec_lines, top=3.2)
@@ -1232,9 +1281,9 @@ def _build_pptx(
     ]
     _add_kpi_boxes(s, returns_kpis, top=1.5)
     _add_body(s, [
-        f"• Upfront IP fee: ${model.upfront_ip_fee:,.0f}",
-        f"• Management fee: {model.management_fee_pct * 100:.0f}% of school revenue",
-        f"• Timeback license: {model.timeback_license_pct * 100:.0f}% of per-student budget",
+        f"• Fixed development costs: ${model.upfront_ip_fee:,.0f} ($250M × 3)",
+        f"• Management fee: {model.management_fee_pct * 100:.0f}% of combined Prong 1+2 revenue",
+        f"• Timeback license: {model.timeback_license_pct * 100:.0f}% of combined Prong 1+2 revenue",
     ], top=3.5)
 
     # ── Slide 7: Deal Structure ────────────────────────────────────────
@@ -1248,12 +1297,14 @@ def _build_pptx(
 
     deal_headers = ["Component", "Details"]
     deal_rows = [
-        ["Structure", f"{strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} with local partner"],
-        ["Ownership", strategy.partnership_structure.ownership_split or "0/100 -- Alpha operates, local entity owns"],
-        ["Upfront IP Fee", f"${model.upfront_ip_fee:,.0f}"],
-        ["Management Fee", f"{model.management_fee_pct * 100:.0f}% of school revenue"],
-        ["Timeback License", f"{model.timeback_license_pct * 100:.0f}% of per-student budget"],
-        ["Local Role", "Cultural IP layer, national identity integration"],
+        ["Structure", "Operator & Licensor (Marriott model)"],
+        ["Ownership", "100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor"],
+        ["Flagship (Prong 1)", f"$40K-$100K tuition, 2-3 schools, 50% backstop"],
+        ["National (Prong 2)", f"$25K/student FIXED, 100K student-year min"],
+        ["Development Costs", "$750M FIXED ($250M × 3)"],
+        ["Management Fee", f"{model.management_fee_pct * 100:.0f}% of combined revenue"],
+        ["Timeback License", f"{model.timeback_license_pct * 100:.0f}% of combined revenue"],
+        ["Cultural IP Layer", "Local identity, language, and values fully integrated"],
     ]
     _add_table(s, deal_headers, deal_rows, top=1.6, row_height=0.5)
 
@@ -1437,10 +1488,11 @@ def _build_gamma_investor_input(
     )
 
     # --- Slide 2: Executive Summary ---
-    jv = strategy.brand.jv_name_suggestion or f"Alpha × {target}"
+    local_entity = strategy.brand.jv_name_suggestion or f"Alpha × {target}"
     exec_lines = [
         f"- Opportunity: Transform K-12 education in {target} through AI-powered learning",
-        f"- Partnership: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} structure with local entity",
+        f"- Partnership: Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
+        f"- Two-prong: Flagship schools ($40K-$100K) + National schools ($25K FIXED)",
     ]
     if model.pnl_projection:
         exec_lines.append(f"- Scale: {model.pnl_projection[-1].students:,} students across {model.pnl_projection[-1].schools} schools by Year 5")
@@ -1493,12 +1545,14 @@ def _build_gamma_investor_input(
     # --- Slide 6: Deal Structure ---
     slides.append(
         f"# Proposed Deal Structure\n\n"
-        f"- Structure: {strategy.partnership_structure.type.value.upper() if strategy.partnership_structure.type else 'JV'} with local partner\n"
-        f"- Ownership: {strategy.partnership_structure.ownership_split or '0/100 — Alpha operates, local entity owns'}\n"
-        f"- Upfront IP fee: ${model.upfront_ip_fee:,.0f}\n"
-        f"- Management fee: {model.management_fee_pct*100:.0f}% of school revenue\n"
-        f"- Timeback license: {model.timeback_license_pct*100:.0f}% of per-student budget\n"
-        f"- Local entity manages cultural IP layer, national identity integration"
+        f"- Structure: Operator & Licensor model (Marriott model)\n"
+        f"- Ownership: 100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor\n"
+        f"- Prong 1 (Flagship): $40K-$100K tuition, 2-3 schools, 50% backstop\n"
+        f"- Prong 2 (National): $25K/student FIXED, 100K student-year minimum\n"
+        f"- Fixed development costs: $750M ($250M × 3) — non-negotiable\n"
+        f"- Management fee: {model.management_fee_pct*100:.0f}% of combined revenue\n"
+        f"- Timeback license: {model.timeback_license_pct*100:.0f}% of combined revenue\n"
+        f"- Cultural IP layer: local identity, language, and values fully integrated"
     )
 
     # --- Slide 7: School Portfolio ---
