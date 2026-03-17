@@ -264,7 +264,7 @@ class FinancialAssumption(BaseModel):
     max_val: float
     step: float
     unit: str = ""            # "$", "%", "x", "students", "years"
-    category: str = "general" # pricing, scale, costs, fees, returns
+    category: str = "general"  # pricing, scale, costs, fees, returns
     description: str = ""
     locked: bool = False      # True = non-negotiable (fee floors etc.)
 

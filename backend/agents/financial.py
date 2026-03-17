@@ -18,12 +18,10 @@ from models.schemas import (
     FinancialAssumption, FinancialAssumptions,
     FinancialModel, YearProjection, UnitEconomics, CapitalDeployment,
     ReturnsAnalysis, SensitivityScenario,
-    Strategy, CountryProfile, EducationAnalysis,
+    Strategy, CountryProfile,
 )
-from services.llm import call_llm_plain
 from config import OUTPUT_DIR
 from config.rules_loader import (
-    get_deal_structure,
     get_flagship_tuition_range,
     get_national_per_student_budget,
     get_min_student_year_commit,
@@ -37,6 +35,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Phase 1: Generate Assumptions
 # ---------------------------------------------------------------------------
+
 
 def generate_assumptions(
     target: str,
@@ -74,7 +73,7 @@ def _generate_sovereign_assumptions(
     national_budget = get_national_per_student_budget()
     min_student_year = get_min_student_year_commit()
     dev_costs = get_fixed_development_costs()
-    fee_floors = get_fee_floors()
+    get_fee_floors()
 
     # --- Prong 1: Flagship ---
     # Tuition set by AGI of top 20% families; default to midpoint of range
@@ -440,8 +439,8 @@ def _generate_us_state_assumptions(
         FinancialAssumption(
             key="upfront_ip_fee", label="Total Upfront Ask ($M)",
             value=max(25, 250 + 250 + 250
-                  + round(target_students_y5 * base_per_student * 0.10 / 1_000_000)
-                  + round(target_students_y5 * base_per_student * 0.20 / 1_000_000)),
+                      + round(target_students_y5 * base_per_student * 0.10 / 1_000_000)
+                      + round(target_students_y5 * base_per_student * 0.20 / 1_000_000)),
             min_val=25, max_val=2000, step=5,
             unit="$M", category="fees",
             description="AlphaCore + App R&D + LifeSkills R&D + Mgmt Fee + Timeback",
@@ -517,7 +516,7 @@ def _build_sovereign_model(a: dict) -> FinancialModel:
 
     capex_per_school = a.get("capex_per_school", 5_000_000)
     exit_multiple = a.get("exit_ebitda_multiple", 15)
-    discount_rate = a.get("discount_rate", 12) / 100
+    a.get("discount_rate", 12) / 100
     tax_rate = a.get("tax_rate", 20) / 100
 
     # --- Upfront fees ---
@@ -650,7 +649,7 @@ def _build_sovereign_model(a: dict) -> FinancialModel:
     )
 
     # --- Sensitivity ---
-    combined_y5_rev = projections[4].revenue if projections else 0
+    projections[4].revenue if projections else 0
     sensitivity = [
         SensitivityScenario(
             variable="National Students (Y5)",
@@ -716,7 +715,7 @@ def _build_us_state_model(a: dict) -> FinancialModel:
     capex_per_school = a.get("capex_per_school", 5_000_000)
     avg_per_school = a.get("avg_students_per_school", 800)
     exit_multiple = a.get("exit_ebitda_multiple", 15)
-    discount_rate = a.get("discount_rate", 12) / 100
+    a.get("discount_rate", 12) / 100
     tax_rate = a.get("tax_rate", 20) / 100
     guide_fee = a.get("guide_school_fee", 15_000)
 
@@ -959,8 +958,6 @@ def export_model_xlsx(
             cell.font = label_font
             cell.fill = label_fill
 
-    a_dict = {item.key: item.value for item in assumptions.assumptions}
-
     # ================================================================
     # Sheet 1: Assumptions
     # ================================================================
@@ -1065,10 +1062,20 @@ def export_model_xlsx(
     ws2.cell(r, 1).fill = subheader_fill
     r += 1
     alpha_items = [
-        ("Management Fee Revenue (5yr Total)", model.total_management_fee_revenue, "$#,##0"),
-        ("Timeback License Revenue (5yr Total)", model.total_timeback_license_revenue, "$#,##0"),
-        ("Upfront IP Fee", model.upfront_ip_fee, "$#,##0"),
-        ("Total Alpha Revenue (5yr)", model.total_management_fee_revenue + model.total_timeback_license_revenue + model.upfront_ip_fee, "$#,##0"),
+        ("Management Fee Revenue (5yr Total)",
+         model.total_management_fee_revenue,
+         "$#,##0"),
+        ("Timeback License Revenue (5yr Total)",
+         model.total_timeback_license_revenue,
+         "$#,##0"),
+        ("Upfront IP Fee",
+         model.upfront_ip_fee,
+         "$#,##0"),
+        ("Total Alpha Revenue (5yr)",
+         model.total_management_fee_revenue +
+         model.total_timeback_license_revenue +
+         model.upfront_ip_fee,
+         "$#,##0"),
     ]
     for name, val, fmt in alpha_items:
         label_row(ws2, r, 1, name)

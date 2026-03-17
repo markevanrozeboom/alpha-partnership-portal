@@ -19,7 +19,6 @@ Removed gates (folded into other stages):
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import uuid
 from datetime import datetime
@@ -33,7 +32,7 @@ from models.schemas import (
 from agents.country_research import run_country_research
 from agents.education_research import run_education_research
 from agents.strategy import run_strategy
-from agents.financial import generate_assumptions, build_model, recalculate_model, export_model_xlsx
+from agents.financial import generate_assumptions, build_model, recalculate_model
 from agents.document_generation import generate_documents
 from agents.term_sheet import (
     generate_term_sheet, generate_term_sheet_assumptions,
@@ -343,7 +342,11 @@ async def _run_documents(state: dict) -> None:
     # --- Generate term sheet ---
     _log(state, "Generating term sheet...")
     ts_data = state.get("term_sheet_assumptions")
-    ts_assumptions = FinancialAssumptions(**ts_data) if ts_data and isinstance(ts_data, dict) and ts_data.get("assumptions") else None
+    ts_assumptions = (
+        FinancialAssumptions(**ts_data)
+        if ts_data and isinstance(ts_data, dict) and ts_data.get("assumptions")
+        else None
+    )
     _, term_sheet_path = await generate_term_sheet(
         target, country_profile, education_analysis,
         strategy_obj, model, assumptions,
@@ -382,9 +385,15 @@ async def _run_documents(state: dict) -> None:
     if has_gamma and pptx_path:
         _log(state, "All documents generated (Gamma deck, term sheet, memorandum, XLSX).")
     elif pptx_path:
-        _log(state, "All documents generated (local PPTX deck, term sheet, memorandum, XLSX). Gamma API was unavailable — local deck used.")
+        _log(state, (
+            "All documents generated (local PPTX deck, term sheet, memorandum, XLSX). "
+            "Gamma API was unavailable — local deck used."
+        ))
     else:
-        _log(state, "Documents generated (term sheet, memorandum, XLSX). WARNING: Deck unavailable — both Gamma API and local PPTX generation failed.")
+        _log(state, (
+            "Documents generated (term sheet, memorandum, XLSX). "
+            "WARNING: Deck unavailable — both Gamma API and local PPTX generation failed."
+        ))
 
 
 async def _finalize(state: dict) -> None:

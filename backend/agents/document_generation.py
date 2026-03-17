@@ -22,7 +22,7 @@ from datetime import datetime
 from services.gamma import generate_and_wait, _extract_gamma_url, _extract_export_url
 
 from docx import Document as DocxDocument
-from docx.shared import Pt as DocxPt, RGBColor as DocxRGB, Inches as DocxInches, Cm
+from docx.shared import Pt as DocxPt, RGBColor as DocxRGB, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
 
@@ -67,7 +67,8 @@ ABSOLUTE RULES:
 # ---------------------------------------------------------------------------
 
 IM_SECTION_PROMPTS = {
-    "executive_summary": HEAD_OF_STATE_PREAMBLE + """You are a Managing Director at Goldman Sachs' Investment Banking Division.
+    "executive_summary": HEAD_OF_STATE_PREAMBLE +
+    """You are a Managing Director at Goldman Sachs' Investment Banking Division.
 Write the EXECUTIVE SUMMARY section of an investment memorandum for a strategic education
 partnership between 2hr Learning (Alpha) and {target}.
 
@@ -99,8 +100,8 @@ Write 1,500-2,000 words covering:
 
 Use formal investment banking prose. Include data points. Be specific and quantitative.
 Research data provides color commentary and narrative context — financial figures are FIXED.""",
-
-    "market_overview": HEAD_OF_STATE_PREAMBLE + """You are a VP at Goldman Sachs' Global Markets Research Division.
+    "market_overview": HEAD_OF_STATE_PREAMBLE +
+    """You are a VP at Goldman Sachs' Global Markets Research Division.
 Write the MARKET OVERVIEW & MACRO ANALYSIS section of an investment memorandum for an
 education partnership in {target}.
 
@@ -124,8 +125,8 @@ Write 2,000-2,500 words covering:
 
 Include tables where relevant (markdown format). Use formal analytical language.
 Cite specific data points with numbers, years, and sources.""",
-
-    "education_deep_dive": HEAD_OF_STATE_PREAMBLE + """You are a Senior Partner at McKinsey & Company's Education Practice.
+    "education_deep_dive": HEAD_OF_STATE_PREAMBLE +
+    """You are a Senior Partner at McKinsey & Company's Education Practice.
 Write the EDUCATION SECTOR DEEP DIVE section of an investment memorandum for {target}.
 
 Context:
@@ -146,8 +147,8 @@ Write 2,000-2,500 words covering:
    advantages vs incumbents, unique value propositions for this market
 
 Include a market sizing table. Use consulting-quality analysis with specific data.""",
-
-    "alpha_model": HEAD_OF_STATE_PREAMBLE + """You are the Chief Strategy Officer of 2hr Learning.
+    "alpha_model": HEAD_OF_STATE_PREAMBLE +
+    """You are the Chief Strategy Officer of 2hr Learning.
 Write the THE 2HR LEARNING MODEL section of an investment memorandum.
 
 Context:
@@ -168,8 +169,8 @@ Write 1,500-2,000 words covering:
    (cultural, curriculum, language, regulatory)
 
 Be specific about outcomes data and the UAE reference deal.""",
-
-    "deal_structure": HEAD_OF_STATE_PREAMBLE + """You are a Partner at a top-tier M&A advisory firm.
+    "deal_structure": HEAD_OF_STATE_PREAMBLE +
+    """You are a Partner at a top-tier M&A advisory firm.
 Write the PROPOSED DEAL STRUCTURE & PARTNERSHIP MODEL section of an investment memorandum
 for the 2hr Learning × {target} partnership.
 
@@ -206,8 +207,8 @@ Write 1,500-2,000 words covering:
 
 Include a fee structure summary table. Be specific about numbers.
 NOTE: Financial figures are FIXED — do not derive them from country research data.""",
-
-    "financial_analysis": HEAD_OF_STATE_PREAMBLE + """You are a Managing Director at Morgan Stanley's Financial Sponsors Group.
+    "financial_analysis": HEAD_OF_STATE_PREAMBLE +
+    """You are a Managing Director at Morgan Stanley's Financial Sponsors Group.
 Write the FINANCIAL ANALYSIS section of an investment memorandum for the 2hr Learning × {target}
 partnership.
 
@@ -244,8 +245,8 @@ Write 2,500-3,000 words covering:
 
 Include P&L summary table, returns summary table, and sensitivity matrix. Use rigorous
 financial analysis language.""",
-
-    "implementation_roadmap": HEAD_OF_STATE_PREAMBLE + """You are a Senior Partner at Bain & Company's Private Equity Group.
+    "implementation_roadmap": HEAD_OF_STATE_PREAMBLE +
+    """You are a Senior Partner at Bain & Company's Private Equity Group.
 Write the IMPLEMENTATION ROADMAP & EXECUTION PLAN section of an investment memorandum for
 the 2hr Learning × {target} partnership.
 
@@ -268,8 +269,8 @@ Write 1,500-2,000 words covering:
 6. TEAM & ORGANIZATION — Key hires, organizational structure, advisory board, local leadership
 
 Include a milestone timeline table.""",
-
-    "risk_factors": HEAD_OF_STATE_PREAMBLE + """You are the Chief Risk Officer of a major investment bank.
+    "risk_factors": HEAD_OF_STATE_PREAMBLE +
+    """You are the Chief Risk Officer of a major investment bank.
 Write the RISK FACTORS & MITIGATION section of an investment memorandum for the
 2hr Learning × {target} partnership.
 
@@ -295,8 +296,8 @@ Write 1,500-2,000 words covering:
    Mitigation through quality assurance framework.
 
 Rate each risk (High/Medium/Low probability and impact). Include a risk matrix table.""",
-
-    "appendices": HEAD_OF_STATE_PREAMBLE + """You are a VP at Goldman Sachs preparing the APPENDICES section of an
+    "appendices": HEAD_OF_STATE_PREAMBLE +
+    """You are a VP at Goldman Sachs preparing the APPENDICES section of an
 investment memorandum for the 2hr Learning × {target} partnership.
 
 Context:
@@ -440,9 +441,9 @@ def _build_context(cp: CountryProfile, strategy: Strategy, model: FinancialModel
     if model.upfront_ip_fee:
         parts.append(f"Upfront IP fee: ${model.upfront_ip_fee:,.0f}")
     if model.management_fee_pct:
-        parts.append(f"Management fee: {model.management_fee_pct*100:.0f}%")
+        parts.append(f"Management fee: {model.management_fee_pct * 100:.0f}%")
     if model.timeback_license_pct:
-        parts.append(f"Timeback license: {model.timeback_license_pct*100:.0f}%")
+        parts.append(f"Timeback license: {model.timeback_license_pct * 100:.0f}%")
     if model.pnl_projection:
         for p in model.pnl_projection:
             parts.append(f"Year {p.year}: {p.students:,} students, {p.schools} schools, "
@@ -469,30 +470,54 @@ def _build_country_data(cp: CountryProfile) -> str:
     ed = cp.education
 
     parts.append(f"Target: {cp.target.name} ({cp.target.type.value})")
-    if d.total_population: parts.append(f"Population: {d.total_population:,.0f}")
-    if d.population_0_18: parts.append(f"Youth (0-18): {d.population_0_18:,.0f}")
-    if d.growth_rate: parts.append(f"Pop growth: {d.growth_rate}%")
-    if d.urbanisation: parts.append(f"Urbanisation: {d.urbanisation}%")
-    if d.median_age: parts.append(f"Median age: {d.median_age}")
-    if d.median_household_income: parts.append(f"Median HH income: ${d.median_household_income:,.0f}")
-    if d.gini_coefficient: parts.append(f"Gini: {d.gini_coefficient}")
-    if e.gdp: parts.append(f"GDP: ${e.gdp:,.0f}")
-    if e.gdp_per_capita: parts.append(f"GDP/capita: ${e.gdp_per_capita:,.0f}")
-    if e.gdp_growth_rate: parts.append(f"GDP growth: {e.gdp_growth_rate}%")
-    if e.currency: parts.append(f"Currency: {e.currency}")
-    if e.fx_rate: parts.append(f"FX rate: {e.fx_rate}")
-    if e.inflation: parts.append(f"Inflation: {e.inflation}%")
-    if e.sovereign_wealth_fund: parts.append(f"SWF: {e.sovereign_wealth_fund}")
-    if e.credit_rating: parts.append(f"Rating: {e.credit_rating}")
-    if r.ministry_of_education: parts.append(f"MoE: {r.ministry_of_education}")
-    if r.foreign_ownership_rules: parts.append(f"Foreign ownership: {r.foreign_ownership_rules}")
-    if r.ppp_framework: parts.append(f"PPP: {r.ppp_framework}")
-    if pc.government_type: parts.append(f"Government: {pc.government_type}")
-    if pc.head_of_state: parts.append(f"Head of state: {pc.head_of_state}")
-    if pc.national_vision_plan: parts.append(f"Vision plan: {pc.national_vision_plan}")
-    if ed.k12_enrolled: parts.append(f"K-12 enrolled: {ed.k12_enrolled:,.0f}")
-    if ed.public_private_split: parts.append(f"Public/private: {ed.public_private_split}")
-    if ed.avg_private_tuition: parts.append(f"Avg private tuition: ${ed.avg_private_tuition:,.0f}")
+    if d.total_population:
+        parts.append(f"Population: {d.total_population:,.0f}")
+    if d.population_0_18:
+        parts.append(f"Youth (0-18): {d.population_0_18:,.0f}")
+    if d.growth_rate:
+        parts.append(f"Pop growth: {d.growth_rate}%")
+    if d.urbanisation:
+        parts.append(f"Urbanisation: {d.urbanisation}%")
+    if d.median_age:
+        parts.append(f"Median age: {d.median_age}")
+    if d.median_household_income:
+        parts.append(f"Median HH income: ${d.median_household_income:,.0f}")
+    if d.gini_coefficient:
+        parts.append(f"Gini: {d.gini_coefficient}")
+    if e.gdp:
+        parts.append(f"GDP: ${e.gdp:,.0f}")
+    if e.gdp_per_capita:
+        parts.append(f"GDP/capita: ${e.gdp_per_capita:,.0f}")
+    if e.gdp_growth_rate:
+        parts.append(f"GDP growth: {e.gdp_growth_rate}%")
+    if e.currency:
+        parts.append(f"Currency: {e.currency}")
+    if e.fx_rate:
+        parts.append(f"FX rate: {e.fx_rate}")
+    if e.inflation:
+        parts.append(f"Inflation: {e.inflation}%")
+    if e.sovereign_wealth_fund:
+        parts.append(f"SWF: {e.sovereign_wealth_fund}")
+    if e.credit_rating:
+        parts.append(f"Rating: {e.credit_rating}")
+    if r.ministry_of_education:
+        parts.append(f"MoE: {r.ministry_of_education}")
+    if r.foreign_ownership_rules:
+        parts.append(f"Foreign ownership: {r.foreign_ownership_rules}")
+    if r.ppp_framework:
+        parts.append(f"PPP: {r.ppp_framework}")
+    if pc.government_type:
+        parts.append(f"Government: {pc.government_type}")
+    if pc.head_of_state:
+        parts.append(f"Head of state: {pc.head_of_state}")
+    if pc.national_vision_plan:
+        parts.append(f"Vision plan: {pc.national_vision_plan}")
+    if ed.k12_enrolled:
+        parts.append(f"K-12 enrolled: {ed.k12_enrolled:,.0f}")
+    if ed.public_private_split:
+        parts.append(f"Public/private: {ed.public_private_split}")
+    if ed.avg_private_tuition:
+        parts.append(f"Avg private tuition: ${ed.avg_private_tuition:,.0f}")
     return "\n".join(parts)
 
 
@@ -519,11 +544,16 @@ def _build_education_data(ea: EducationAnalysis) -> str:
 
 def _build_strategy_data(s: Strategy) -> str:
     parts = []
-    if s.entry_mode: parts.append(f"Entry mode: {s.entry_mode.value}")
-    if s.partnership_structure.type: parts.append(f"Partnership: {s.partnership_structure.type.value}")
-    if s.partnership_structure.ownership_split: parts.append(f"Ownership: {s.partnership_structure.ownership_split}")
-    if s.partnership_structure.ip_structure: parts.append(f"IP: {s.partnership_structure.ip_structure}")
-    if s.brand.jv_name_suggestion: parts.append(f"Local entity name: {s.brand.jv_name_suggestion}")
+    if s.entry_mode:
+        parts.append(f"Entry mode: {s.entry_mode.value}")
+    if s.partnership_structure.type:
+        parts.append(f"Partnership: {s.partnership_structure.type.value}")
+    if s.partnership_structure.ownership_split:
+        parts.append(f"Ownership: {s.partnership_structure.ownership_split}")
+    if s.partnership_structure.ip_structure:
+        parts.append(f"IP: {s.partnership_structure.ip_structure}")
+    if s.brand.jv_name_suggestion:
+        parts.append(f"Local entity name: {s.brand.jv_name_suggestion}")
     if s.school_types:
         for st in s.school_types[:4]:
             parts.append(f"School type: {st.name} — {st.focus or ''} — {st.tuition or ''}")
@@ -532,8 +562,10 @@ def _build_strategy_data(s: Strategy) -> str:
             parts.append(f"Phase: {ph.phase} ({ph.timeline}) — {ph.student_count or 'TBD'} students")
     if s.key_asks:
         parts.append("Key asks: " + "; ".join(s.key_asks[:6]))
-    if s.target_student_count_year5: parts.append(f"Y5 target: {s.target_student_count_year5:,} students")
-    if s.upfront_ask: parts.append(f"Upfront ask: ${s.upfront_ask:,.0f}")
+    if s.target_student_count_year5:
+        parts.append(f"Y5 target: {s.target_student_count_year5:,} students")
+    if s.upfront_ask:
+        parts.append(f"Upfront ask: ${s.upfront_ask:,.0f}")
     return "\n".join(parts)
 
 
@@ -728,7 +760,7 @@ async def _build_investment_memorandum(
     doc.add_page_break()
 
     # --- Disclaimer Page ---
-    disclaimer = doc.add_heading("IMPORTANT NOTICE", level=2)
+    doc.add_heading("IMPORTANT NOTICE", level=2)
     disclaimer_text = (
         "This Investment Memorandum (the \"Memorandum\") has been prepared by 2hr Learning "
         "(\"Alpha\" or the \"Company\") solely for the purpose of providing information to "
@@ -751,7 +783,7 @@ async def _build_investment_memorandum(
     doc.add_page_break()
 
     # --- Table of Contents ---
-    toc_heading = doc.add_heading("TABLE OF CONTENTS", level=1)
+    doc.add_heading("TABLE OF CONTENTS", level=1)
     doc.add_paragraph("")
     for _, section_title in section_configs:
         toc_entry = doc.add_paragraph()
@@ -818,7 +850,7 @@ def _render_markdown_to_docx(doc: DocxDocument, md: str) -> None:
                 i += 1
 
             # Filter out separator lines (e.g., |---|---|)
-            data_lines = [l for l in table_lines if not all(c in "|-: " for c in l)]
+            data_lines = [line_text for line_text in table_lines if not all(c in "|-: " for c in line_text)]
 
             if len(data_lines) >= 1:
                 # Parse cells
@@ -854,7 +886,7 @@ def _render_markdown_to_docx(doc: DocxDocument, md: str) -> None:
             if text.startswith("**") and "**" in text[2:]:
                 end_bold = text.index("**", 2)
                 bold_part = text[2:end_bold]
-                rest = text[end_bold+2:]
+                rest = text[end_bold + 2:]
                 if rest.startswith(": ") or rest.startswith(" — ") or rest.startswith(" - "):
                     p = doc.add_paragraph(style="List Bullet")
                     r1 = p.add_run(bold_part)
@@ -868,10 +900,11 @@ def _render_markdown_to_docx(doc: DocxDocument, md: str) -> None:
             continue
 
         # Numbered lists
-        if len(stripped) >= 3 and stripped[0].isdigit() and (stripped[1] == "." or (stripped[1].isdigit() and stripped[2] == ".")):
+        if len(stripped) >= 3 and stripped[0].isdigit() and (
+                stripped[1] == "." or (stripped[1].isdigit() and stripped[2] == ".")):
             # Find the text after the number and period
             dot_idx = stripped.index(".")
-            text = stripped[dot_idx+1:].strip()
+            text = stripped[dot_idx + 1:].strip()
             doc.add_paragraph(text, style="List Number")
             i += 1
             continue
@@ -903,7 +936,7 @@ def _add_formatted_text(paragraph, text: str) -> None:
                 if bold_start > pos:
                     paragraph.add_run(text[pos:bold_start])
                 # Add bold text
-                run = paragraph.add_run(text[bold_start+2:bold_end])
+                run = paragraph.add_run(text[bold_start + 2:bold_end])
                 run.bold = True
                 pos = bold_end + 2
                 continue
@@ -917,7 +950,8 @@ def _add_formatted_text(paragraph, text: str) -> None:
 # PPTX Deck
 # ---------------------------------------------------------------------------
 
-DECK_OUTLINE_PROMPT = HEAD_OF_STATE_PREAMBLE + """You are a senior director at Goldman Sachs' Investment Banking Division
+DECK_OUTLINE_PROMPT = HEAD_OF_STATE_PREAMBLE + \
+    """You are a senior director at Goldman Sachs' Investment Banking Division
 drafting an investor/government presentation deck outline for a {audience_label} audience.
 
 Target market: {target}
@@ -967,8 +1001,6 @@ def _build_pptx(
     The deck mirrors the same content structure used by ``_build_gamma_investor_input``
     but with professional tables, accent bars, and visual design elements.
     """
-    from pptx.util import Emu
-    from pptx.dml.color import RGBColor as _RGB
     from pptx.oxml.ns import qn
 
     prs = PptxPresentation()
@@ -982,10 +1014,8 @@ def _build_pptx(
     WHITE = PptxRGB(0xFF, 0xFF, 0xFF)
     LIGHT_GRAY = PptxRGB(0xCC, 0xCC, 0xCC)
     MID_GRAY = PptxRGB(0x88, 0x88, 0x99)
-    DARK_ROW = PptxRGB(0x12, 0x16, 0x24)
-    ALT_ROW = PptxRGB(0x0E, 0x12, 0x1E)
 
-    def _add_slide() -> "pptx.slide.Slide":
+    def _add_slide():
         layout = prs.slide_layouts[6]  # blank layout
         slide = prs.slides.add_slide(layout)
         bg = slide.background
@@ -1223,7 +1253,7 @@ def _build_pptx(
 
     exec_lines = [
         f"• Transform K-12 education in {target} through AI-powered learning",
-        f"• Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
+        "• Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
         "• Two-prong: Flagship schools ($40K-$100K) + National schools ($25K fixed)",
         "• Proven model: UAE deal ($1.5B, 200K students) as reference",
     ]
@@ -1322,8 +1352,8 @@ def _build_pptx(
     deal_rows = [
         ["Structure", "Operator & Licensor (Marriott model)"],
         ["Ownership", "100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor"],
-        ["Flagship (Prong 1)", f"$40K-$100K tuition, 2-3 schools, 50% backstop"],
-        ["National (Prong 2)", f"$25K/student FIXED, 100K student-year min"],
+        ["Flagship (Prong 1)", "$40K-$100K tuition, 2-3 schools, 50% backstop"],
+        ["National (Prong 2)", "$25K/student FIXED, 100K student-year min"],
         ["Development Costs", "$750M FIXED ($250M × 3)"],
         ["Management Fee", f"{model.management_fee_pct * 100:.0f}% of combined revenue"],
         ["Timeback License", f"{model.timeback_license_pct * 100:.0f}% of combined revenue"],
@@ -1511,15 +1541,17 @@ def _build_gamma_investor_input(
     )
 
     # --- Slide 2: Executive Summary ---
-    local_entity = strategy.brand.jv_name_suggestion or f"Alpha × {target}"
     exec_lines = [
         f"- Opportunity: Transform K-12 education in {target} through AI-powered learning",
-        f"- Partnership: Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
-        f"- Two-prong: Flagship schools ($40K-$100K) + National schools ($25K FIXED)",
+        "- Partnership: Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
+        "- Two-prong: Flagship schools ($40K-$100K) + National schools ($25K FIXED)",
     ]
     if model.pnl_projection:
-        exec_lines.append(f"- Scale: {model.pnl_projection[-1].students:,} students across {model.pnl_projection[-1].schools} schools by Year 5")
-        exec_lines.append(f"- Investment: Year 5 revenue of ${model.pnl_projection[-1].revenue:,.0f}")
+        last = model.pnl_projection[-1]
+        exec_lines.append(
+            f"- Scale: {last.students:,} students across {last.schools} schools by Year 5"
+        )
+        exec_lines.append(f"- Investment: Year 5 revenue of ${last.revenue:,.0f}")
     if model.returns_analysis.irr:
         exec_lines.append(f"- Returns: {model.returns_analysis.irr}% IRR, {model.returns_analysis.moic}x MOIC")
     exec_lines.append("- Proven model: UAE deal ($1.5B, 200K students) as reference")
@@ -1573,8 +1605,8 @@ def _build_gamma_investor_input(
         f"- Prong 1 (Flagship): $40K-$100K tuition, 2-3 schools, 50% backstop\n"
         f"- Prong 2 (National): $25K/student FIXED, 100K student-year minimum\n"
         f"- Fixed development costs: $750M ($250M × 3) — non-negotiable\n"
-        f"- Management fee: {model.management_fee_pct*100:.0f}% of combined revenue\n"
-        f"- Timeback license: {model.timeback_license_pct*100:.0f}% of combined revenue\n"
+        f"- Management fee: {model.management_fee_pct * 100:.0f}% of combined revenue\n"
+        f"- Timeback license: {model.timeback_license_pct * 100:.0f}% of combined revenue\n"
         f"- Cultural IP layer: local identity, language, and values fully integrated"
     )
 
@@ -1628,7 +1660,9 @@ def _build_gamma_investor_input(
     # --- Slide 12: Appendix - P&L ---
     if model.pnl_projection:
         pnl_lines = [
-            f"- Y{p.year}: {p.students:,} students | ${p.revenue:,.0f} rev | ${p.ebitda:,.0f} EBITDA | ${p.free_cash_flow:,.0f} FCF"
+            "- Y{}: {:,} students | ${:,.0f} rev | ${:,.0f} EBITDA | ${:,.0f} FCF".format(
+                p.year, p.students, p.revenue, p.ebitda, p.free_cash_flow
+            )
             for p in model.pnl_projection
         ]
         slides.append("# Appendix: Detailed P&L Projection\n\n" + "\n".join(pnl_lines))

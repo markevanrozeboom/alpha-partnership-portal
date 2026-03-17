@@ -46,9 +46,12 @@ export default function PortalRunPage() {
   }, [runId]);
 
   useEffect(() => {
-    fetchStatus();
+    const initialTimer = setTimeout(fetchStatus, 0);
     pollRef.current = setInterval(fetchStatus, 3000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      clearTimeout(initialTimer);
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [fetchStatus]);
 
   // Stop polling when complete or error

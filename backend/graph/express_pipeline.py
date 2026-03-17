@@ -15,8 +15,6 @@ from datetime import datetime
 from typing import Any
 
 from models.schemas import (
-    CountryProfile, EducationAnalysis, Strategy,
-    FinancialAssumptions, FinancialModel,
     AudienceType, TargetType,
 )
 from agents.country_research import run_country_research
@@ -162,10 +160,12 @@ async def run_express_pipeline(run_id: str) -> None:
 
         # Investment memorandum (DOCX) + XLSX + investor deck for sovereign
         # For sovereign nations, request PDF export from Gamma as well.
-        gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback, deck_input_text = await generate_documents(
-            target, country_profile, education_analysis, strategy_obj,
-            financial_model, assumptions, AudienceType.INVESTOR,
-            export_as="pdf" if not is_us_state else "pptx",
+        gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback, deck_input_text = (
+            await generate_documents(
+                target, country_profile, education_analysis, strategy_obj,
+                financial_model, assumptions, AudienceType.INVESTOR,
+                export_as="pdf" if not is_us_state else "pptx",
+            )
         )
 
         # For US states, use the state deck; for sovereign nations, use the investor deck

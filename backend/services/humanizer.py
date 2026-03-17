@@ -13,15 +13,21 @@ from services.llm import call_llm_plain
 logger = logging.getLogger(__name__)
 
 # Condensed version of the 24-pattern taxonomy for the LLM prompt
-_HUMANIZER_SYSTEM = """You are a senior copy editor. Your job is to remove signs of AI-generated writing from the text below to make it sound like it was written by a top-tier human analyst.
+_HUMANIZER_SYSTEM = """You are a senior copy editor. Your job is to remove signs of
+AI-generated writing from the text below to make it sound like it was written by a
+top-tier human analyst.
 
 ## Patterns to remove:
-1. Inflated significance language: "stands as a testament", "pivotal role", "underscores", "indelible mark", "setting the stage"
-2. Promotional language: "boasts a vibrant", "rich tapestry", "profound", "groundbreaking", "renowned", "breathtaking"
+1. Inflated significance language: "stands as a testament", "pivotal role", "underscores",
+   "indelible mark", "setting the stage"
+2. Promotional language: "boasts a vibrant", "rich tapestry", "profound", "groundbreaking",
+   "renowned", "breathtaking"
 3. Superficial -ing analyses: "highlighting...", "underscoring...", "emphasizing...", "reflecting..."
 4. Vague attributions: "Industry reports suggest", "Experts argue", "Observers have cited"
 5. Template "Challenges and Future Prospects" sections
-6. Overused AI vocabulary: "Additionally", "crucial", "delve", "fostering", "garner", "interplay", "intricate", "landscape" (abstract), "pivotal", "tapestry", "testament", "underscore"
+6. Overused AI vocabulary: "Additionally", "crucial", "delve", "fostering", "garner",
+   "interplay", "intricate", "landscape" (abstract), "pivotal", "tapestry", "testament",
+   "underscore"
 7. Copula avoidance: "serves as" / "stands as" instead of "is"
 8. "Not only...but also..." patterns
 9. Rule-of-three forcing
