@@ -35,11 +35,10 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 EXPRESS_STEPS = [
-    "researching",
-    "analyzing_education",
+    "researching",           # Combined country + education research
     "developing_strategy",
     "building_financials",
-    "generating_documents",
+    "generating_documents",  # Includes term sheet
     "creating_pdfs",
     "completed",
 ]
@@ -102,31 +101,28 @@ async def run_express_pipeline(run_id: str) -> None:
 
     try:
         # ---------------------------------------------------------------
-        # Step 1: Country Research
+        # Step 1: Combined Country + Education Research
         # ---------------------------------------------------------------
-        _update(state, 0, f"Researching {target}...")
+        _update(state, 0, f"Researching {target} (country + education)...")
         country_profile, country_report_md, _ = await run_country_research(target)
 
-        # ---------------------------------------------------------------
-        # Step 2: Education Research
-        # ---------------------------------------------------------------
-        _update(state, 1, "Analyzing education sector...")
+        # Education brief (thin wrapper — no new Perplexity call)
         education_analysis, education_report_md, _ = await run_education_research(
             target, country_profile
         )
 
         # ---------------------------------------------------------------
-        # Step 3: Strategy
+        # Step 2: Strategy
         # ---------------------------------------------------------------
-        _update(state, 2, "Developing market entry strategy...")
+        _update(state, 1, "Developing market entry strategy...")
         strategy_obj, strategy_report_md, _ = await run_strategy(
             target, country_profile, education_analysis
         )
 
         # ---------------------------------------------------------------
-        # Step 4: Financial Model
+        # Step 3: Financial Model
         # ---------------------------------------------------------------
-        _update(state, 3, "Building financial model...")
+        _update(state, 2, "Building financial model...")
         assumptions = generate_assumptions(target, country_profile, strategy_obj)
         financial_model = build_model(assumptions, target, strategy_obj)
 
@@ -136,9 +132,9 @@ async def run_express_pipeline(run_id: str) -> None:
         )
 
         # ---------------------------------------------------------------
-        # Step 5: Generate Documents
+        # Step 4: Generate Documents (includes term sheet)
         # ---------------------------------------------------------------
-        _update(state, 4, "Generating term sheet and proposal deck...")
+        _update(state, 3, "Generating term sheet and proposal deck...")
 
         is_us_state = country_profile.target.type == TargetType.US_STATE
 
@@ -239,7 +235,7 @@ async def run_express_pipeline(run_id: str) -> None:
         # ---------------------------------------------------------------
         # Step 6: Generate PDFs
         # ---------------------------------------------------------------
-        _update(state, 5, "Creating PDF documents...")
+        _update(state, 4, "Creating PDF documents...")
 
         # Term Sheet — convert our DOCX to PDF
         term_sheet_pdf = convert_docx_to_pdf(term_sheet_docx_path)
@@ -280,7 +276,7 @@ async def run_express_pipeline(run_id: str) -> None:
         # ---------------------------------------------------------------
         # Complete
         # ---------------------------------------------------------------
-        _update(state, 6, "Complete!")
+        _update(state, 5, "Complete!")
         state["status"] = "completed"
         logger.info("Express run %s completed successfully.", run_id)
 

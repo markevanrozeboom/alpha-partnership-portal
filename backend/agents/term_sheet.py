@@ -404,7 +404,29 @@ def get_financial_model_adjustments(
 # LLM prompts for term sheet sections
 # ---------------------------------------------------------------------------
 
-TERM_SHEET_PROMPT = """You are a senior M&A lawyer at Sullivan & Cromwell drafting a non-binding
+# ---------------------------------------------------------------------------
+# Head-of-state preamble — prepended to every LLM prompt
+# ---------------------------------------------------------------------------
+
+HEAD_OF_STATE_PREAMBLE = """CRITICAL — EXTERNALLY PRESENTABLE ARTIFACTS:
+These documents will be presented DIRECTLY to heads of state, sovereign rulers, royal family
+members, and senior government ministers. The UAE version of these materials was personally
+reviewed by the daughter of the #2 figure in Abu Dhabi and the #3 figure in the UAE.
+
+ABSOLUTE RULES:
+1. NEVER include internal classifications (tiers, scores, ratings, internal frameworks)
+2. NEVER reference "Tier 1", "Tier 2", "Tier 3" or any scoring/ranking system
+3. NEVER include analytical frameworks, scoring matrices, or internal assessment tools
+4. NEVER reference PPP adjustments, GDP scaling, or pricing methodology
+5. NEVER use phrases like "Alpha Relevance", "fit score", or internal jargon
+6. Write in the voice of a trusted advisor presenting to royalty — measured, confident, specific
+7. All financial figures are FIXED (the deal model does not change by country)
+8. Research is for cultural context and narrative color only — it does NOT drive financial numbers
+9. Use the country's formal diplomatic name and proper honorifics for leaders
+10. Every artifact must be suitable for immediate external presentation without editing
+"""
+
+TERM_SHEET_PROMPT = HEAD_OF_STATE_PREAMBLE + """You are a senior M&A lawyer at Sullivan & Cromwell drafting a non-binding
 indicative term sheet for a strategic education partnership between 2hr Learning (Alpha Holdings)
 and {target}.
 

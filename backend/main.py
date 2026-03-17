@@ -185,22 +185,19 @@ async def get_run(run_id: str):
 
 @app.post("/api/runs/{run_id}/feedback/country-report")
 async def submit_country_report_feedback(run_id: str, feedback: ReportFeedback):
-    """Submit feedback on the country research report."""
+    """Submit feedback on the country & education research report.
+
+    Post-streamline: approval skips directly to strategy (education research
+    is merged into the country research stage).
+    """
     try:
-        if feedback.approved:
-            next_status = submit_feedback(
-                run_id, "country_report_feedback", feedback.model_dump(),
-                approved=True,
-                next_working_status=PipelineStatus.RESEARCHING_EDUCATION.value,
-                revision_working_status=PipelineStatus.RESEARCHING_COUNTRY.value,
-            )
-        else:
-            next_status = submit_feedback(
-                run_id, "country_report_feedback", feedback.model_dump(),
-                approved=False,
-                next_working_status=PipelineStatus.RESEARCHING_EDUCATION.value,
-                revision_working_status=PipelineStatus.RESEARCHING_COUNTRY.value,
-            )
+        # Approval → skip to strategy (education is already done in country stage)
+        next_status = submit_feedback(
+            run_id, "country_report_feedback", feedback.model_dump(),
+            approved=feedback.approved,
+            next_working_status=PipelineStatus.STRATEGIZING.value,
+            revision_working_status=PipelineStatus.RESEARCHING_COUNTRY.value,
+        )
 
         # Start the next step in the background
         asyncio.create_task(execute_step(run_id))
@@ -259,20 +256,24 @@ async def submit_assumptions_feedback(run_id: str, feedback: AssumptionsFeedback
 
 @app.post("/api/runs/{run_id}/feedback/model")
 async def submit_model_feedback(run_id: str, feedback: ModelFeedback):
-    """Submit financial model review — lock or adjust."""
+    """Submit financial model review — lock or adjust.
+
+    Post-streamline: approval skips directly to document generation
+    (term sheet assumptions are folded into document gen stage).
+    """
     try:
         if feedback.locked:
             next_status = submit_feedback(
                 run_id, "model_feedback", feedback.model_dump(),
                 approved=True,
-                next_working_status=PipelineStatus.PRESENTING_TERM_SHEET_ASSUMPTIONS.value,
+                next_working_status=PipelineStatus.GENERATING_DOCUMENTS.value,
                 revision_working_status=PipelineStatus.BUILDING_MODEL.value,
             )
         else:
             next_status = submit_feedback(
                 run_id, "model_feedback", feedback.model_dump(),
                 approved=False,
-                next_working_status=PipelineStatus.PRESENTING_TERM_SHEET_ASSUMPTIONS.value,
+                next_working_status=PipelineStatus.GENERATING_DOCUMENTS.value,
                 revision_working_status=PipelineStatus.BUILDING_MODEL.value,
             )
         asyncio.create_task(execute_step(run_id))

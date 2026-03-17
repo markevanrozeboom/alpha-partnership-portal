@@ -4,15 +4,17 @@ Replaces the LangGraph interrupt/resume mechanism with a straightforward
 dict-based state store and direct agent calls.  Much more reliable than
 the checkpoint-based approach for deployed environments.
 
-Flow:
-  1. country_research          → review_country_report          (HITL)
-  2. education_research        → review_education_report        (HITL)
-  3. strategy                  → review_strategy                (HITL)
-  4. assumptions               → review_assumptions             (HITL)
-  5. financial_model           → review_model                   (HITL)
-  6. term_sheet_assumptions    → review_term_sheet_assumptions  (HITL)
-  7. documents                 → review_documents               (HITL)
-  8. finalize                  → completed
+Streamlined flow (March 17, 2026):
+  1. country_research  → review_country_report     (HITL) — includes education data
+  2. strategy          → review_strategy            (HITL)
+  3. assumptions       → review_assumptions         (HITL)
+  4. financial_model   → review_model               (HITL)
+  5. documents         → review_documents           (HITL) — includes term sheet
+  6. finalize          → completed
+
+Removed gates (folded into other stages):
+  - education_research (merged into country_research)
+  - term_sheet_assumptions (folded into document generation)
 """
 
 from __future__ import annotations
@@ -94,11 +96,18 @@ def _log(state: dict, msg: str) -> None:
 # ---------------------------------------------------------------------------
 
 async def _run_country_research(state: dict) -> None:
-    """Run the Country Research Agent."""
+    """Run the combined Country + Education Research stage.
+
+    Post-streamline: country_research.py produces both the CountryProfile
+    and seeds education data.  We then run the thin education_research
+    wrapper to generate the focused education brief + EducationAnalysis,
+    skipping the old separate HITL gate for education.
+    """
     target = state["target_input"]
-    _log(state, f"Starting country research for '{target}'...")
+    _log(state, f"Starting combined country & education research for '{target}'...")
     state["status"] = PipelineStatus.RESEARCHING_COUNTRY.value
 
+    # --- Country research (includes education data) ---
     feedback_text = None
     prev_report = state.get("country_report") or None
     fb = state.get("country_report_feedback")
@@ -113,8 +122,26 @@ async def _run_country_research(state: dict) -> None:
     state["country_profile"] = profile.model_dump()
     state["country_report"] = report_md
     state["country_report_docx_path"] = docx_path
+
+    # --- Education research (thin wrapper — no new Perplexity call) ---
+    _log(state, "Generating education brief from country data...")
+    edu_fb_text = None
+    edu_prev = state.get("education_report") or None
+    edu_fb = state.get("education_report_feedback")
+    if edu_fb and not edu_fb.get("approved") and edu_fb.get("feedback"):
+        edu_fb_text = edu_fb["feedback"]
+
+    analysis, edu_report_md, edu_docx_path = await run_education_research(
+        target, CountryProfile(**state["country_profile"]),
+        feedback=edu_fb_text, previous_report=edu_prev,
+    )
+
+    state["education_analysis"] = analysis.model_dump()
+    state["education_report"] = edu_report_md
+    state["education_report_docx_path"] = edu_docx_path
+
     state["status"] = PipelineStatus.REVIEW_COUNTRY_REPORT.value
-    _log(state, f"Country research complete. Type: {profile.target.type.value} (unified model — no tiers)")
+    _log(state, f"Country & education research complete. Type: {profile.target.type.value} (unified model — no tiers)")
 
 
 async def _run_education_research(state: dict) -> None:
@@ -395,8 +422,10 @@ async def execute_step(run_id: str) -> None:
 
     try:
         if status == PipelineStatus.RESEARCHING_COUNTRY.value:
+            # Combined stage: country research + education brief (no separate education gate)
             await _run_country_research(state)
         elif status == PipelineStatus.RESEARCHING_EDUCATION.value:
+            # Legacy compat: if pipeline somehow lands here, run education then skip to strategy
             await _run_education_research(state)
         elif status == PipelineStatus.STRATEGIZING.value:
             await _run_strategy(state)
@@ -405,8 +434,10 @@ async def execute_step(run_id: str) -> None:
         elif status == PipelineStatus.BUILDING_MODEL.value:
             await _run_financial_model(state)
         elif status == PipelineStatus.PRESENTING_TERM_SHEET_ASSUMPTIONS.value:
+            # Legacy compat: term sheet assumptions now folded into document gen
             await _run_term_sheet_assumptions(state)
         elif status == PipelineStatus.GENERATING_DOCUMENTS.value:
+            # Generates all documents INCLUDING term sheet (folded in)
             await _run_documents(state)
         else:
             logger.warning("execute_step called with unexpected status %s for run %s", status, run_id)
