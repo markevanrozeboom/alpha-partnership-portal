@@ -55,13 +55,7 @@ const FIXED_ECONOMICS = {
     { item: "Management Fee", amount: "10% budget", recipient: "OpEx to Alpha Holdings" },
     { item: "TimeBack License Fee", amount: "20% budget", recipient: "OpEx to Alpha Holdings" },
   ],
-  investments: [
-    { investment: "Incept Labs (eduLLM)", amount: "$1B", valuation: "$10B", timing: "2026" },
-    { investment: "Alpha Holdings", amount: "$100M", valuation: "$10B", timing: "2026" },
-    { investment: "Alpha Holdings", amount: "$1B", valuation: "$100B", timing: "2027" },
-    { investment: "TimeBack edu video game", amount: "$20M", valuation: "$1B", timing: "12/2025" },
-  ],
-  investmentTotal: "$2.12B",
+
   costStructure: [
     { item: "Tuition", alpha: "$50,000", national: "$25,000", notes: "Budget for $25,000 school" },
     { item: "Guides", alpha: "$14,000", national: "$4,500", notes: "Alpha 11:1 ratio & higher comp; National 25:1 ratio & lower comp" },
@@ -94,9 +88,7 @@ function generateTermSheetHtml(ctx: CountryContext): string {
     .map(r => `<tr><td>${r.item}</td><td class="amt">${r.alpha}</td><td class="amt highlight">${r.national}</td><td class="notes">${r.notes}</td></tr>`)
     .join("\n");
 
-  const investmentRows = FIXED_ECONOMICS.investments
-    .map(r => `<tr><td>${r.investment}</td><td class="amt">${r.amount}</td><td class="amt">${r.valuation}</td><td>${r.timing}</td></tr>`)
-    .join("\n");
+
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -352,26 +344,15 @@ function generateTermSheetHtml(ctx: CountryContext): string {
           </tbody>
         </table>
       </div>
+    </div>
 
+    <div>
       <div class="section-box">
         <div class="section-title">Ongoing</div>
         <table>
           <thead><tr><th>Item</th><th>Amount</th><th>Recipient</th></tr></thead>
           <tbody>${ongoingRows}
             <tr class="total-row"><td>Total</td><td class="amt">Scale dependent</td><td></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div>
-      <div class="section-box">
-        <div class="section-label">Investments (Optional)</div>
-        <table>
-          <thead><tr><th>Investment</th><th>Amt.</th><th>Val.</th><th>Timing</th></tr></thead>
-          <tbody>
-            ${investmentRows}
-            <tr class="total-row"><td>Total</td><td class="amt" colspan="3">${FIXED_ECONOMICS.investmentTotal} (plus optional $250M directed dev fee)</td></tr>
           </tbody>
         </table>
       </div>
@@ -937,7 +918,7 @@ function generatePitchDeckHtml(ctx: CountryContext): string {
 <!-- ═══ SLIDE 5: Commercial Structure ═══ -->
 <div class="slide slide-content">
   <div class="label">Transaction Details</div>
-  <h2>${ctx.localizedProgramName || ctx.country} <span>Commercial & Investment Structure</span></h2>
+  <h2>${ctx.localizedProgramName || ctx.country} <span>Commercial Structure</span></h2>
   
   <div class="two-pane">
     <div class="pane">
@@ -949,24 +930,15 @@ function generatePitchDeckHtml(ctx: CountryContext): string {
           <tr class="total-row"><td>Total</td><td class="amt">${FIXED_ECONOMICS.upfrontTotal}</td><td></td></tr>
         </tbody>
       </table>
-      
-      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin: 16px 0 10px;">Ongoing</div>
+    </div>
+    
+    <div class="pane">
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Ongoing</div>
       <table class="deck-table">
         <thead><tr><th>Item</th><th>Ongoing</th><th>Recipient</th></tr></thead>
         <tbody>
           ${FIXED_ECONOMICS.ongoing.map(r => `<tr><td>${r.item}</td><td class="amt">${r.amount}</td><td>${r.recipient}</td></tr>`).join("\n")}
           <tr class="total-row"><td>Total</td><td class="amt">Scale dependent</td><td></td></tr>
-        </tbody>
-      </table>
-    </div>
-    
-    <div class="pane">
-      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Investments (Optional)</div>
-      <table class="deck-table">
-        <thead><tr><th>Investment</th><th>Amt.</th><th>Val.</th><th>Timing</th></tr></thead>
-        <tbody>
-          ${FIXED_ECONOMICS.investments.map(r => `<tr><td>${r.investment}</td><td class="amt">${r.amount}</td><td class="amt">${r.valuation}</td><td>${r.timing}</td></tr>`).join("\n")}
-          <tr class="total-row"><td>Total</td><td class="amt" colspan="3">${FIXED_ECONOMICS.investmentTotal}</td></tr>
         </tbody>
       </table>
     </div>
