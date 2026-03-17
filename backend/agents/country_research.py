@@ -14,6 +14,7 @@ All outputs are suitable for direct presentation to heads of state.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 
@@ -246,10 +247,12 @@ async def run_country_research(
         edu_research_text = ""
         edu_citations: list = []
     else:
-        # Two Perplexity calls: general country + education-specific
-        perplexity_result = await research_country(target)
-        wb_data = await get_country_data(target)
-        edu_perplexity = await research_education(target)
+        # Two Perplexity calls + World Bank run concurrently
+        perplexity_result, wb_data, edu_perplexity = await asyncio.gather(
+            research_country(target),
+            get_country_data(target),
+            research_education(target),
+        )
         edu_research_text = edu_perplexity.get("answer", "")
         edu_citations = edu_perplexity.get("citations", [])
 

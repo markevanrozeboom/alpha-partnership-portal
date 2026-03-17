@@ -86,6 +86,11 @@ export default function RunPage() {
   const [liveModel, setLiveModel] = useState<FinancialModel | null>(null);
   const [liveAssumptions, setLiveAssumptions] = useState<FinancialAssumption[] | null>(null);
 
+  // Refs to track whether live model/assumptions have been initialised yet,
+  // so fetchStatus doesn't need them as dependencies (avoiding interval restarts).
+  const liveModelInitRef = useRef(false);
+  const liveAssumptionsInitRef = useRef(false);
+
   // For term sheet deal terms recalculation
   const [termSheetImpactWarning, setTermSheetImpactWarning] = useState<string[] | null>(null);
 
@@ -95,12 +100,18 @@ export default function RunPage() {
     try {
       const res = await getRunStatus(runId);
       setData(res);
-      if (res.financial_model && !liveModel) setLiveModel(res.financial_model);
-      if (res.financial_assumptions?.assumptions && !liveAssumptions) setLiveAssumptions(res.financial_assumptions.assumptions);
+      if (res.financial_model && !liveModelInitRef.current) {
+        liveModelInitRef.current = true;
+        setLiveModel(res.financial_model);
+      }
+      if (res.financial_assumptions?.assumptions && !liveAssumptionsInitRef.current) {
+        liveAssumptionsInitRef.current = true;
+        setLiveAssumptions(res.financial_assumptions.assumptions);
+      }
     } catch (err) {
       setError(String(err));
     }
-  }, [runId, liveModel, liveAssumptions]);
+  }, [runId]);
 
   // Start polling on mount
   useEffect(() => {

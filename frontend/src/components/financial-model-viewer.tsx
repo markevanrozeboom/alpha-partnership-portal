@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import type { FinancialModel, FinancialAssumption } from "@/lib/api";
@@ -19,6 +19,10 @@ function fmt(n: number): string {
   if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n.toFixed(0)}`;
 }
+
+const KEY_ASSUMPTION_KEYS = new Set([
+  "premium_tuition", "mid_tuition", "cogs_pct", "opex_pct", "students_year5", "exit_ebitda_multiple",
+]);
 
 export function FinancialModelViewer({
   model,
@@ -48,9 +52,10 @@ export function FinancialModelViewer({
     return adj;
   }, [sliderValues, assumptions]);
 
-  // Key adjustable sliders for the model view
-  const keyAssumptions = assumptions.filter((a) =>
-    ["premium_tuition", "mid_tuition", "cogs_pct", "opex_pct", "students_year5", "exit_ebitda_multiple"].includes(a.key)
+  // Key adjustable sliders for the model view — memoized to avoid re-filtering on every render
+  const keyAssumptions = useMemo(
+    () => assumptions.filter((a) => KEY_ASSUMPTION_KEYS.has(a.key)),
+    [assumptions]
   );
 
   const y5 = model.pnl_projection[model.pnl_projection.length - 1];
