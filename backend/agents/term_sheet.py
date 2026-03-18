@@ -1740,9 +1740,7 @@ def _add_school_design_section(
     )
     _add_list_item(
         doc,
-        f"Tuition: ${fin.get('flagship_tuition', 0):,.0f}/year "
-        "(set to maximize revenue within $40K-$100K range, "
-        "exceeding the most expensive non-boarding school).",
+        f"Tuition: ${fin.get('flagship_tuition', 0):,.0f}/year.",
     )
     _add_list_item(
         doc,
@@ -2061,14 +2059,6 @@ def _add_flagship_summary_table(
     ])
 
     _add_styled_table(doc, headers, rows, bold_last_row=True)
-
-    # Additional notes
-    _add_body(
-        doc,
-        "Flagship Alphas operate at 25% operating margin. "
-        "The country/state provides a 50% capacity backstop "
-        "for 5 years.",
-    )
 
 
 # ---------------------------------------------------------------------------
