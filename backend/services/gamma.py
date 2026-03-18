@@ -252,7 +252,10 @@ async def poll_generation(generation_id: str) -> dict[str, Any]:
 
             await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
-    raise TimeoutError(f"Gamma generation {generation_id} did not complete within {MAX_POLL_ATTEMPTS * POLL_INTERVAL_SECONDS}s")
+    raise TimeoutError(
+        f"Gamma generation {generation_id} did not complete within {
+            MAX_POLL_ATTEMPTS *
+            POLL_INTERVAL_SECONDS}s")
 
 
 async def generate_and_wait(

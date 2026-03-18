@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 import unicodedata
 from datetime import datetime
 
 from docx import Document as DocxDocument
+from docx.oxml.ns import qn
+from docx.table import Table as DocxTable
+from docx.text.paragraph import Paragraph
 from fpdf import FPDF
 
 logger = logging.getLogger(__name__)
@@ -51,7 +53,7 @@ def _clean_text(text: str) -> str:
         "\u2014": "-",   # em dash
         "\u2015": "-",   # horizontal bar
         "\u2012": "-",   # figure dash
-        "\u2026": "...", # ellipsis
+        "\u2026": "...",  # ellipsis
         "\u00a0": " ",   # non-breaking space
         "\u2002": " ",   # en space
         "\u2003": " ",   # em space
@@ -78,20 +80,21 @@ def _clean_text(text: str) -> str:
         "\u00d7": "x",   # multiplication sign
         "\u2192": "->",  # rightwards arrow
         "\u2190": "<-",  # leftwards arrow
-        "\u2194": "<->", # left right arrow
-        "\u2713": "[x]", # check mark
-        "\u2717": "[ ]", # ballot x
-        "\u20ac": "EUR", # euro sign
-        "\u00a3": "GBP", # pound sign
-        "\u00a5": "JPY", # yen sign
+        "\u2194": "<->",  # left right arrow
+        "\u2713": "[x]",  # check mark
+        "\u2717": "[ ]",  # ballot x
+        "\u20ac": "EUR",  # euro sign
+        "\u00a3": "GBP",  # pound sign
+        "\u00a5": "JPY",  # yen sign
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
 
     # Normalise remaining Unicode via NFKD decomposition — this converts
-    # accented chars into base + combining mark, then we keep only the
-    # characters that survive latin-1 encoding.
+    # accented chars into base + combining mark.  Strip the combining marks
+    # so "Éducation" → "Education" instead of "E?ducation".
     text = unicodedata.normalize("NFKD", text)
+    text = "".join(c for c in text if not unicodedata.combining(c))
 
     # Final fallback: encode to latin-1, replacing anything still unsupported
     return text.encode("latin-1", errors="replace").decode("latin-1")
@@ -123,16 +126,8 @@ class AlphaPDF(FPDF):
     def header(self):
         if self.page_no() == 1:
             return  # Skip header on cover page
-        self.set_font("Helvetica", "I", 8)
-        self.set_text_color(*MID_GRAY)
-        super().cell(0, 8, _clean_text(
-            f"CONFIDENTIAL - 2hr Learning (Alpha) | {self.doc_subtitle}"
-        ), align="L")
-        self.ln(4)
-        # Thin accent line
-        self.set_draw_color(*ACCENT)
-        self.set_line_width(0.3)
-        self.line(10, self.get_y(), self.w - 10, self.get_y())
+        # Body text already contains a CONFIDENTIAL header line,
+        # so we only add a small top margin here.
         self.ln(6)
 
     def footer(self):
@@ -185,6 +180,138 @@ class AlphaPDF(FPDF):
         self.multi_cell(0, 8, "Prepared by 2hr Learning - Alpha Division", align="C")
 
 
+def _is_separator_row(row, num_cols: int) -> bool:
+    """Detect separator/section rows where all cells have the same text."""
+    texts = [cell.text.strip() for cell in row.cells[:num_cols]]
+    unique = set(texts)
+    return len(unique) == 1 and len(texts[0]) > 15
+
+
+def _calc_col_widths(table, num_cols: int, page_w: float) -> list[float]:
+    """Calculate proportional column widths based on content length."""
+    max_lens = [0] * num_cols
+    for row in table.rows:
+        for ci in range(min(num_cols, len(row.cells))):
+            txt = row.cells[ci].text.strip()
+            max_lens[ci] = max(max_lens[ci], len(txt))
+
+    # Give first column (labels) and last column (notes) more room
+    # Use a minimum of 8 chars so narrow columns aren't crushed
+    adjusted = [max(8, ml) for ml in max_lens]
+    total = sum(adjusted) or 1
+    widths = [(a / total) * page_w for a in adjusted]
+
+    # Enforce minimum column width of 20mm
+    for i in range(num_cols):
+        if widths[i] < 20:
+            widths[i] = 20
+    # Re-normalise to page width
+    total_w = sum(widths)
+    if total_w != page_w:
+        scale = page_w / total_w
+        widths = [w * scale for w in widths]
+    return widths
+
+
+def _estimate_row_height(
+    text: str, col_width: float, font_size: float,
+) -> float:
+    """Estimate the height needed for wrapped text in a cell."""
+    char_width = font_size * 0.22  # approximate average char width (mm)
+    chars_per_line = max(1, int(col_width / char_width))
+    num_lines = max(1, -(-len(text) // chars_per_line))  # ceil division
+    line_height = font_size * 0.45  # mm per line
+    return max(7, num_lines * line_height + 2)
+
+
+def _render_table(
+    pdf: FPDF, table, num_cols: int, page_w: float,
+) -> None:
+    """Render a DOCX table into the PDF with text wrapping and merged rows."""
+    col_widths = _calc_col_widths(table, num_cols, page_w)
+
+    for ri, row in enumerate(table.rows):
+        is_header = (ri == 0)
+        is_sep = _is_separator_row(row, num_cols)
+
+        # --- Separator row: single merged band ---
+        if is_sep:
+            pdf.set_fill_color(*LIGHT_GRAY)
+            pdf.set_text_color(100, 100, 100)
+            pdf.set_font("Helvetica", "I", 8)
+            sep_text = _clean_text(row.cells[0].text.strip())
+            pdf.cell(page_w, 6, sep_text, border=1, fill=True)
+            pdf.ln(6)
+            pdf.set_text_color(*TEXT_COLOR)
+            continue
+
+        # --- Determine row height (tallest cell wins) ---
+        if is_header:
+            pdf.set_fill_color(*ACCENT)
+            pdf.set_text_color(*WHITE)
+            pdf.set_font("Helvetica", "B", 8)
+        elif ri % 2 == 0:
+            pdf.set_fill_color(*LIGHT_GRAY)
+            pdf.set_text_color(*TEXT_COLOR)
+            pdf.set_font("Helvetica", "", 8)
+        else:
+            pdf.set_fill_color(*WHITE)
+            pdf.set_text_color(*TEXT_COLOR)
+            pdf.set_font("Helvetica", "", 8)
+
+        font_sz = 8.0
+        cell_texts: list[str] = []
+        row_h = 7.0
+        for ci in range(num_cols):
+            txt = _clean_text(
+                row.cells[ci].text.strip() if ci < len(row.cells) else ""
+            )
+            cell_texts.append(txt)
+            h = _estimate_row_height(txt, col_widths[ci], font_sz)
+            row_h = max(row_h, h)
+
+        # --- Draw cells ---
+        x_start = pdf.get_x()
+        y_start = pdf.get_y()
+
+        # Check if row fits on current page, else add page
+        if y_start + row_h > pdf.h - 20:
+            pdf.add_page()
+            pdf.set_text_color(*TEXT_COLOR)
+            x_start = pdf.get_x()
+            y_start = pdf.get_y()
+            # Re-apply style after page break
+            if is_header:
+                pdf.set_fill_color(*ACCENT)
+                pdf.set_text_color(*WHITE)
+                pdf.set_font("Helvetica", "B", 8)
+            elif ri % 2 == 0:
+                pdf.set_fill_color(*LIGHT_GRAY)
+                pdf.set_text_color(*TEXT_COLOR)
+                pdf.set_font("Helvetica", "", 8)
+            else:
+                pdf.set_fill_color(*WHITE)
+                pdf.set_text_color(*TEXT_COLOR)
+                pdf.set_font("Helvetica", "", 8)
+
+        for ci, txt in enumerate(cell_texts):
+            x = x_start + sum(col_widths[:ci])
+            pdf.set_xy(x, y_start)
+            # Draw filled background rect + border
+            pdf.rect(x, y_start, col_widths[ci], row_h, "DF")
+            # Draw text with small padding
+            pdf.set_xy(x + 1, y_start + 1)
+            pdf.multi_cell(
+                col_widths[ci] - 2, font_sz * 0.42,
+                txt, border=0,
+            )
+
+        # Move cursor past the row
+        pdf.set_xy(x_start, y_start + row_h)
+
+    pdf.ln(0)  # ensure cursor is at end of table
+
+
 def convert_docx_to_pdf(docx_path: str) -> str:
     """Convert a DOCX file to a professional PDF.
 
@@ -206,15 +333,12 @@ def convert_docx_to_pdf(docx_path: str) -> str:
     # Detect document type from filename
     basename = os.path.basename(docx_path).lower()
     if "term_sheet" in basename:
-        doc_type = "term_sheet"
         cover_title = "INDICATIVE TERM SHEET"
         cover_subtitle = "Strategic Education Partnership"
     elif "investment_memorandum" in basename or "proposal" in basename:
-        doc_type = "proposal"
         cover_title = "INVESTMENT MEMORANDUM"
         cover_subtitle = "Strategic Partnership Proposal for Education Transformation"
     else:
-        doc_type = "document"
         cover_title = "DOCUMENT"
         cover_subtitle = ""
 
@@ -233,112 +357,112 @@ def convert_docx_to_pdf(docx_path: str) -> str:
         target=f"2hr Learning (Alpha) x {target_name}",
     )
 
-    # Content pages
+    # Content pages — iterate body elements in document order so
+    # tables appear exactly where they were inserted (not all at the end).
     pdf.add_page()
     pdf.set_text_color(*TEXT_COLOR)
 
-    for para in doc.paragraphs:
-        text = _clean_text(para.text.strip())
-        if not text:
-            pdf.ln(3)
-            continue
+    for element in doc.element.body:
+        tag = element.tag
 
-        style_name = para.style.name if para.style else ""
+        # --- Paragraph ---
+        if tag == qn("w:p"):
+            para = Paragraph(element, doc)
 
-        # --- Headings ---
-        if style_name.startswith("Heading 1") or style_name == "Heading 1":
-            pdf.ln(6)
-            pdf.set_font("Helvetica", "B", 18)
-            pdf.set_text_color(*DARK)
-            pdf.multi_cell(0, 9, text)
-            # Accent underline
-            pdf.set_draw_color(*ACCENT)
-            pdf.set_line_width(0.5)
-            pdf.line(10, pdf.get_y() + 1, 80, pdf.get_y() + 1)
-            pdf.ln(5)
-            pdf.set_text_color(*TEXT_COLOR)
+            # Detect page breaks (w:br with w:type="page")
+            has_page_break = False
+            for run_el in element.findall(
+                f".//{qn('w:br')}[@{qn('w:type')}='page']"
+            ):
+                has_page_break = True
+            if has_page_break:
+                pdf.add_page()
+                pdf.set_text_color(*TEXT_COLOR)
+                continue
 
-        elif style_name.startswith("Heading 2"):
-            pdf.ln(5)
-            pdf.set_font("Helvetica", "B", 14)
-            pdf.set_text_color(*ACCENT)
-            pdf.multi_cell(0, 8, text)
-            pdf.ln(2)
-            pdf.set_text_color(*TEXT_COLOR)
+            text = _clean_text(para.text.strip())
+            if not text:
+                pdf.ln(4)
+                continue
 
-        elif style_name.startswith("Heading 3"):
-            pdf.ln(3)
-            pdf.set_font("Helvetica", "B", 12)
-            pdf.set_text_color(*TEXT_COLOR)
-            pdf.multi_cell(0, 7, text)
-            pdf.ln(2)
+            style_name = para.style.name if para.style else ""
 
-        # --- List items ---
-        elif style_name.startswith("List Bullet"):
-            pdf.set_font("Helvetica", "", 10)
-            pdf.set_text_color(*TEXT_COLOR)
-            x = pdf.get_x()
-            pdf.cell(8, 6, "-")
-            pdf.multi_cell(0, 6, text)
-            pdf.ln(1)
+            # --- Headings ---
+            if style_name.startswith("Heading 1") or style_name == "Heading 1":
+                pdf.ln(10)
+                pdf.set_font("Helvetica", "B", 18)
+                pdf.set_text_color(*DARK)
+                pdf.multi_cell(0, 9, text)
+                # Accent underline
+                pdf.set_draw_color(*ACCENT)
+                pdf.set_line_width(0.5)
+                pdf.line(10, pdf.get_y() + 1, 80, pdf.get_y() + 1)
+                pdf.ln(6)
+                pdf.set_text_color(*TEXT_COLOR)
 
-        elif style_name.startswith("List Number"):
-            pdf.set_font("Helvetica", "", 10)
-            pdf.set_text_color(*TEXT_COLOR)
-            pdf.cell(8, 6, " ")
-            pdf.multi_cell(0, 6, text)
-            pdf.ln(1)
+            elif style_name.startswith("Heading 2"):
+                pdf.ln(8)
+                pdf.set_font("Helvetica", "B", 14)
+                pdf.set_text_color(*ACCENT)
+                pdf.multi_cell(0, 8, text)
+                pdf.ln(4)
+                pdf.set_text_color(*TEXT_COLOR)
 
-        # --- Regular paragraphs ---
-        else:
-            # Check for bold runs
-            has_bold = any(run.bold for run in para.runs if run.text.strip())
-            has_italic = any(run.italic for run in para.runs if run.text.strip())
+            elif style_name.startswith("Heading 3"):
+                pdf.ln(6)
+                pdf.set_font("Helvetica", "B", 12)
+                pdf.set_text_color(*TEXT_COLOR)
+                pdf.multi_cell(0, 7, text)
+                pdf.ln(3)
 
-            if has_bold and len(para.runs) == 1:
-                pdf.set_font("Helvetica", "B", 10)
-            elif has_italic and len(para.runs) == 1:
-                pdf.set_font("Helvetica", "I", 9)
-                pdf.set_text_color(*MID_GRAY)
-            else:
+            # --- List items ---
+            elif style_name.startswith("List Bullet"):
                 pdf.set_font("Helvetica", "", 10)
-
-            pdf.multi_cell(0, 6, text)
-            pdf.ln(2)
-            pdf.set_text_color(*TEXT_COLOR)
-
-    # --- Render tables ---
-    for table in doc.tables:
-        pdf.ln(4)
-        num_cols = len(table.columns)
-        if num_cols == 0:
-            continue
-
-        col_width = (pdf.w - 20) / num_cols
-
-        for ri, row in enumerate(table.rows):
-            # Header row gets accent background
-            if ri == 0:
-                pdf.set_fill_color(*ACCENT)
-                pdf.set_text_color(*WHITE)
-                pdf.set_font("Helvetica", "B", 9)
-            elif ri % 2 == 0:
-                pdf.set_fill_color(*LIGHT_GRAY)
                 pdf.set_text_color(*TEXT_COLOR)
-                pdf.set_font("Helvetica", "", 9)
+                pdf.get_x()
+                pdf.cell(8, 6, "-")
+                pdf.multi_cell(0, 6, text)
+                pdf.ln(3)
+
+            elif style_name.startswith("List Number"):
+                pdf.set_font("Helvetica", "", 10)
+                pdf.set_text_color(*TEXT_COLOR)
+                pdf.cell(8, 6, " ")
+                pdf.multi_cell(0, 6, text)
+                pdf.ln(3)
+
+            # --- Regular paragraphs ---
             else:
-                pdf.set_fill_color(*WHITE)
+                has_bold = any(
+                    run.bold for run in para.runs if run.text.strip()
+                )
+                has_italic = any(
+                    run.italic for run in para.runs if run.text.strip()
+                )
+
+                if has_bold and len(para.runs) == 1:
+                    pdf.set_font("Helvetica", "B", 10)
+                elif has_italic and len(para.runs) == 1:
+                    pdf.set_font("Helvetica", "I", 9)
+                    pdf.set_text_color(*MID_GRAY)
+                else:
+                    pdf.set_font("Helvetica", "", 10)
+
+                pdf.multi_cell(0, 6, text)
+                pdf.ln(5)
                 pdf.set_text_color(*TEXT_COLOR)
-                pdf.set_font("Helvetica", "", 9)
 
-            row_height = 7
-            for ci, cell in enumerate(row.cells):
-                cell_text = _clean_text(cell.text.strip())[:60]  # Truncate long cells
-                pdf.cell(col_width, row_height, cell_text, border=1, fill=True)
+        # --- Table ---
+        elif tag == qn("w:tbl"):
+            table = DocxTable(element, doc)
+            pdf.ln(4)
+            num_cols = len(table.columns)
+            if num_cols == 0:
+                continue
 
-            pdf.ln(row_height)
-
-        pdf.ln(4)
+            page_w = pdf.w - 20  # usable width
+            _render_table(pdf, table, num_cols, page_w)
+            pdf.ln(4)
 
     # Save
     pdf.output(pdf_path)

@@ -73,14 +73,15 @@ unified_model:
   # ---------------------------------------------------------------------------
   upfront_fees:
     alphacore_license: 250000000         # $250M — FIXED for all countries
-    edtech_app_content_rd: 250000000     # $250M — FIXED for all countries
-    lifeskills_rd: 250000000             # $250M — FIXED for all countries
-    total_fixed_development: 750000000   # $750M total fixed costs
+    incept_edllm: 250000000              # $250M — Country/State specific Incept EdLLM
+    edtech_app_content_rd: 250000000     # $250M — Country/State specific EdTech Apps
+    lifeskills_rd: 250000000             # $250M — Country/State specific Programs and Life Skills
+    total_fixed_development: 1000000000  # $1B total fixed costs (4 × $250M)
     note: >
-      AlphaCore license, country-specific workshops, and edtech app fees
-      are FIXED amounts — they do NOT scale by country GDP, population,
-      or any other metric. Only management fee prepay and Timeback prepay
-      scale (based on student count × budget).
+      Four FIXED upfront development costs: AlphaCore License, Incept EdLLM,
+      EdTech Apps, and Programs & Life Skills — $250M each, $1B total.
+      These do NOT scale by country GDP, population, or any other metric.
+      Prepaid fees (Timeback, Operating Fee) scale by student count.
 
   # Prepaid fees — these CAN scale (based on student commitment)
   prepaid_fees:

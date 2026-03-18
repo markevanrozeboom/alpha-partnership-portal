@@ -6,7 +6,6 @@ One unified model for all countries. Fixed pricing. No PPP scaling.
 
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -150,14 +149,22 @@ def get_min_student_year_commit() -> int:
 
 
 def get_fixed_development_costs() -> dict:
-    """Return the FIXED upfront development costs (not country-scaled)."""
+    """Return the FIXED upfront development costs (not country-scaled).
+
+    Four items at $250M each = $1B total:
+      1. Alpha Core License
+      2. Country/State specific Incept EdLLM
+      3. Country/State specific EdTech Apps
+      4. Country/State specific Programs and Life Skills
+    """
     model = load_unified_model()
     upfront = model.get("upfront_fees", {})
     return {
         "alphacore_license": upfront.get("alphacore_license", 250_000_000),
+        "incept_edllm": upfront.get("incept_edllm", 250_000_000),
         "edtech_app_content_rd": upfront.get("edtech_app_content_rd", 250_000_000),
         "lifeskills_rd": upfront.get("lifeskills_rd", 250_000_000),
-        "total": upfront.get("total_fixed_development", 750_000_000),
+        "total": upfront.get("total_fixed_development", 1_000_000_000),
     }
 
 

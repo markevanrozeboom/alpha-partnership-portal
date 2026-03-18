@@ -390,13 +390,17 @@ For each state, output a JSON object with EXACTLY these keys (use null if not fo
 - naep_8th_reading_proficient_pct (integer)
 - naep_8th_math_proficient_pct (integer)
 
-Return a single JSON object where keys are state names with underscores (e.g. "New_York") and values are the metric objects above.
+Return a single JSON object where keys are state names with underscores
+(e.g. "New_York") and values are the metric objects above.
 
 RESPOND WITH ONLY THE JSON OBJECT, no markdown, no explanation."""
 
     try:
         response = await call_llm_plain(
-            system_prompt="You are a data extraction assistant. Parse research text into structured JSON. Return ONLY valid JSON.",
+            system_prompt=(
+                "You are a data extraction assistant. "
+                "Parse research text into structured JSON. Return ONLY valid JSON."
+            ),
             user_prompt=prompt,
         )
 

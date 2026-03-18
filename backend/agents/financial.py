@@ -18,12 +18,10 @@ from models.schemas import (
     FinancialAssumption, FinancialAssumptions,
     FinancialModel, YearProjection, UnitEconomics, CapitalDeployment,
     ReturnsAnalysis, SensitivityScenario,
-    Strategy, CountryProfile, EducationAnalysis,
+    Strategy, CountryProfile,
 )
-from services.llm import call_llm_plain
 from config import OUTPUT_DIR
 from config.rules_loader import (
-    get_deal_structure,
     get_flagship_tuition_range,
     get_national_per_student_budget,
     get_min_student_year_commit,
@@ -37,6 +35,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Phase 1: Generate Assumptions
 # ---------------------------------------------------------------------------
+
 
 def generate_assumptions(
     target: str,
@@ -65,9 +64,13 @@ def _generate_sovereign_assumptions(
 ) -> FinancialAssumptions:
     """Generate two-prong model assumptions for sovereign nations.
 
-    Prong 1 (Flagship): Tuition $40K-$100K, capital city + 1-2 biggest cities, 50% backstop.
-    Prong 2 (National): FIXED $25K per-student budget, 100K student-year min commit.
-    Upfront fees: FIXED $250M each (AlphaCore, App R&D, LifeSkills) = $750M total.
+    Prong 1 (Flagship): 100% Alpha-owned. Tuition $40K-$100K, top metros, 25% margin.
+    Prong 2 (National): 100% Country-owned, Alpha operates. FIXED $25K/student, 100K min.
+
+    Upfront fees per financial_rules_v1.md:
+      4 × $250M fixed development = $1B
+      Timeback prepaid = students × $5,000/student
+      Operating Fee prepaid = students × $2,500/student
     """
     # --- Load fixed parameters from config ---
     tuition_min, tuition_max = get_flagship_tuition_range()
@@ -83,66 +86,71 @@ def _generate_sovereign_assumptions(
     # Higher GDP → higher in the $40K-$100K range
     gdp_ratio = min(1.0, max(0.0, (gdp_cap - 10_000) / 80_000))
     default_flagship_tuition = round(
-        (tuition_min + (tuition_max - tuition_min) * gdp_ratio) / 1_000
-    ) * 1_000
+        (tuition_min + (tuition_max - tuition_min) * gdp_ratio) / 5_000
+    ) * 5_000  # $5K increments per rules
     default_flagship_tuition = max(tuition_min, min(tuition_max, default_flagship_tuition))
 
-    # Flagship schools: capital city + 1-2 biggest cities = 2-3 schools
+    # Flagship schools: capital city + top metros, max 3 flagships in capital + 1 per other metro
     default_flagship_schools = 3
-    default_flagship_students_per_school = 800
-    flagship_fill_rate = 0.50  # 50% backstop
+    default_flagship_students_per_school = 500  # 250-1000 range, 50-student increments
+    _flagship_fill_rate = 0.50  # 50% backstop  # noqa: F841
 
     # --- Prong 2: National ---
     # 100K student-year minimum commitment
     default_national_students = min_student_year
 
-    # --- Prepaid fees scale by student count ---
-    total_prong2_revenue_y5 = default_national_students * national_budget
-    flagship_capacity = default_flagship_schools * default_flagship_students_per_school
-    total_prong1_revenue_y5 = flagship_capacity * default_flagship_tuition * flagship_fill_rate
-    combined_revenue_y5 = total_prong1_revenue_y5 + total_prong2_revenue_y5
+    # --- Prepaid fees: per-student minimums (NOT revenue %) ---
+    # Per financial_rules_v1.md:
+    #   Timeback prepaid = students × $5,000 per student
+    #   Operating Fee prepaid = students × $2,500 per student
+    timeback_floor_per_student = fee_floors.get("timeback_fee_floor_per_student", 5_000)
+    mgmt_floor_per_student = fee_floors.get("management_fee_floor_per_student", 2_500)
+    prepaid_timeback = round(default_national_students * timeback_floor_per_student / 1_000_000)
+    prepaid_mgmt = round(default_national_students * mgmt_floor_per_student / 1_000_000)
 
-    prepaid_mgmt = round(combined_revenue_y5 * 0.10 / 1_000_000)
-    prepaid_timeback = round(combined_revenue_y5 * 0.20 / 1_000_000)
+    # Fixed development total: $1B (4 × $250M)
+    fixed_dev_total_m = round(dev_costs["total"] / 1_000_000)
 
     assumptions = [
         # --- Prong 1: Flagship ---
         FinancialAssumption(
             key="flagship_tuition", label="Flagship Tuition (per student/year)",
             value=default_flagship_tuition,
-            min_val=tuition_min, max_val=tuition_max, step=1_000,
+            min_val=tuition_min, max_val=tuition_max, step=5_000,
             unit="$", category="prong_1_flagship",
-            description="Set by AGI of top 20% families. Capital city + biggest cities.",
+            description="Set by AGI of top 20% families. $5K increments. "
+            "Must exceed most expensive non-boarding school.",
         ),
         FinancialAssumption(
             key="flagship_schools", label="Flagship School Count",
             value=default_flagship_schools,
-            min_val=2, max_val=5, step=1,
+            min_val=1, max_val=10, step=1,
             unit="schools", category="prong_1_flagship",
-            description="Capital city + 1-2 biggest cities",
+            description="Max 3 in capital + 1 per other top metro (limited to 3 largest metros)",
         ),
         FinancialAssumption(
             key="flagship_students_per_school",
             label="Flagship Students per School",
             value=default_flagship_students_per_school,
-            min_val=200, max_val=1_500, step=50,
+            min_val=250, max_val=1_000, step=50,
             unit="students", category="prong_1_flagship",
+            description="250-1,000 students, 50-student increments per rules",
         ),
         FinancialAssumption(
             key="flagship_fill_rate", label="Flagship Fill Rate (%)",
             value=50, min_val=30, max_val=100, step=5,
             unit="%", category="prong_1_flagship",
-            description="50% backstop (non-negotiable floor)",
+            description="50% backstop guaranteed by country/state for 5 years",
         ),
 
-        # --- Prong 2: National ---
+        # --- Prong 2: National (Counterparty-Owned, Alpha-Operated) ---
         FinancialAssumption(
             key="national_per_student_budget",
             label="National Per-Student Budget",
             value=national_budget,
             min_val=national_budget, max_val=national_budget, step=1_000,
             unit="$", category="prong_2_national",
-            description="FIXED $25K per student — non-negotiable",
+            description="FIXED $25,000 per student — non-negotiable",
             locked=True,
         ),
         FinancialAssumption(
@@ -188,69 +196,87 @@ def _generate_sovereign_assumptions(
         # --- Alpha Fee Structure (locked) ---
         FinancialAssumption(
             key="management_fee_pct",
-            label="Management Fee (% of Combined Revenue)",
+            label="Operating Fee (% of funding/tuition)",
             value=10, min_val=10, max_val=10, step=1,
             unit="%", category="fees",
-            description="10% — non-negotiable",
+            description="10% of funding/tuition, min $2,500/student — non-negotiable",
             locked=True,
         ),
         FinancialAssumption(
             key="timeback_license_pct",
-            label="Timeback License (% of Combined Revenue)",
+            label="Timeback License (% of funding/tuition)",
             value=20, min_val=20, max_val=20, step=1,
             unit="%", category="fees",
-            description="20% — non-negotiable",
+            description="20% of funding/tuition, min $5,000/student — non-negotiable",
             locked=True,
         ),
 
         # --- Upfront Fees: Fixed Development Costs (locked) ---
         FinancialAssumption(
-            key="upfront_alphacore_license", label="AlphaCore License ($M)",
+            key="upfront_alphacore_license", label="Alpha Core License ($M)",
             value=dev_costs["alphacore_license"] / 1_000_000,
             min_val=250, max_val=250, step=1,
             unit="$M", category="fees",
-            description="FIXED $250M — AlphaCore curriculum OS & LMS license",
+            description="FIXED $250M — Alpha Core License, paid upfront",
+            locked=True,
+        ),
+        FinancialAssumption(
+            key="upfront_incept_edllm", label="Incept EdLLM ($M)",
+            value=dev_costs["incept_edllm"] / 1_000_000,
+            min_val=250, max_val=250, step=1,
+            unit="$M", category="fees",
+            description="FIXED $250M — Country/State specific Incept EdLLM, paid upfront",
             locked=True,
         ),
         FinancialAssumption(
             key="upfront_app_content_rd",
-            label="EdTech App & Content R&D ($M)",
+            label="Country-Specific EdTech Apps ($M)",
             value=dev_costs["edtech_app_content_rd"] / 1_000_000,
             min_val=250, max_val=250, step=1,
             unit="$M", category="fees",
-            description="FIXED $250M — country-specific EdTech app content R&D",
+            description="FIXED $250M — country-specific EdTech Apps R&D, paid upfront",
             locked=True,
         ),
         FinancialAssumption(
-            key="upfront_lifeskills_rd", label="LifeSkills R&D ($M)",
+            key="upfront_lifeskills_rd", label="Programs and Life Skills R&D ($M)",
             value=dev_costs["lifeskills_rd"] / 1_000_000,
             min_val=250, max_val=250, step=1,
             unit="$M", category="fees",
-            description="FIXED $250M — country-specific life skills curriculum R&D",
+            description="FIXED $250M — country-specific Programs and Life Skills, paid upfront",
             locked=True,
         ),
 
-        # --- Prepaid Fees (scale by student count) ---
-        FinancialAssumption(
-            key="upfront_mgmt_fee", label="Prepaid Management Fee ($M)",
-            value=max(1, prepaid_mgmt),
-            min_val=1, max_val=1_000, step=5,
-            unit="$M", category="fees",
-            description="Combined Prong 1+2 revenue × 10% — scales by student count",
-        ),
+        # --- Prepaid Fees (scale by student count × per-student minimum) ---
         FinancialAssumption(
             key="upfront_timeback_fee", label="Prepaid Timeback Fee ($M)",
-            value=max(1, prepaid_timeback),
-            min_val=1, max_val=2_000, step=5,
+            value=prepaid_timeback,
+            min_val=1, max_val=5_000, step=5,
             unit="$M", category="fees",
-            description="Combined Prong 1+2 revenue × 20% — scales by student count",
+            description=f"Students × ${timeback_floor_per_student:,}/student = ${prepaid_timeback:,}M",
+        ),
+        FinancialAssumption(
+            key="upfront_mgmt_fee", label="Prepaid Operating Fee ($M)",
+            value=prepaid_mgmt,
+            min_val=1, max_val=2_500, step=5,
+            unit="$M", category="fees",
+            description=f"Students × ${mgmt_floor_per_student:,}/student = ${prepaid_mgmt:,}M",
+        ),
+        FinancialAssumption(
+            key="parent_education_annual", label="Parent Education / Launch / Guides ($M/yr)",
+            value=50, min_val=25, max_val=100, step=5,
+            unit="$M", category="fees",
+            description="$50M per year ongoing — parent education, marketing, guide training",
         ),
         FinancialAssumption(
             key="upfront_ip_fee", label="Total Upfront Ask ($M)",
-            value=max(750, 750 + prepaid_mgmt + prepaid_timeback),
-            min_val=750, max_val=3_000, step=5,
+            value=fixed_dev_total_m + prepaid_timeback + prepaid_mgmt,
+            min_val=1_000, max_val=5_000, step=5,
             unit="$M", category="fees",
-            description="$750M fixed development + prepaid mgmt + prepaid timeback",
+            description=(
+                f"${fixed_dev_total_m:,}M fixed dev"
+                f" + ${prepaid_timeback:,}M Timeback"
+                f" + ${prepaid_mgmt:,}M Operating Fee"
+            ),
         ),
 
         # --- Returns ---
@@ -440,8 +466,8 @@ def _generate_us_state_assumptions(
         FinancialAssumption(
             key="upfront_ip_fee", label="Total Upfront Ask ($M)",
             value=max(25, 250 + 250 + 250
-                  + round(target_students_y5 * base_per_student * 0.10 / 1_000_000)
-                  + round(target_students_y5 * base_per_student * 0.20 / 1_000_000)),
+                      + round(target_students_y5 * base_per_student * 0.10 / 1_000_000)
+                      + round(target_students_y5 * base_per_student * 0.20 / 1_000_000)),
             min_val=25, max_val=2000, step=5,
             unit="$M", category="fees",
             description="AlphaCore + App R&D + LifeSkills R&D + Mgmt Fee + Timeback",
@@ -517,16 +543,17 @@ def _build_sovereign_model(a: dict) -> FinancialModel:
 
     capex_per_school = a.get("capex_per_school", 5_000_000)
     exit_multiple = a.get("exit_ebitda_multiple", 15)
-    discount_rate = a.get("discount_rate", 12) / 100
+    a.get("discount_rate", 12) / 100
     tax_rate = a.get("tax_rate", 20) / 100
 
     # --- Upfront fees ---
     upfront_alphacore = a.get("upfront_alphacore_license", 250) * 1_000_000
+    upfront_incept_edllm = a.get("upfront_incept_edllm", 250) * 1_000_000
     upfront_app_rd = a.get("upfront_app_content_rd", 250) * 1_000_000
     upfront_lifeskills = a.get("upfront_lifeskills_rd", 250) * 1_000_000
-    upfront_mgmt = a.get("upfront_mgmt_fee", 0) * 1_000_000
-    upfront_timeback = a.get("upfront_timeback_fee", 0) * 1_000_000
-    upfront_ip = a.get("upfront_ip_fee", 750) * 1_000_000
+    upfront_mgmt = a.get("upfront_mgmt_fee", 250) * 1_000_000      # Operating Fee prepaid
+    upfront_timeback = a.get("upfront_timeback_fee", 500) * 1_000_000  # Timeback prepaid
+    upfront_ip = a.get("upfront_ip_fee", 1_750) * 1_000_000
 
     # --- Prong 1: Flagship capacity (constant across years) ---
     flagship_capacity = flagship_schools * flagship_per_school
@@ -650,7 +677,7 @@ def _build_sovereign_model(a: dict) -> FinancialModel:
     )
 
     # --- Sensitivity ---
-    combined_y5_rev = projections[4].revenue if projections else 0
+    projections[4].revenue if projections else 0
     sensitivity = [
         SensitivityScenario(
             variable="National Students (Y5)",
@@ -688,6 +715,7 @@ def _build_sovereign_model(a: dict) -> FinancialModel:
         timeback_license_pct=timeback_pct,
         upfront_ip_fee=upfront_ip,
         upfront_alphacore_license=upfront_alphacore,
+        upfront_incept_edllm=upfront_incept_edllm,
         upfront_app_content_rd=upfront_app_rd,
         upfront_lifeskills_rd=upfront_lifeskills,
         upfront_mgmt_fee=upfront_mgmt,
@@ -716,7 +744,7 @@ def _build_us_state_model(a: dict) -> FinancialModel:
     capex_per_school = a.get("capex_per_school", 5_000_000)
     avg_per_school = a.get("avg_students_per_school", 800)
     exit_multiple = a.get("exit_ebitda_multiple", 15)
-    discount_rate = a.get("discount_rate", 12) / 100
+    a.get("discount_rate", 12) / 100
     tax_rate = a.get("tax_rate", 20) / 100
     guide_fee = a.get("guide_school_fee", 15_000)
 
@@ -959,8 +987,6 @@ def export_model_xlsx(
             cell.font = label_font
             cell.fill = label_fill
 
-    a_dict = {item.key: item.value for item in assumptions.assumptions}
-
     # ================================================================
     # Sheet 1: Assumptions
     # ================================================================
@@ -1065,10 +1091,20 @@ def export_model_xlsx(
     ws2.cell(r, 1).fill = subheader_fill
     r += 1
     alpha_items = [
-        ("Management Fee Revenue (5yr Total)", model.total_management_fee_revenue, "$#,##0"),
-        ("Timeback License Revenue (5yr Total)", model.total_timeback_license_revenue, "$#,##0"),
-        ("Upfront IP Fee", model.upfront_ip_fee, "$#,##0"),
-        ("Total Alpha Revenue (5yr)", model.total_management_fee_revenue + model.total_timeback_license_revenue + model.upfront_ip_fee, "$#,##0"),
+        ("Management Fee Revenue (5yr Total)",
+         model.total_management_fee_revenue,
+         "$#,##0"),
+        ("Timeback License Revenue (5yr Total)",
+         model.total_timeback_license_revenue,
+         "$#,##0"),
+        ("Upfront IP Fee",
+         model.upfront_ip_fee,
+         "$#,##0"),
+        ("Total Alpha Revenue (5yr)",
+         model.total_management_fee_revenue +
+         model.total_timeback_license_revenue +
+         model.upfront_ip_fee,
+         "$#,##0"),
     ]
     for name, val, fmt in alpha_items:
         label_row(ws2, r, 1, name)

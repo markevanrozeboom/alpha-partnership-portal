@@ -2,7 +2,7 @@
  * API client for the Alpha Country/State Business Plan backend.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://country-and-us-state-business-plan-app.onrender.com";
 
 // ---------------------------------------------------------------------------
 // Types
