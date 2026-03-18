@@ -38,7 +38,9 @@ Return valid JSON matching this exact structure:
   "keyStrengths": ["Strength 1 for partnership", "Strength 2", "Strength 3"],
   "localizedProgramName": "A SHORT brand name for the education program (2-4 words max, like 'Ed71' for UAE or 'Vision2030 Learning' for Saudi). Must be concise enough for a slide title. Reference something culturally meaningful. NEVER include explanations or descriptions — just the brand name itself.",
   "localLifeSkillsFocus": "What life skills matter most in this culture (e.g. entrepreneurship, civic leadership, environmental stewardship). 1-2 sentences.",
-  "languageApps": "What localized AI apps would be needed (languages, religious education, cultural studies, ESL). Brief list."
+  "languageApps": "What localized AI apps would be needed (languages, religious education, cultural studies, ESL). Brief list.",
+  "addressableStudentPopulation": "Estimated number of school-age children (5-18) in households with annual income > $250,000 USD (or PPP equivalent). This is the realistic addressable market for a $25,000/student program. Use known data: HNWI counts, wealth reports (Knight Frank, Henley & Partners, Credit Suisse), income distribution data, and international/premium private school enrollment as proxies. For wealthy nations (GDP per capita > $40k), this could be millions. For developing nations, it may be tens of thousands. Give a specific number like '15,000-25,000 students' or '2.1 million students'. Be realistic, not aspirational.",
+  "addressableMethodology": "1-2 sentences explaining the data sources and logic behind the estimate (e.g. 'Based on 7,200 HNWIs per Henley 2024, ~3,600 households with 2-3 school-age children, plus sub-millionaire affluent segment currently enrolled in international schools.')"
 }
 
 Be specific with numbers. Return ONLY the JSON object, no markdown fences.`;
@@ -314,7 +316,7 @@ function generateTermSheetHtml(ctx: CountryContext): string {
   </div>
 
   <div class="callout">
-    <p><strong>${ctx.headOfStateTitle}:</strong> ${ctx.headOfState} · <strong>Population:</strong> ${ctx.population} · <strong>GDP per Capita:</strong> ${ctx.gdpPerCapita} · <strong>School-Age Population:</strong> ${ctx.schoolAgePopulation}</p>
+    <p><strong>${ctx.headOfStateTitle}:</strong> ${ctx.headOfState} · <strong>Population:</strong> ${ctx.population} · <strong>GDP per Capita:</strong> ${ctx.gdpPerCapita} · <strong>School-Age Population:</strong> ${ctx.schoolAgePopulation}${ctx.addressableStudentPopulation ? ` · <strong>Addressable Market (AGI &gt; $250k):</strong> ${ctx.addressableStudentPopulation}` : ''}</p>
   </div>
 
   <div class="scale-badges">
@@ -950,9 +952,13 @@ function generatePitchDeckHtml(ctx: CountryContext): string {
   </div>
 
   <div class="callout-box" style="margin-top: 16px; display: flex; align-items: center; gap: 16px;">
-    <div style="font-size: 28px; font-weight: 800; color: #1a56db; white-space: nowrap;">${ctx.schoolAgePopulation}</div>
+    <div style="min-width: 180px;">
+      <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #718096; margin-bottom: 4px;">Addressable Market</div>
+      <div style="font-size: 26px; font-weight: 800; color: #1a56db; line-height: 1.1;">${ctx.addressableStudentPopulation || ctx.schoolAgePopulation}</div>
+      <div style="font-size: 10px; color: #718096; margin-top: 2px;">families with AGI &gt; $250k</div>
+    </div>
     <div>
-      <p style="font-size: 13px; line-height: 1.5; color: #2d3748;"><strong>Significant room to scale.</strong> The initial 5-year plan targets 200k students — a fraction of ${ctx.country}'s school-age population. As the program proves results, there is substantial opportunity to expand well beyond the initial communities with the same per-student economics already in place.</p>
+      <p style="font-size: 13px; line-height: 1.5; color: #2d3748;"><strong>Significant room to scale.</strong> The initial 5-year plan targets 200k students. As the program proves results, there is substantial opportunity to expand further with the same per-student economics already in place.${ctx.addressableMethodology ? ` <span style="font-size: 11px; color: #718096;">(${ctx.addressableMethodology})</span>` : ''}</p>
     </div>
   </div>
   
@@ -1034,7 +1040,11 @@ async function generateDocuments(target: string): Promise<GenerationResult> {
   const termSheetHtml = generateTermSheetHtml(ctx);
   const pitchDeckHtml = generatePitchDeckHtml(ctx);
 
-  return { context: ctx, termSheetHtml, pitchDeckHtml };
+  // Step 3: Generate DOCX and base64-encode it for client-side download
+  const docxBuffer = await buildTermSheetDocx(ctx);
+  const termSheetDocxBase64 = docxBuffer.toString("base64");
+
+  return { context: ctx, termSheetHtml, pitchDeckHtml, termSheetDocxBase64 };
 }
 
 // ─── Routes ──────────────────────────────────────────────────────────────────

@@ -19,6 +19,8 @@ export interface CountryContext {
   localizedProgramName: string; // e.g. "Ed71" for UAE, suggested local brand name
   localLifeSkillsFocus: string; // what life skills matter most in this culture
   languageApps: string; // what localized AI apps would be needed
+  addressableStudentPopulation: string; // estimated students in families with AGI > $250k
+  addressableMethodology: string; // brief explanation of how estimate was derived
 }
 
 // The full generation result
@@ -26,6 +28,7 @@ export interface GenerationResult {
   context: CountryContext;
   termSheetHtml: string;
   pitchDeckHtml: string;
+  termSheetDocxBase64: string; // base64-encoded DOCX file
 }
 
 // In-memory only — no DB needed

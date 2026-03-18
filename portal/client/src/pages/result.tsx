@@ -82,14 +82,26 @@ export default function ResultPage() {
   }, [result]);
 
   const handleDownloadDocx = useCallback(() => {
-    if (!id) return;
-    const link = document.createElement("a");
-    link.href = `/api/runs/${id}/docx`;
-    link.download = "";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }, [id]);
+    if (!result?.termSheetDocxBase64) return;
+    const name = result.context.localizedProgramName || result.context.country;
+    const byteChars = atob(result.termSheetDocxBase64);
+    const byteNums = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) {
+      byteNums[i] = byteChars.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNums);
+    const blob = new Blob([byteArray], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name}-Term-Sheet.docx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [result]);
 
   if (isLoading) {
     return (

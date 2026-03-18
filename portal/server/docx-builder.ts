@@ -487,6 +487,11 @@ export function buildTermSheetDocx(ctx: CountryContext): Promise<Buffer> {
               new TextRun({ text: `${ctx.gdpPerCapita}  ·  `, size: 18, font: "Calibri", color: "2D3748" }),
               new TextRun({ text: "School-Age Population: ", bold: true, size: 18, font: "Calibri", color: "2D3748" }),
               new TextRun({ text: ctx.schoolAgePopulation, size: 18, font: "Calibri", color: "2D3748" }),
+              ...(ctx.addressableStudentPopulation ? [
+                new TextRun({ text: "  ·  ", size: 18, font: "Calibri", color: "2D3748" }),
+                new TextRun({ text: "Addressable (AGI > $250k): ", bold: true, size: 18, font: "Calibri", color: "1A56DB" }),
+                new TextRun({ text: ctx.addressableStudentPopulation, size: 18, font: "Calibri", color: "1A56DB" }),
+              ] : []),
             ],
           }),
 
