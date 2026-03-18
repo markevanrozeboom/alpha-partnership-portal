@@ -335,8 +335,9 @@ def generate_term_sheet_assumptions(
             label="Flagship Alpha Schools",
             value=(
                 financial_model.flagship_optimization.total_schools
-                if financial_model.flagship_optimization
-                else int(fa.get("flagship_schools", 0))
+                if (financial_model.flagship_optimization
+                    and financial_model.flagship_optimization.total_schools > 0)
+                else int(fa.get("flagship_schools", 3))
             ),
             min_val=0, max_val=10, step=1,
             unit="schools", category="school_portfolio",
@@ -1043,7 +1044,7 @@ def _extract_financial_values(
         else 100_000
     )
 
-    # --- Flagship data (from optimization result) ---
+    # --- Flagship data (from optimization result or assumptions) ---
     flagship_opt = model.flagship_optimization
     flagship_tuition = model.flagship_tuition or 0
     flagship_students_total = model.flagship_students or 0
@@ -1053,12 +1054,18 @@ def _extract_financial_values(
         flagship_schools = flagship_opt.total_schools
         flagship_per_school = flagship_opt.optimal_capacity
     else:
-        flagship_schools = int(ts.get("ts_num_flagship_schools", 0))
+        # Fallback: use term-sheet assumptions → financial model defaults
+        flagship_schools = int(ts.get("ts_num_flagship_schools", 3))
+        if flagship_schools == 0:
+            flagship_schools = 3  # Ensure we always show something
         flagship_per_school = (
             flagship_students_total // max(1, flagship_schools)
             if flagship_students_total and flagship_schools
-            else 0
+            else 500  # Default from financial_rules_v1.md fallback
         )
+        # Ensure tuition has a sensible fallback
+        if flagship_tuition == 0:
+            flagship_tuition = int(ts.get("ts_flagship_tuition", 65_000))
 
     return {
         "per_student": per_student,
