@@ -1702,7 +1702,7 @@ def _add_deal_terms_section(
     )
     _add_list_item(
         doc,
-        f"Per student funding/tuition: ${fin['per_student']:,.0f}/year (FIXED).",
+        f"Per student funding/tuition: ${fin['per_student']:,.0f}/year.",
     )
     _add_list_item(
         doc,
