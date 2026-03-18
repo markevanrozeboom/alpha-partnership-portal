@@ -88,9 +88,10 @@ def _clean_text(text: str) -> str:
         text = text.replace(old, new)
 
     # Normalise remaining Unicode via NFKD decomposition — this converts
-    # accented chars into base + combining mark, then we keep only the
-    # characters that survive latin-1 encoding.
+    # accented chars into base + combining mark.  Strip the combining marks
+    # so "Éducation" → "Education" instead of "E?ducation".
     text = unicodedata.normalize("NFKD", text)
+    text = "".join(c for c in text if not unicodedata.combining(c))
 
     # Final fallback: encode to latin-1, replacing anything still unsupported
     return text.encode("latin-1", errors="replace").decode("latin-1")
