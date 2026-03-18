@@ -180,6 +180,138 @@ class AlphaPDF(FPDF):
         self.multi_cell(0, 8, "Prepared by 2hr Learning - Alpha Division", align="C")
 
 
+def _is_separator_row(row, num_cols: int) -> bool:
+    """Detect separator/section rows where all cells have the same text."""
+    texts = [cell.text.strip() for cell in row.cells[:num_cols]]
+    unique = set(texts)
+    return len(unique) == 1 and len(texts[0]) > 15
+
+
+def _calc_col_widths(table, num_cols: int, page_w: float) -> list[float]:
+    """Calculate proportional column widths based on content length."""
+    max_lens = [0] * num_cols
+    for row in table.rows:
+        for ci in range(min(num_cols, len(row.cells))):
+            txt = row.cells[ci].text.strip()
+            max_lens[ci] = max(max_lens[ci], len(txt))
+
+    # Give first column (labels) and last column (notes) more room
+    # Use a minimum of 8 chars so narrow columns aren't crushed
+    adjusted = [max(8, ml) for ml in max_lens]
+    total = sum(adjusted) or 1
+    widths = [(a / total) * page_w for a in adjusted]
+
+    # Enforce minimum column width of 20mm
+    for i in range(num_cols):
+        if widths[i] < 20:
+            widths[i] = 20
+    # Re-normalise to page width
+    total_w = sum(widths)
+    if total_w != page_w:
+        scale = page_w / total_w
+        widths = [w * scale for w in widths]
+    return widths
+
+
+def _estimate_row_height(
+    text: str, col_width: float, font_size: float,
+) -> float:
+    """Estimate the height needed for wrapped text in a cell."""
+    char_width = font_size * 0.22  # approximate average char width (mm)
+    chars_per_line = max(1, int(col_width / char_width))
+    num_lines = max(1, -(-len(text) // chars_per_line))  # ceil division
+    line_height = font_size * 0.45  # mm per line
+    return max(7, num_lines * line_height + 2)
+
+
+def _render_table(
+    pdf: FPDF, table, num_cols: int, page_w: float,
+) -> None:
+    """Render a DOCX table into the PDF with text wrapping and merged rows."""
+    col_widths = _calc_col_widths(table, num_cols, page_w)
+
+    for ri, row in enumerate(table.rows):
+        is_header = (ri == 0)
+        is_sep = _is_separator_row(row, num_cols)
+
+        # --- Separator row: single merged band ---
+        if is_sep:
+            pdf.set_fill_color(*LIGHT_GRAY)
+            pdf.set_text_color(100, 100, 100)
+            pdf.set_font("Helvetica", "I", 8)
+            sep_text = _clean_text(row.cells[0].text.strip())
+            pdf.cell(page_w, 6, sep_text, border=1, fill=True)
+            pdf.ln(6)
+            pdf.set_text_color(*TEXT_COLOR)
+            continue
+
+        # --- Determine row height (tallest cell wins) ---
+        if is_header:
+            pdf.set_fill_color(*ACCENT)
+            pdf.set_text_color(*WHITE)
+            pdf.set_font("Helvetica", "B", 8)
+        elif ri % 2 == 0:
+            pdf.set_fill_color(*LIGHT_GRAY)
+            pdf.set_text_color(*TEXT_COLOR)
+            pdf.set_font("Helvetica", "", 8)
+        else:
+            pdf.set_fill_color(*WHITE)
+            pdf.set_text_color(*TEXT_COLOR)
+            pdf.set_font("Helvetica", "", 8)
+
+        font_sz = 8.0
+        cell_texts: list[str] = []
+        row_h = 7.0
+        for ci in range(num_cols):
+            txt = _clean_text(
+                row.cells[ci].text.strip() if ci < len(row.cells) else ""
+            )
+            cell_texts.append(txt)
+            h = _estimate_row_height(txt, col_widths[ci], font_sz)
+            row_h = max(row_h, h)
+
+        # --- Draw cells ---
+        x_start = pdf.get_x()
+        y_start = pdf.get_y()
+
+        # Check if row fits on current page, else add page
+        if y_start + row_h > pdf.h - 20:
+            pdf.add_page()
+            pdf.set_text_color(*TEXT_COLOR)
+            x_start = pdf.get_x()
+            y_start = pdf.get_y()
+            # Re-apply style after page break
+            if is_header:
+                pdf.set_fill_color(*ACCENT)
+                pdf.set_text_color(*WHITE)
+                pdf.set_font("Helvetica", "B", 8)
+            elif ri % 2 == 0:
+                pdf.set_fill_color(*LIGHT_GRAY)
+                pdf.set_text_color(*TEXT_COLOR)
+                pdf.set_font("Helvetica", "", 8)
+            else:
+                pdf.set_fill_color(*WHITE)
+                pdf.set_text_color(*TEXT_COLOR)
+                pdf.set_font("Helvetica", "", 8)
+
+        for ci, txt in enumerate(cell_texts):
+            x = x_start + sum(col_widths[:ci])
+            pdf.set_xy(x, y_start)
+            # Draw filled background rect + border
+            pdf.rect(x, y_start, col_widths[ci], row_h, "DF")
+            # Draw text with small padding
+            pdf.set_xy(x + 1, y_start + 1)
+            pdf.multi_cell(
+                col_widths[ci] - 2, font_sz * 0.42,
+                txt, border=0,
+            )
+
+        # Move cursor past the row
+        pdf.set_xy(x_start, y_start + row_h)
+
+    pdf.ln(0)  # ensure cursor is at end of table
+
+
 def convert_docx_to_pdf(docx_path: str) -> str:
     """Convert a DOCX file to a professional PDF.
 
@@ -328,34 +460,8 @@ def convert_docx_to_pdf(docx_path: str) -> str:
             if num_cols == 0:
                 continue
 
-            col_width = (pdf.w - 20) / num_cols
-
-            for ri, row in enumerate(table.rows):
-                if ri == 0:
-                    pdf.set_fill_color(*ACCENT)
-                    pdf.set_text_color(*WHITE)
-                    pdf.set_font("Helvetica", "B", 9)
-                elif ri % 2 == 0:
-                    pdf.set_fill_color(*LIGHT_GRAY)
-                    pdf.set_text_color(*TEXT_COLOR)
-                    pdf.set_font("Helvetica", "", 9)
-                else:
-                    pdf.set_fill_color(*WHITE)
-                    pdf.set_text_color(*TEXT_COLOR)
-                    pdf.set_font("Helvetica", "", 9)
-
-                row_height = 7
-                for ci, cell in enumerate(row.cells):
-                    cell_text = _clean_text(
-                        cell.text.strip()
-                    )[:60]
-                    pdf.cell(
-                        col_width, row_height,
-                        cell_text, border=1, fill=True,
-                    )
-
-                pdf.ln(row_height)
-
+            page_w = pdf.w - 20  # usable width
+            _render_table(pdf, table, num_cols, page_w)
             pdf.ln(4)
 
     # Save
