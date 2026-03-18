@@ -4,8 +4,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { storage } from "./storage";
 import { buildTermSheetDocx } from "./docx-builder";
-import { computeFinancialModel } from "./financial-engine";
-import type { CountryContext, GenerationResult, FinancialResearchData } from "@shared/schema";
+import { computeFinancialModel, fmtCompact, fmtUsd, fmtNum } from "./financial-engine";
+import type { CountryContext, GenerationResult, FinancialResearchData, FinancialModel } from "@shared/schema";
 
 const client = new Anthropic({
   defaultHeaders: { "anthropic-version": "2023-06-01" },
@@ -397,413 +397,251 @@ function generateTermSheetHtml(ctx: CountryContext): string {
 }
 
 // ─── Pitch Deck HTML Generator ───────────────────────────────────────────────
+// Modelled after the Ed71 Proposal Deck (first 8 slides)
+// Slide 8 "Commercial Structure" mirrors the Ed71 per-student cost table exactly.
 
-function generatePitchDeckHtml(ctx: CountryContext): string {
+function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): string {
+  const programName = ctx.localizedProgramName || ctx.country;
+  const year = new Date().getFullYear();
+  const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long" });
+
   const strengths = (ctx.keyStrengths || [])
     .map(s => `<li>${s}</li>`)
     .join("\n");
+
+  // ── Build upfront investment rows from the financial model ──
+  const allUpfrontItems = [...model.upfront.fixedItems, ...model.upfront.variableItems];
+  const upfrontRows = allUpfrontItems
+    .map(r => `<tr><td>${r.item}</td><td class="amt">${fmtCompact(r.amountUsd)}</td><td>${r.recipient}</td></tr>`)
+    .join("\n");
+
+  // ── Build ongoing investment rows from the financial model ──
+  const ongoingRows = model.ongoing.items
+    .map(r => `<tr><td>${r.item}</td><td class="amt">${r.amount}</td><td>${r.recipient}</td></tr>`)
+    .join("\n");
+
+  // ── Investment structure panel items (right side of slide 8) ──
+  const investmentItems = [
+    ...model.upfront.fixedItems.map(r => ({ item: r.item, amount: fmtCompact(r.amountUsd), detail: r.recipient })),
+    ...model.upfront.variableItems.map(r => ({ item: r.item, amount: fmtCompact(r.amountUsd), detail: r.note || r.recipient })),
+  ];
+  const investmentRows = investmentItems
+    .map(r => `<div class="invest-row"><div class="invest-item">${r.item}</div><div class="invest-amt">${r.amount}</div><div class="invest-detail">${r.detail}</div></div>`)
+    .join("\n");
+
+  // ── Scholarship gap callout (if applicable) ──
+  const gapCallout = model.scholarshipGap.perStudentGap > 0
+    ? `<div class="callout-box" style="margin-top:16px;"><p><strong>Scholarship Gap:</strong> ${model.scholarshipGap.note}</p></div>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${ctx.localizedProgramName || ctx.country} — AI-Native National Education System</title>
+<title>${programName} — Proposal Deck</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-  
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  
-  @page { 
-    size: 16in 9in;
-    margin: 0;
-  }
-  
+
+  @page { size: 16in 9in; margin: 0; }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .slide { page-break-after: always; break-after: page; }
     .slide:last-child { page-break-after: avoid; }
   }
-  
+
   body {
     font-family: 'Inter', -apple-system, sans-serif;
     color: #1a1a2e;
     background: #f0f2f8;
   }
-  
+
+  /* ── Slide chrome ── */
   .slide {
-    width: 100%;
-    max-width: 1280px;
+    width: 100%; max-width: 1280px;
     margin: 0 auto 2px;
     aspect-ratio: 16/9;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
     background: linear-gradient(135deg, #f8f9ff 0%, #eef1fa 100%);
   }
-  
   .slide-footer {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 48px;
-    font-size: 10px;
-    color: #a0aec0;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 48px; font-size: 10px; color: #a0aec0;
   }
-  
-  .slide-footer .brand {
-    font-weight: 700;
-    color: #1a56db;
-    font-size: 12px;
-  }
-  
-  .slide-num {
-    font-variant-numeric: tabular-nums;
-  }
-  
-  /* ── Slide 1: Cover ── */
+  .slide-footer .brand { font-weight: 700; color: #1a56db; font-size: 12px; }
+  .slide-num { font-variant-numeric: tabular-nums; }
+
+  /* ── Cover ── */
   .slide-cover {
     background: linear-gradient(135deg, #0a1628 0%, #1a2744 40%, #1a56db 100%);
-    color: #fff;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 60px;
+    color: #fff; justify-content: center; align-items: center; text-align: center; padding: 60px;
   }
-  
-  .slide-cover .flag {
-    font-size: 64px;
-    margin-bottom: 24px;
-  }
-  
-  .slide-cover h1 {
-    font-size: 48px;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-    margin-bottom: 12px;
-  }
-  
-  .slide-cover h1 span {
-    color: #60a5fa;
-  }
-  
-  .slide-cover .tagline {
-    font-size: 20px;
-    font-weight: 300;
-    color: #94b8ff;
-    max-width: 700px;
-  }
-  
-  .slide-cover .meta {
-    position: absolute;
-    bottom: 48px;
-    font-size: 12px;
-    color: #6b8cc7;
-  }
-  
-  /* ── Slide: Content ── */
-  .slide-content {
-    padding: 48px;
-  }
-  
+  .slide-cover .flag { font-size: 64px; margin-bottom: 24px; }
+  .slide-cover h1 { font-size: 48px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 12px; }
+  .slide-cover h1 span { color: #60a5fa; }
+  .slide-cover .tagline { font-size: 20px; font-weight: 300; color: #94b8ff; max-width: 700px; }
+  .slide-cover .meta { position: absolute; bottom: 48px; font-size: 12px; color: #6b8cc7; }
+
+  /* ── Content slides ── */
+  .slide-content { padding: 48px; }
   .slide-content .label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #1a56db;
-    margin-bottom: 8px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: #1a56db; margin-bottom: 8px;
   }
-  
   .slide-content h2 {
-    font-size: 32px;
-    font-weight: 800;
-    color: #0a1628;
-    letter-spacing: -0.02em;
-    line-height: 1.15;
-    margin-bottom: 28px;
+    font-size: 32px; font-weight: 800; color: #0a1628;
+    letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 28px;
   }
-  
-  .slide-content h2 span {
-    color: #1a56db;
-  }
-  
+  .slide-content h2 span { color: #1a56db; }
+
   /* ── Two-column grid ── */
-  .two-pane {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
-    flex: 1;
-  }
-  
-  .pane {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .pane-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  
+  .two-pane { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; }
+  .pane { display: flex; flex-direction: column; }
+  .pane-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
   .pane-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: #e8eeff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
+    width: 44px; height: 44px; border-radius: 50%; background: #e8eeff;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
   }
-  
-  .pane-title {
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #0a1628;
-  }
-  
-  .stack-item {
-    font-size: 13px;
-    padding: 8px 0;
-    border-bottom: 1px solid #e8ecf4;
-    color: #2d3748;
-    line-height: 1.5;
-  }
-  
-  .stack-item strong {
-    color: #0a1628;
-  }
-  
-  .scale-row {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 16px;
-    gap: 12px;
-  }
-  
-  .scale-box {
-    flex: 1;
-    text-align: center;
-  }
-  
-  .scale-box .period {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #718096;
-    margin-bottom: 4px;
-  }
-  
-  .scale-box .figure {
-    font-size: 14px;
-    font-weight: 700;
-    color: #0a1628;
-  }
-  
-  .scale-arrow {
-    display: flex;
-    align-items: center;
-    color: #1a56db;
-    font-size: 12px;
-  }
-  
+  .pane-title { font-size: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #0a1628; }
+  .stack-item { font-size: 13px; padding: 8px 0; border-bottom: 1px solid #e8ecf4; color: #2d3748; line-height: 1.5; }
+  .stack-item strong { color: #0a1628; }
+
+  .scale-row { display: flex; justify-content: space-between; margin-top: 16px; gap: 12px; }
+  .scale-box { flex: 1; text-align: center; }
+  .scale-box .period { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #718096; margin-bottom: 4px; }
+  .scale-box .figure { font-size: 14px; font-weight: 700; color: #0a1628; }
+  .scale-arrow { display: flex; align-items: center; color: #1a56db; font-size: 12px; }
+
   /* ── Bullet lists ── */
-  .bullet-list {
-    list-style: none;
-    padding: 0;
-  }
-  
+  .bullet-list { list-style: none; padding: 0; }
   .bullet-list li {
-    position: relative;
-    padding: 8px 0 8px 20px;
-    font-size: 14px;
-    color: #2d3748;
-    line-height: 1.5;
-    border-bottom: 1px solid #edf2f7;
+    position: relative; padding: 8px 0 8px 20px; font-size: 14px;
+    color: #2d3748; line-height: 1.5; border-bottom: 1px solid #edf2f7;
   }
-  
   .bullet-list li::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 14px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #1a56db;
+    content: ""; position: absolute; left: 0; top: 14px;
+    width: 8px; height: 8px; border-radius: 50%; background: #1a56db;
   }
-  
+
   /* ── Key facts row ── */
-  .facts-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-  
-  .fact-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px;
-    text-align: center;
-  }
-  
-  .fact-card .fact-value {
-    font-size: 22px;
-    font-weight: 800;
-    color: #0a1628;
-    margin-bottom: 4px;
-  }
-  
-  .fact-card .fact-label {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #718096;
-  }
-  
-  /* ── Tables ── */
-  .deck-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-  }
-  
-  .deck-table th {
-    text-align: left;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #4a5568;
-    padding: 8px 12px;
-    border-bottom: 2px solid #e2e8f0;
-    background: #f7fafc;
-  }
-  
-  .deck-table th.primary-col {
-    background: #1a56db;
-    color: #fff;
-  }
-  
-  .deck-table td {
-    padding: 7px 12px;
-    border-bottom: 1px solid #edf2f7;
-    vertical-align: top;
-  }
-  
-  .deck-table td.amt {
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-  
-  .deck-table td.highlight {
-    background: linear-gradient(135deg, #1a56db08, #1a56db12);
-    color: #1a56db;
-    font-weight: 700;
-  }
-  
-  .deck-table td.notes {
-    font-size: 10px;
-    color: #718096;
-  }
-  
-  .deck-table .section-header td {
-    font-weight: 700;
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #718096;
-    padding-top: 14px;
-    border-bottom: none;
-  }
-  
-  .deck-table .total-row td {
-    font-weight: 700;
-    border-top: 2px solid #0a1628;
-    border-bottom: 2px solid #0a1628;
-    background: #f7fafc;
-  }
-  
-  /* Results badges */
-  .results-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    margin-top: 16px;
-  }
-  
-  .result-badge {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 20px;
-    text-align: center;
-  }
-  
-  .result-badge .result-value {
-    font-size: 32px;
-    font-weight: 800;
-    color: #1a56db;
-    line-height: 1;
-    margin-bottom: 6px;
-  }
-  
-  .result-badge .result-label {
-    font-size: 11px;
-    color: #4a5568;
-    line-height: 1.4;
-  }
-  
+  .facts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .fact-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; text-align: center; }
+  .fact-card .fact-value { font-size: 22px; font-weight: 800; color: #0a1628; margin-bottom: 4px; }
+  .fact-card .fact-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #718096; }
+
+  /* ── Results badges ── */
+  .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 16px; }
+  .result-badge { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; text-align: center; }
+  .result-badge .result-value { font-size: 32px; font-weight: 800; color: #1a56db; line-height: 1; margin-bottom: 6px; }
+  .result-badge .result-label { font-size: 11px; color: #4a5568; line-height: 1.4; }
+
+  /* ── Callout boxes ── */
   .callout-box {
-    background: #f0f4ff;
-    border-left: 4px solid #1a56db;
-    padding: 16px 20px;
-    border-radius: 0 8px 8px 0;
-    margin-top: 16px;
+    background: #f0f4ff; border-left: 4px solid #1a56db;
+    padding: 16px 20px; border-radius: 0 8px 8px 0; margin-top: 16px;
   }
-  
-  .callout-box p {
-    font-size: 13px;
-    line-height: 1.6;
-    color: #2d3748;
+  .callout-box p { font-size: 13px; line-height: 1.6; color: #2d3748; }
+
+  /* ── Tables ── */
+  .deck-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .deck-table th {
+    text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: #4a5568; padding: 8px 12px;
+    border-bottom: 2px solid #e2e8f0; background: #f7fafc;
+  }
+  .deck-table th.primary-col { background: #1a56db; color: #fff; }
+  .deck-table td { padding: 7px 12px; border-bottom: 1px solid #edf2f7; vertical-align: top; }
+  .deck-table td.amt { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .deck-table td.highlight { background: linear-gradient(135deg, #1a56db08, #1a56db12); color: #1a56db; font-weight: 700; }
+  .deck-table td.notes { font-size: 10px; color: #718096; }
+  .deck-table .section-header td { font-weight: 700; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #718096; padding-top: 14px; border-bottom: none; }
+  .deck-table .total-row td { font-weight: 700; border-top: 2px solid #0a1628; border-bottom: 2px solid #0a1628; background: #f7fafc; }
+
+  /* ── Day comparison ── */
+  .day-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }
+  .day-col { border-radius: 10px; padding: 20px; }
+  .day-col.traditional { background: #fef2f2; border: 1px solid #fecaca; }
+  .day-col.alpha { background: #f0f4ff; border: 1px solid #c7d2fe; }
+  .day-col h4 { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+  .day-col .day-item { font-size: 12px; padding: 4px 0; color: #4a5568; }
+  .day-col .day-item strong { color: #0a1628; }
+
+  /* ── Partnership cards ── */
+  .partner-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+  .partner-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; }
+  .partner-card .partner-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #1a56db; margin-bottom: 8px; }
+  .partner-card .partner-value { font-size: 14px; font-weight: 600; color: #0a1628; line-height: 1.4; }
+  .partner-card .partner-detail { font-size: 11px; color: #718096; margin-top: 4px; line-height: 1.4; }
+
+  /* ── Commercial Structure slide (Ed71-style) ── */
+  .comm-panel {
+    border: 2px solid #1a56db; border-radius: 4px; overflow: hidden;
+  }
+  .comm-header {
+    background: #1a56db; color: #fff; text-align: center;
+    font-size: 16px; font-weight: 700; padding: 8px 16px;
+  }
+  .comm-sub-header {
+    background: #4a5568; color: #fff; text-align: center;
+    font-size: 13px; font-weight: 700; padding: 5px 16px;
+  }
+  .comm-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .comm-table th {
+    text-align: left; font-size: 10px; font-weight: 700;
+    padding: 5px 10px; border-bottom: 1px solid #e2e8f0; color: #4a5568;
+  }
+  .comm-table td { padding: 5px 10px; border-bottom: 1px solid #edf2f7; }
+  .comm-table td.amt { font-weight: 700; text-align: center; white-space: nowrap; }
+  .comm-table .total-row td {
+    font-weight: 700; border-top: 2px solid #0a1628; background: #f7fafc;
+  }
+  .comm-footnote { font-size: 9px; color: #718096; padding: 4px 10px; font-style: italic; }
+
+  /* ── Investment Structure panel ── */
+  .invest-panel {
+    border: 2px solid #1a56db; border-radius: 4px; overflow: hidden;
+  }
+  .invest-row {
+    display: grid; grid-template-columns: 1fr auto;
+    padding: 5px 12px; border-bottom: 1px solid #edf2f7; font-size: 11px;
+  }
+  .invest-item { color: #2d3748; font-weight: 500; }
+  .invest-amt { font-weight: 700; color: #0a1628; text-align: right; }
+  .invest-detail { grid-column: 1 / -1; font-size: 10px; color: #718096; margin-top: 1px; }
+  .invest-total {
+    display: flex; justify-content: space-between;
+    padding: 6px 12px; font-weight: 700; font-size: 13px;
+    background: #f7fafc; border-top: 2px solid #0a1628;
   }
 </style>
 </head>
 <body>
 
-<!-- ═══ SLIDE 1: COVER ═══ -->
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 1 — COVER
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-cover">
   <div class="flag">${ctx.flagEmoji}</div>
-  <h1>${ctx.localizedProgramName || ctx.country}<br><span>World's First AI-Native<br>National Education System</span></h1>
+  <h1>${programName}<br><span>The World's First AI-Native<br>National Education System</span></h1>
   <div class="tagline">${ctx.formalName}</div>
-  <div class="meta">Confidential & Proprietary · ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long" })} · Alpha Education</div>
+  <div class="meta">Confidential &amp; Proprietary · ${dateStr} · Alpha Education</div>
   <div class="slide-footer" style="color: rgba(255,255,255,0.3);">
     <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA</span>
     <span class="slide-num">1</span>
   </div>
 </div>
 
-<!-- ═══ SLIDE 2: Country Context ═══ -->
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 2 — THE OPPORTUNITY
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">The Opportunity</div>
   <h2>${ctx.country}: <span>A Generational Investment in Human Capital</span></h2>
-  
+
   <div class="facts-grid">
     <div class="fact-card">
       <div class="fact-value">${ctx.population}</div>
@@ -822,28 +660,30 @@ function generatePitchDeckHtml(ctx: CountryContext): string {
       <div class="fact-label">Current Ed Spend / Student</div>
     </div>
   </div>
-  
+
   <div class="callout-box">
     <p>${ctx.culturalNarrative}</p>
   </div>
-  
+
   <div style="margin-top: 20px;">
     <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">National Education Vision</div>
     <p style="font-size:14px; color:#2d3748; line-height:1.6;">${ctx.nationalEdVision}</p>
   </div>
-  
+
   <div class="slide-footer">
     <span class="brand">ALPHA</span>
-    <span>© ${new Date().getFullYear()}. Confidential & Proprietary.</span>
+    <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">2</span>
   </div>
 </div>
 
-<!-- ═══ SLIDE 3: Results + Why Alpha ═══ -->
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 3 — ALPHA'S PROVEN RESULTS
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">Proven Results</div>
   <h2>Alpha's students achieve <span>world-class outcomes</span></h2>
-  
+
   <div class="results-grid">
     <div class="result-badge">
       <div class="result-value">2.2–4.9×</div>
@@ -858,26 +698,66 @@ function generatePitchDeckHtml(ctx: CountryContext): string {
       <div class="result-label">of students say they<br>"love school"</div>
     </div>
   </div>
-  
+
   <div style="margin-top: 24px;">
     <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:12px;">Why ${ctx.country}</div>
     <ul class="bullet-list">
       ${strengths}
     </ul>
   </div>
-  
+
   <div class="slide-footer">
     <span class="brand">ALPHA</span>
-    <span>© ${new Date().getFullYear()}. Confidential & Proprietary.</span>
+    <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">3</span>
   </div>
 </div>
 
-<!-- ═══ SLIDE 4: The Complete Platform ═══ -->
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 4 — THE 2HR LEARNING MODEL
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
-  <div class="label">The Complete Platform for Regional Leadership</div>
-  <h2>Launching ${ctx.localizedProgramName || ctx.country} on Alpha's <span>full education stack</span></h2>
-  
+  <div class="label">The 2hr Learning Model</div>
+  <h2>AI-powered education that <span>compresses and elevates</span></h2>
+
+  <ul class="bullet-list" style="margin-bottom: 20px;">
+    <li><strong>The Core Insight:</strong> Children can master academics in 2 hours/day — this has been proven for 40 years (Bloom's 2-Sigma). AI makes 1:1 tutoring possible at scale for the first time.</li>
+    <li><strong>Timeback®:</strong> AI + learning science platform delivering 10× faster mastery. 90% mastery floor — no gaps, no "Swiss cheese" learning.</li>
+    <li><strong>AlphaCore™:</strong> The strongest K-12 life-skills curriculum — leadership, teamwork, communication, resilience.</li>
+    <li><strong>Guide School:</strong> 12-month talent academy transforming teachers into Guides — coaches &amp; mentors focused on mindset, not lecturing.</li>
+  </ul>
+
+  <div class="day-compare">
+    <div class="day-col traditional">
+      <h4 style="color: #991b1b;">Traditional School Day</h4>
+      <div class="day-item"><strong>6 hours</strong> of classroom instruction</div>
+      <div class="day-item">Teacher lectures to 30 students</div>
+      <div class="day-item">One-size-fits-all curriculum</div>
+      <div class="day-item">Results: stagnant outcomes nationwide</div>
+    </div>
+    <div class="day-col alpha">
+      <h4 style="color: #1a56db;">Alpha School Day</h4>
+      <div class="day-item"><strong>2 hours</strong> AI-powered academic mastery</div>
+      <div class="day-item"><strong>4 hours</strong> life skills, STEM, sports, arts</div>
+      <div class="day-item">Personalised AI tutor for every student</div>
+      <div class="day-item">Results: 2–5× faster learning, 97% love school</div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <span class="brand">ALPHA</span>
+    <span>© ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">4</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 5 — THE COMPLETE PLATFORM
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="slide slide-content">
+  <div class="label">The Complete Platform</div>
+  <h2>Launching ${programName} on Alpha's <span>full education stack</span></h2>
+
   <div class="two-pane">
     <div class="pane">
       <div class="pane-header">
@@ -886,122 +766,203 @@ function generatePitchDeckHtml(ctx: CountryContext): string {
       </div>
       <div class="stack-item"><strong>Parent Education System:</strong> Parents demand outcomes</div>
       <div class="stack-item"><strong>Reinvented School Day:</strong> 2 hrs of academics + life skills</div>
-      <div class="stack-item"><strong>Timeback®:</strong> AI platform for 10x faster mastery</div>
+      <div class="stack-item"><strong>Timeback®:</strong> AI platform for 10× faster mastery</div>
       <div class="stack-item"><strong>AlphaCore™:</strong> The strongest K-12 life-skills curriculum</div>
-      <div class="stack-item"><strong>Guide School:</strong> Talent academy for training guides</div>
-      <div class="stack-item"><strong>Incept eduLLM:</strong> Personalized content generation</div>
+      <div class="stack-item"><strong>Guide School:</strong> Talent academy for training Guides</div>
+      <div class="stack-item"><strong>Incept eduLLM:</strong> Personalised content generation engine</div>
       <div class="scale-row">
         <div class="scale-box"><div class="period">This Year</div><div class="figure">2,500 students · 22 campuses</div></div>
         <div class="scale-arrow">→</div>
         <div class="scale-box"><div class="period">3-Year Plan</div><div class="figure">100k students · 100 campuses</div></div>
       </div>
     </div>
-    
+
     <div class="pane">
       <div class="pane-header">
         <div class="pane-icon">${ctx.flagEmoji}</div>
-        <div class="pane-title">${ctx.localizedProgramName || ctx.country}: Nationally Owned</div>
+        <div class="pane-title">${programName}: Nationally Owned</div>
       </div>
-      <div class="stack-item"><strong>Education Sovereignty:</strong> ${ctx.country} owns the critical pieces</div>
+      <div class="stack-item"><strong>Education Sovereignty:</strong> ${ctx.country} owns 100% of the local entity</div>
       <div class="stack-item"><strong>Infrastructure:</strong> Built to scale across 100+ schools</div>
-      <div class="stack-item"><strong>Localized AI Apps:</strong> ${ctx.languageApps}</div>
+      <div class="stack-item"><strong>Localised AI Apps:</strong> ${ctx.languageApps}</div>
       <div class="stack-item"><strong>Local Life-Skills:</strong> ${ctx.localLifeSkillsFocus}</div>
-      <div class="stack-item"><strong>Talent Academy:</strong> Recruit and train ${ctx.localizedProgramName || ctx.country} Guides</div>
+      <div class="stack-item"><strong>Talent Academy:</strong> Recruit and train ${programName} Guides</div>
       <div class="stack-item"><strong>National eduLLM:</strong> Embedded local laws, values, and culture</div>
       <div class="scale-row">
-        <div class="scale-box"><div class="period">This Year</div><div class="figure">${FIXED_ECONOMICS.scaleTargets.yearOne}</div></div>
+        <div class="scale-box"><div class="period">Year 1</div><div class="figure">${fmtNum(model.counterparty.minStudentsPerYear / 50)} students</div></div>
         <div class="scale-arrow">→</div>
-        <div class="scale-box"><div class="period">5-Year Plan</div><div class="figure">${FIXED_ECONOMICS.scaleTargets.fiveYear}</div></div>
+        <div class="scale-box"><div class="period">5-Year Plan</div><div class="figure">${fmtNum(model.counterparty.minStudentsPerYear)}+ students</div></div>
       </div>
     </div>
   </div>
-  
+
   <div class="slide-footer">
     <span class="brand">ALPHA</span>
-    <span>© ${new Date().getFullYear()}. Confidential & Proprietary.</span>
-    <span class="slide-num">4</span>
-  </div>
-</div>
-
-<!-- ═══ SLIDE 5: Commercial Structure ═══ -->
-<div class="slide slide-content">
-  <div class="label">Transaction Details</div>
-  <h2>${ctx.localizedProgramName || ctx.country} <span>Commercial Structure</span></h2>
-  
-  <div class="two-pane">
-    <div class="pane">
-      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Upfront</div>
-      <table class="deck-table">
-        <thead><tr><th>Item</th><th>Upfront</th><th>Recipient</th></tr></thead>
-        <tbody>
-          ${FIXED_ECONOMICS.upfront.map(r => `<tr><td>${r.item.replace("EdTech App R&D", `${ctx.country} EdTech App R&D`).replace("Local Life-Skills R&D", `${ctx.localizedProgramName || ctx.country} R&D`)}</td><td class="amt">${r.amount}</td><td>${r.recipient}</td></tr>`).join("\n")}
-          <tr class="total-row"><td>Total</td><td class="amt">${FIXED_ECONOMICS.upfrontTotal}</td><td></td></tr>
-        </tbody>
-      </table>
-    </div>
-    
-    <div class="pane">
-      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Ongoing</div>
-      <table class="deck-table">
-        <thead><tr><th>Item</th><th>Ongoing</th><th>Recipient</th></tr></thead>
-        <tbody>
-          ${FIXED_ECONOMICS.ongoing.map(r => `<tr><td>${r.item}</td><td class="amt">${r.amount}</td><td>${r.recipient}</td></tr>`).join("\n")}
-          <tr class="total-row"><td>Total</td><td class="amt">Scale dependent</td><td></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="callout-box" style="margin-top: 16px; display: flex; align-items: center; gap: 16px;">
-    <div style="min-width: 180px;">
-      <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #718096; margin-bottom: 4px;">Addressable Market</div>
-      <div style="font-size: 26px; font-weight: 800; color: #1a56db; line-height: 1.1;">${ctx.addressableStudentPopulation || ctx.schoolAgePopulation}</div>
-      <div style="font-size: 10px; color: #718096; margin-top: 2px;">families with AGI &gt; $250k</div>
-    </div>
-    <div>
-      <p style="font-size: 13px; line-height: 1.5; color: #2d3748;"><strong>Significant room to scale.</strong> The initial 5-year plan targets 200k students. As the program proves results, there is substantial opportunity to expand further with the same per-student economics already in place.${ctx.addressableMethodology ? ` <span style="font-size: 11px; color: #718096;">(${ctx.addressableMethodology})</span>` : ''}</p>
-    </div>
-  </div>
-  
-  <div class="slide-footer">
-    <span class="brand">ALPHA</span>
-    <span>© ${new Date().getFullYear()}. Confidential & Proprietary.</span>
+    <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">5</span>
   </div>
 </div>
 
-<!-- ═══ SLIDE 6: Cost Structure (Page 8 table) ═══ -->
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 6 — PARTNERSHIP MODEL
+     ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
-  <div class="label">${ctx.localizedProgramName || ctx.country} Cost Structure</div>
-  <h2>Budget like other <span>$25k Alpha Holdings Schools</span></h2>
-  
-  <div style="display: grid; grid-template-columns: 1fr 280px; gap: 24px;">
-    <table class="deck-table">
-      <thead>
-        <tr>
-          <th>Item (per student P&L)</th>
-          <th>Alpha @ $50k Tuition</th>
-          <th class="primary-col">${ctx.localizedProgramName || "National"} @ $25k Budget</th>
-          <th>Notes</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr class="section-header"><td colspan="4">FUNDING</td></tr>
-        ${FIXED_ECONOMICS.costStructure.map(r => `<tr><td>${r.item}</td><td class="amt">${r.alpha}</td><td class="amt highlight">${r.national}</td><td class="notes">${r.notes}</td></tr>`).join("\n")}
-      </tbody>
-    </table>
-    
-    <div style="background: #f7fafc; border-radius: 10px; padding: 20px; border: 1px solid #e2e8f0; align-self: start; margin-top: 24px;">
-      <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #0a1628; margin-bottom: 12px;">Cost to Educate</div>
-      <p style="font-size: 12px; color: #4a5568; line-height: 1.6;">Conventional schools have the same cost to educate, but with close to 100% of spend on teachers.</p>
-      <p style="font-size: 12px; color: #4a5568; line-height: 1.6; margin-top: 8px;">Timeback and Life Skills spend same as at gt.school and Texas Sports Academy.</p>
+  <div class="label">Partnership Model</div>
+  <h2>${programName}: <span>${ctx.country} Owns 100% · Alpha Operates &amp; Licenses</span></h2>
+
+  <div class="partner-grid">
+    <div class="partner-card">
+      <div class="partner-label">Structure</div>
+      <div class="partner-value">Operator &amp; Licensor</div>
+      <div class="partner-detail">Modelled after the Marriott hotel management model. ${ctx.country} owns 100% of the local entity; Alpha is the exclusive operator and licensor.</div>
+    </div>
+    <div class="partner-card">
+      <div class="partner-label">Flagship Schools</div>
+      <div class="partner-value">${model.flagship.totalSchoolCount} School${model.flagship.totalSchoolCount !== 1 ? 's' : ''} · ${fmtUsd(model.flagship.tuitionPerYear)}/yr</div>
+      <div class="partner-detail">${model.flagship.schools.map(s => `${s.metro} (${s.count})`).join(', ')}. ${model.flagship.scholarshipNote ? model.flagship.scholarshipNote : `${fmtNum(model.flagship.capacityPerSchool)} students per school.`}</div>
+    </div>
+    <div class="partner-card">
+      <div class="partner-label">National Schools</div>
+      <div class="partner-value">${fmtNum(model.counterparty.minStudentsPerYear)} Student-Year Min</div>
+      <div class="partner-detail">Fixed $${model.counterparty.perStudentBudget.toLocaleString("en-US")} per-student annual budget. ${ctx.country} funds 100% of local entity operations.</div>
     </div>
   </div>
-  
+
+  <div style="margin-top: 24px;">
+    <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:12px;">What Alpha Retains (IP)</div>
+    <ul class="bullet-list">
+      <li><strong>Timeback®</strong> — AI learning platform (licensed to local entity)</li>
+      <li><strong>AlphaCore™</strong> — Life-skills curriculum (licensed)</li>
+      <li><strong>Guide School</strong> — Teacher training IP (licensed)</li>
+      <li><strong>Incept eduLLM</strong> — Personalised content engine (licensed)</li>
+    </ul>
+  </div>
+
+  <div class="callout-box" style="margin-top: 16px;">
+    <p><strong>Education Sovereignty:</strong> ${ctx.country} owns 100% of the national identity, cultural values, local curriculum, and all locally developed content. Alpha provides the engine; ${ctx.country} owns the car.</p>
+  </div>
+
   <div class="slide-footer">
     <span class="brand">ALPHA</span>
-    <span>© ${new Date().getFullYear()}. Confidential & Proprietary.</span>
+    <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">6</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 7 — ADDRESSABLE MARKET & SCALE
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="slide slide-content">
+  <div class="label">Addressable Market</div>
+  <h2>${programName}: <span>Massive Scale Opportunity</span></h2>
+
+  <div class="two-pane">
+    <div class="pane">
+      <div class="callout-box" style="margin-top: 0; margin-bottom: 16px; display: flex; align-items: center; gap: 16px;">
+        <div style="min-width: 140px;">
+          <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #718096; margin-bottom: 4px;">Addressable Market</div>
+          <div style="font-size: 28px; font-weight: 800; color: #1a56db; line-height: 1.1;">${ctx.addressableStudentPopulation || ctx.schoolAgePopulation}</div>
+          <div style="font-size: 10px; color: #718096; margin-top: 2px;">families with AGI &gt; $250k</div>
+        </div>
+        <div>
+          <p style="font-size: 12px; line-height: 1.5; color: #2d3748;"><strong>Significant room to scale.</strong> The initial commitment targets ${fmtNum(model.counterparty.minStudentsPerYear)} students.${ctx.addressableMethodology ? ` <span style="font-size: 10px; color: #718096;">(${ctx.addressableMethodology})</span>` : ''}</p>
+        </div>
+      </div>
+
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Per-Student Economics ($${model.counterparty.perStudentBudget.toLocaleString("en-US")} Budget)</div>
+      <table class="deck-table">
+        <thead><tr><th>Cost Item</th><th>Per Student</th><th>Notes</th></tr></thead>
+        <tbody>
+          ${model.counterparty.costBreakdown.map(c => `<tr><td>${c.item}</td><td class="amt">$${c.amount.toLocaleString("en-US")}</td><td class="notes">${c.note || '—'}</td></tr>`).join("\n          ")}
+          <tr class="total-row"><td>Total</td><td class="amt">$${model.counterparty.perStudentBudget.toLocaleString("en-US")}</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pane">
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Scale Trajectory</div>
+      <div class="scale-row" style="margin-top: 0;">
+        <div class="scale-box" style="background: #f0f4ff; border-radius: 8px; padding: 16px; border: 1px solid #c7d2fe;">
+          <div class="period">Year 1</div>
+          <div class="figure">${fmtNum(Math.round(model.counterparty.minStudentsPerYear / 50))} students</div>
+        </div>
+        <div class="scale-arrow" style="font-size: 20px;">→</div>
+        <div class="scale-box" style="background: #e8eeff; border-radius: 8px; padding: 16px; border: 1px solid #93a9ff;">
+          <div class="period">5-Year Plan</div>
+          <div class="figure">${fmtNum(model.counterparty.minStudentsPerYear)}+ students</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Flagship Schools (Revenue-Optimized)</div>
+        ${model.flagship.schools.map(s => `<div class="stack-item"><strong>${s.metro}</strong>: ${s.count} school${s.count !== 1 ? 's' : ''}</div>`).join("\n        ")}
+        <div class="stack-item"><strong>Tuition:</strong> ${fmtUsd(model.flagship.tuitionPerYear)} / year</div>
+        <div class="stack-item"><strong>Capacity:</strong> ${fmtNum(model.flagship.capacityPerSchool)} students per school</div>
+        ${model.flagship.scholarshipNote ? `<div class="callout-box" style="margin-top: 8px;"><p style="font-size: 11px;">${model.flagship.scholarshipNote}</p></div>` : ''}
+      </div>
+
+      ${gapCallout}
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <span class="brand">ALPHA</span>
+    <span>© ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">7</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 8 — COMMERCIAL & INVESTMENT STRUCTURE  (exact Ed71 layout)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="slide slide-content">
+  <div class="label">Publicly Funded, Privately Operated Schools</div>
+  <h2>${programName} <span>Commercial &amp; Investment Structure</span></h2>
+
+  <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 24px; flex: 1;">
+
+    <!-- LEFT: Commercial Structure -->
+    <div class="comm-panel">
+      <div class="comm-header">Commercial Structure</div>
+
+      <div class="comm-sub-header">Upfront</div>
+      <table class="comm-table">
+        <thead><tr><th style="width:40%">Item</th><th style="width:20%; text-align:center;">Upfront</th><th style="width:40%">Recipient</th></tr></thead>
+        <tbody>
+          ${allUpfrontItems.map(r => `<tr><td>${r.item}</td><td class="amt">${fmtCompact(r.amountUsd)}</td><td>${r.recipient}</td></tr>`).join("\n          ")}
+          <tr class="total-row"><td>Total ${programName} Schools</td><td class="amt">${fmtCompact(model.upfront.totalUsd)}</td><td></td></tr>
+        </tbody>
+      </table>
+
+      <div class="comm-sub-header">Ongoing</div>
+      <table class="comm-table">
+        <thead><tr><th style="width:40%">Item</th><th style="width:20%; text-align:center;">Ongoing</th><th style="width:40%">Recipient</th></tr></thead>
+        <tbody>
+          ${ongoingRows}
+          <tr class="total-row"><td>Total ${programName} Schools</td><td class="amt">Scale dependent</td><td></td></tr>
+        </tbody>
+      </table>
+      <div class="comm-footnote">* per ${fmtNum(model.counterparty.minStudentsPerYear)} students</div>
+    </div>
+
+    <!-- RIGHT: Investment Structure -->
+    <div class="invest-panel">
+      <div class="comm-header">Investment Structure</div>
+
+      ${investmentRows}
+
+      <div class="invest-total">
+        <span>Total</span>
+        <span>${fmtCompact(model.upfront.totalUsd)}</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="slide-footer">
+    <span class="brand">ALPHA</span>
+    <span>© ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">8</span>
   </div>
 </div>
 
@@ -1068,7 +1029,7 @@ async function generateDocuments(target: string): Promise<GenerationResult> {
 
   // Step 3: Generate both HTML documents using the fixed economics + country context
   const termSheetHtml = generateTermSheetHtml(ctx);
-  const pitchDeckHtml = generatePitchDeckHtml(ctx);
+  const pitchDeckHtml = generatePitchDeckHtml(ctx, financialModel);
 
   // Step 4: Generate DOCX and base64-encode it for client-side download
   const docxBuffer = await buildTermSheetDocx(ctx, financialModel);

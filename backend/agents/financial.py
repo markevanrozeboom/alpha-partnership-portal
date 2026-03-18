@@ -39,6 +39,60 @@ logger = logging.getLogger(__name__)
 # Flagship Revenue-Maximizing Grid Search (financial_rules_v1.md)
 # ---------------------------------------------------------------------------
 
+# OECD income-distribution heuristics (used as floors when LLM data is
+# missing or suspiciously low).  Based on OECD/Credit Suisse wealth data:
+#   ~3.5% of households in wealthy OECD countries have AGI ≥ $200K
+#   ~0.8% of households have AGI ≥ $500K
+#   K-12 children are ~15% of population
+_K12_RATIO = 0.15          # fraction of metro pop that are K-12 age
+_PCT_ABOVE_200K = 0.035    # fraction of K-12 children in families >$200K
+_PCT_ABOVE_500K = 0.008    # fraction of K-12 children in families >$500K
+
+
+def _apply_income_floors(
+    metros: list[MetroFlagshipInput],
+) -> list[MetroFlagshipInput]:
+    """Ensure income-bracket data has reasonable OECD floors.
+
+    If the LLM returned zeros or suspiciously low values for a metro
+    that has a known population, we apply a population-based floor so
+    the grid search can still size flagships for that metro.
+    """
+    patched: list[MetroFlagshipInput] = []
+    for m in metros:
+        if m.metro_population <= 0:
+            patched.append(m)
+            continue
+
+        k12_est = int(m.metro_population * _K12_RATIO)
+        floor_200k = int(k12_est * _PCT_ABOVE_200K)
+        floor_500k = int(k12_est * _PCT_ABOVE_500K)
+
+        new_200k = max(m.children_in_families_income_above_200k, floor_200k)
+        new_500k = max(m.children_in_families_income_above_500k, floor_500k)
+
+        if (new_200k != m.children_in_families_income_above_200k
+                or new_500k != m.children_in_families_income_above_500k):
+            logger.info(
+                "Income floor applied for %s: "
+                ">$200K %s→%s, >$500K %s→%s (pop=%s)",
+                m.metro_name,
+                f"{m.children_in_families_income_above_200k:,}",
+                f"{new_200k:,}",
+                f"{m.children_in_families_income_above_500k:,}",
+                f"{new_500k:,}",
+                f"{m.metro_population:,}",
+            )
+            m = m.model_copy(update={
+                "children_in_families_income_above_200k": new_200k,
+                "children_in_families_income_above_500k": new_500k,
+                "k12_children": max(m.k12_children, k12_est),
+            })
+
+        patched.append(m)
+    return patched
+
+
 def _interpolate_eligible_children(
     metro: MetroFlagshipInput,
     min_agi: float,
@@ -109,18 +163,23 @@ def optimize_flagships(
         )
         return result
 
+    # Apply OECD income floors so the grid search works even when
+    # the LLM returned low / zero values for secondary metros.
+    patched_metros = _apply_income_floors(list(market_data.metros[:3]))
+
     logger.info(
         "optimize_flagships: %d metros provided, "
         "country top school $%s (%s)",
-        len(market_data.metros),
+        len(patched_metros),
         f"{market_data.country_most_expensive_nonboarding_tuition:,.0f}",
         market_data.country_most_expensive_nonboarding_school,
     )
-    for i, m in enumerate(market_data.metros):
+    for i, m in enumerate(patched_metros):
         logger.info(
             "  Input metro %d: %s (capital=%s) — "
-            ">$200K=%s children, >$500K=%s children",
+            "pop=%s, >$200K=%s children, >$500K=%s children",
             i + 1, m.metro_name, m.is_capital,
+            f"{m.metro_population:,}",
             f"{m.children_in_families_income_above_200k:,}",
             f"{m.children_in_families_income_above_500k:,}",
         )
@@ -137,7 +196,7 @@ def optimize_flagships(
     # Each metro must have ≥ 250 eligible children at minimum tuition
     min_agi_at_floor = 5 * tuition_min  # $200K
     qualifying_metros: list[MetroFlagshipInput] = []
-    for metro in market_data.metros[:3]:  # Limited to top 3
+    for metro in patched_metros:  # Already limited to top 3
         eligible = _interpolate_eligible_children(metro, min_agi_at_floor)
         demand = int(eligible * penetration_rate)
         logger.info(
@@ -151,7 +210,7 @@ def optimize_flagships(
 
     logger.info(
         "  %d of %d metros qualify for flagships",
-        len(qualifying_metros), len(market_data.metros[:3]),
+        len(qualifying_metros), len(patched_metros),
     )
 
     if not qualifying_metros:
