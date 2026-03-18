@@ -361,27 +361,44 @@ async def run_country_research(
     # ------------------------------------------------------------------
     # LLM call 1b: flagship market data extraction (sovereign only)
     # ------------------------------------------------------------------
-    if target_type != TargetType.US_STATE and flagship_research_text:
-        try:
-            fmd: FlagshipMarketData = await call_llm(
-                system_prompt=FLAGSHIP_EXTRACTION_PROMPT,
-                user_prompt=(
-                    f"Target country: {target}\n\n"
-                    f"Flagship Market Research:\n{flagship_research_text}\n\n"
-                    f"General Country Research:\n{research_text[:3000]}\n\n"
-                    f"Education Research:\n{edu_research_text[:2000]}"
-                ),
-                output_schema=FlagshipMarketData,
+    if target_type != TargetType.US_STATE:
+        if not flagship_research_text:
+            logger.warning(
+                "Flagship research returned empty text for %s "
+                "— Perplexity call may have failed. "
+                "Flagship optimization will use fallback defaults.",
+                target,
             )
-            profile.flagship_market_data = fmd
+        else:
             logger.info(
-                "Flagship market data extracted: %d metros, "
-                "top school $%s",
-                len(fmd.metros),
-                f"{fmd.country_most_expensive_nonboarding_tuition:,.0f}",
+                "Flagship research text received for %s: %d chars",
+                target, len(flagship_research_text),
             )
-        except Exception as exc:
-            logger.warning("Flagship market data extraction failed: %s", exc)
+            try:
+                fmd: FlagshipMarketData = await call_llm(
+                    system_prompt=FLAGSHIP_EXTRACTION_PROMPT,
+                    user_prompt=(
+                        f"Target country: {target}\n\n"
+                        f"Flagship Market Research:\n"
+                        f"{flagship_research_text}\n\n"
+                        f"General Country Research:\n"
+                        f"{research_text[:3000]}\n\n"
+                        f"Education Research:\n"
+                        f"{edu_research_text[:2000]}"
+                    ),
+                    output_schema=FlagshipMarketData,
+                )
+                profile.flagship_market_data = fmd
+                logger.info(
+                    "Flagship market data extracted: %d metros, "
+                    "top school $%s",
+                    len(fmd.metros),
+                    f"{fmd.country_most_expensive_nonboarding_tuition:,.0f}",
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Flagship market data extraction failed: %s", exc,
+                )
 
     # ------------------------------------------------------------------
     # Populate US state education data from Spending Spotlight

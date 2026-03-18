@@ -238,6 +238,9 @@ async def research_education(country: str) -> dict:
 async def research_flagship_markets(country: str) -> dict:
     """Research metro-level wealth and school data for flagship sizing.
 
+    Uses sonar-pro (not deep-research) to avoid rate-limit / timeout
+    issues when running alongside the other two deep-research calls.
+
     Gathers the data needed by the revenue-maximizing grid search
     defined in financial_rules_v1.md:
       - Top 3 metros: K-12 children, wealthy-family income distribution
@@ -272,7 +275,19 @@ async def research_flagship_markets(country: str) -> dict:
         f"sourced reasoning are acceptable. Convert all currencies to USD.\n"
         f"Provide specific numbers, years, and source citations."
     )
-    return await deep_research(query)
+    logger.info("Flagship market research for %s — using sonar-pro", country)
+    result = await pro_research(query)
+    if result.get("error"):
+        logger.error(
+            "Flagship market research FAILED for %s: %s",
+            country, result["error"],
+        )
+    else:
+        logger.info(
+            "Flagship market research OK for %s — %d chars",
+            country, len(result.get("answer", "")),
+        )
+    return result
 
 
 async def research_us_state(state: str) -> dict:
