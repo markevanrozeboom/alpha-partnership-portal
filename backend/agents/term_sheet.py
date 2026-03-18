@@ -1284,24 +1284,6 @@ def _add_transformation_section(
         "results.",
     )
 
-    budget = fin["per_student"]
-    budget_k = (
-        f"${budget / 1000:.0f}k" if budget >= 1000
-        else f"${budget:,.0f}"
-    )
-    _add_body(
-        doc,
-        f"Illustrative \u201ccost to educate\u201d for "
-        f"{cv.jv_program_name} school vs. traditional school at "
-        f"{budget_k} annual budget highlights the extreme leverage "
-        "of a Timeback-based school (presented on a per-student "
-        "basis, traditional budget estimate based on industry "
-        "benchmarks):",
-    )
-
-    # Cost comparison table
-    _add_cost_comparison_table(doc, fin)
-
     _add_body(
         doc,
         f"This complete infrastructure is what "
@@ -1713,6 +1695,18 @@ def _add_deal_terms_section(
     # --- Table 2: Investment Table ---
     doc.add_heading("Investment Required", level=2)
     _add_investment_table(doc, cv, fin)
+
+    doc.add_paragraph()  # spacer
+
+    # --- Table 1: School Cost Comparison ---
+    doc.add_heading("School Cost Comparison", level=2)
+    _add_body(
+        doc,
+        "Illustrative \u201ccost to educate\u201d per student for "
+        f"{cv.jv_program_name} school vs. traditional school at "
+        f"${fin['per_student'] / 1000:.0f}k annual budget:",
+    )
+    _add_cost_comparison_table(doc, fin)
 
 
 def _add_school_design_section(
