@@ -236,6 +236,18 @@ def convert_docx_to_pdf(docx_path: str) -> str:
         # --- Paragraph ---
         if tag == qn("w:p"):
             para = Paragraph(element, doc)
+
+            # Detect page breaks (w:br with w:type="page")
+            has_page_break = False
+            for run_el in element.findall(
+                f".//{qn('w:br')}[@{qn('w:type')}='page']"
+            ):
+                has_page_break = True
+            if has_page_break:
+                pdf.add_page()
+                pdf.set_text_color(*TEXT_COLOR)
+                continue
+
             text = _clean_text(para.text.strip())
             if not text:
                 pdf.ln(3)
