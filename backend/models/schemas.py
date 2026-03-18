@@ -336,10 +336,11 @@ class FinancialModel(BaseModel):
     # Upfront fees — FIXED (not country-scaled)
     upfront_ip_fee: float = 25_000_000
     upfront_alphacore_license: float = 250_000_000
+    upfront_incept_edllm: float = 250_000_000
     upfront_app_content_rd: float = 250_000_000
     upfront_lifeskills_rd: float = 250_000_000
-    upfront_mgmt_fee: float = 0
-    upfront_timeback_fee: float = 0
+    upfront_mgmt_fee: float = 0       # Operating Fee prepaid
+    upfront_timeback_fee: float = 0    # Timeback prepaid
     total_management_fee_revenue: float = 0
     total_timeback_license_revenue: float = 0
     # Two-prong model

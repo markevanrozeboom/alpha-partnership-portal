@@ -109,7 +109,9 @@ def generate_term_sheet_assumptions(
         y5_revenue = financial_model.pnl_projection[-1].revenue
 
     per_student = fa.get(
-        "per_student_budget", fa.get("mid_tuition", 20_000)
+        "per_student_budget",
+        fa.get("national_per_student_budget",
+               fa.get("mid_tuition", 25_000)),
     )
     capex_per_school = fa.get("capex_per_school", 5_000_000)
 
@@ -211,7 +213,7 @@ def generate_term_sheet_assumptions(
         ),
         FinancialAssumption(
             key="ts_upfront_lifeskills_rd",
-            label="Customized Country-Specific LifeSkills R&D ($M)",
+            label="Country-Specific Programs and Life Skills ($M)",
             value=_to_m(financial_model.upfront_lifeskills_rd),
             min_val=10, max_val=500, step=10,
             unit="$M", category="fees",
@@ -221,8 +223,19 @@ def generate_term_sheet_assumptions(
             ),
         ),
         FinancialAssumption(
+            key="ts_upfront_incept_edllm",
+            label="Country-Specific Incept EdLLM ($M)",
+            value=_to_m(financial_model.upfront_incept_edllm),
+            min_val=10, max_val=500, step=10,
+            unit="$M", category="fees",
+            description=(
+                "Country/State specific Incept EdLLM "
+                "development, paid upfront"
+            ),
+        ),
+        FinancialAssumption(
             key="ts_upfront_mgmt_fee",
-            label="Upfront Management Fee ($M)",
+            label="Prepaid Operating Fee ($M)",
             value=_to_m_floor1(financial_model.upfront_mgmt_fee),
             min_val=1, max_val=500, step=5,
             unit="$M", category="fees",
@@ -927,6 +940,10 @@ def _extract_financial_values(
         "ts_upfront_alphacore_license",
         model.upfront_alphacore_license, 250,
     )
+    upfront_incept_edllm = _upfront(
+        "ts_upfront_incept_edllm",
+        model.upfront_incept_edllm, 250,
+    )
     upfront_app_rd = _upfront(
         "ts_upfront_app_content_rd",
         model.upfront_app_content_rd, 250,
@@ -936,10 +953,10 @@ def _extract_financial_values(
         model.upfront_lifeskills_rd, 250,
     )
     upfront_mgmt = _upfront(
-        "ts_upfront_mgmt_fee", model.upfront_mgmt_fee, 0,
+        "ts_upfront_mgmt_fee", model.upfront_mgmt_fee, 250,
     )
     upfront_timeback = _upfront(
-        "ts_upfront_timeback_fee", model.upfront_timeback_fee, 0,
+        "ts_upfront_timeback_fee", model.upfront_timeback_fee, 500,
     )
     upfront_total = ts.get(
         "ts_upfront_ip_fee",
@@ -950,9 +967,10 @@ def _extract_financial_values(
         ),
     )
 
-    # IP costs (AlphaCore + App R&D + LifeSkills R&D)
+    # IP costs (AlphaCore + Incept EdLLM + EdTech Apps + Programs & LifeSkills)
     ip_development_total = (
-        upfront_alphacore + upfront_app_rd + upfront_lifeskills
+        upfront_alphacore + upfront_incept_edllm
+        + upfront_app_rd + upfront_lifeskills
     )
     fee_prepays_total = upfront_mgmt + upfront_timeback
 
@@ -972,14 +990,16 @@ def _extract_financial_values(
     # Annual revenue at scale
     annual_revenue_at_scale = y5_students * per_student
 
-    # Funding gap
+    # Funding gap: $25K per student less current public funding
     current_public_spend = min(15_000, per_student * 0.6)
     funding_gap_per_student = per_student - current_public_spend
     funding_gap_annual_100k = round(
         100_000 * funding_gap_per_student / 1_000_000_000, 1,
     )
 
-    launch_capital_annual = ts.get("ts_launch_capital", 25)
+    # Parent Education / Launch / Guide Training: fixed $50M/yr per rules
+    parent_education_annual = ts.get("ts_parent_education_annual", 50)
+    launch_capital_annual = ts.get("ts_launch_capital", parent_education_annual)
 
     # Cumulative students for IP amortization
     cumulative_students = 0
@@ -1007,11 +1027,21 @@ def _extract_financial_values(
                 "students": p.students,
             })
 
+    # --- Flagship data ---
+    flagship_tuition = model.flagship_tuition or 0
+    flagship_students_total = model.flagship_students or 0
+    flagship_schools = int(ts.get("ts_num_flagship_schools", 3))
+    flagship_per_school = (
+        flagship_students_total // max(1, flagship_schools)
+        if flagship_students_total else 500
+    )
+
     return {
         "per_student": per_student,
         "y5_students": y5_students,
         "num_schools": num_schools,
         "upfront_alphacore": upfront_alphacore,
+        "upfront_incept_edllm": upfront_incept_edllm,
         "upfront_app_rd": upfront_app_rd,
         "upfront_lifeskills": upfront_lifeskills,
         "upfront_mgmt": upfront_mgmt,
@@ -1024,12 +1054,20 @@ def _extract_financial_values(
         "per_student_mgmt": per_student_mgmt,
         "per_student_timeback": per_student_timeback,
         "annual_revenue_at_scale": annual_revenue_at_scale,
+        "funding_gap_per_student": funding_gap_per_student,
         "funding_gap_annual_100k": funding_gap_annual_100k,
+        "current_public_spend": current_public_spend,
+        "parent_education_annual": parent_education_annual,
         "launch_capital_annual": launch_capital_annual,
         "ip_amort_per_student": ip_amort_per_student,
         "cumulative_students": cumulative_students,
         "scaling_plan": scaling_plan,
         "pnl": model.pnl_projection or [],
+        # Flagship data
+        "flagship_tuition": flagship_tuition,
+        "flagship_students_total": flagship_students_total,
+        "flagship_schools": flagship_schools,
+        "flagship_per_school": flagship_per_school,
     }
 
 
@@ -1524,29 +1562,33 @@ def _add_funding_section(
     _add_body(
         doc,
         f"{cv.jv_program_name} will require ${ip_total_m:,.0f} "
-        "million of capital to fund construction of the national "
-        f"{cv.jv_program_name} education asset in collaboration "
-        "with Alpha Holdings. Ownership of all resulting "
+        "million of upfront development capital across four areas, "
+        "plus prepaid fees. Ownership of all resulting "
         f"{target}-specific IP will reside with "
-        f"{cv.jv_program_name}, and the breakdown is as follows:",
+        f"{cv.jv_program_name}. The breakdown is as follows:",
     )
 
     _add_list_item(
         doc,
-        f"${fin['upfront_alphacore']:,.0f} million to license "
-        "existing AlphaCore life-skills and intangible school IP "
+        f"${fin['upfront_alphacore']:,.0f} million — Alpha Core License "
         f"for use in {target}.",
     )
     _add_list_item(
         doc,
-        f"${fin['upfront_lifeskills']:,.0f} million to co-design "
-        f"and build {cv.cultural_program_name} and the initial "
-        f"{cv.jv_program_name} school model.",
+        f"${fin.get('upfront_incept_edllm', 250):,.0f} million — "
+        f"Country-specific Incept EdLLM, trained on "
+        f"{cv.edu_llm_training}.",
     )
     _add_list_item(
         doc,
-        f"${fin['upfront_app_rd']:,.0f} million of R&D capital "
-        f"for building {target}-specific EdTech applications on "
+        f"${fin['upfront_lifeskills']:,.0f} million — "
+        f"Country-specific Programs and Life Skills "
+        f"({cv.cultural_program_name}).",
+    )
+    _add_list_item(
+        doc,
+        f"${fin['upfront_app_rd']:,.0f} million — "
+        f"Country-specific EdTech Apps on "
         f"Timeback ({cv.language_subjects}).",
     )
 
@@ -1563,33 +1605,30 @@ def _add_funding_section(
     y5 = fin["y5_students"]
 
     _add_list_item_bold_prefix(
-        doc, "Management fee: ",
-        f"{fin['mgmt_pct']} percent of revenue (or operating "
-        f"expenses if for a public school), with a "
-        f"${mgmt_min:,.0f} per-student annual minimum (comparable "
-        f"to {cv.national_credential_reference}\u2019s management "
-        "structure on a per-student equivalent basis).",
+        doc, "Operating Fee: ",
+        f"{fin['mgmt_pct']}% of funding/tuition, with a "
+        f"${mgmt_min:,.0f} per-student annual minimum.",
     )
 
-    timeback_rev_100k = round(
-        100_000 * timeback_min / 1_000_000_000, 1,
-    )
     _add_list_item_bold_prefix(
-        doc, "Timeback fee: ",
-        f"{fin['timeback_pct']} percent of revenue or budget, "
-        f"with a ${timeback_min:,.0f} per-student annual minimum "
-        "(same pricing as for existing Alpha schools globally). "
-        f"For each 100,000 students at ${per_student:,.0f} tuition,"
-        f" this equates to ${timeback_rev_100k}B annual software "
-        "licensing revenue.",
+        doc, "Timeback Fee: ",
+        f"{fin['timeback_pct']}% of funding/tuition, with a "
+        f"${timeback_min:,.0f} per-student annual minimum "
+        "(same pricing as for existing Alpha schools globally).",
     )
 
     _add_list_item(
         doc,
-        "Alpha Holdings will receive up-front payments covering "
-        f"the first {min(100_000, y5):,} student-years, via "
-        "pre-paid management and Timeback fees "
+        "Alpha Holdings will receive upfront prepaid fees: "
+        f"${fin['upfront_timeback']:,.0f}M Timeback + "
+        f"${fin['upfront_mgmt']:,.0f}M Operating Fee "
         f"(total ${fin['fee_prepays_total']:,.0f}M).",
+    )
+
+    _add_list_item_bold_prefix(
+        doc, "Parent Education / Launch / Guide Training: ",
+        f"${fin.get('parent_education_annual', 50):,.0f}M per year, "
+        "ongoing each year.",
     )
 
     _add_body(
@@ -1637,100 +1676,86 @@ def _add_deal_terms_section(
     doc: DocxDocument, target: str, cv: CountryVariables, fin: dict,
     model: FinancialModel,
 ) -> None:
-    """Build the Ed71 Schools section with deal terms table."""
+    """Build the deal terms section with the investment table.
+
+    Table 2: Country/State Owned Schools — Investment Required
+    """
     doc.add_heading(
-        f"1. {cv.jv_program_name} Schools", level=1,
+        f"1. {cv.jv_program_name} Schools "
+        f"(Country/State Owned, Alpha Operated)",
+        level=1,
     )
 
     _add_list_item(
         doc,
-        f"100% {target} owned, Alpha Holdings exclusive operator.",
+        f"100% {target} owned, 0% Alpha owned. "
+        "Alpha operates on behalf of the Country/State.",
     )
     _add_list_item(
         doc,
-        "We are assuming some combination of government funding "
-        "and/or a scholarship fund will fully fund for "
-        f"{cv.country_adjective} students.",
+        f"Per student funding/tuition: ${fin['per_student']:,.0f}/year (FIXED).",
     )
     _add_list_item(
         doc,
-        f"Expected ${fin['per_student']:,.0f} "
-        f"{cv.jv_program_name} per student annual budget:",
-    )
-
-    base_students = min(100_000, fin["y5_students"])
-    target_students = fin["y5_students"]
-    base_rev = base_students * fin["per_student"]
-    target_rev = target_students * fin["per_student"]
-    _add_list_item(
-        doc,
-        f"Base scale: {base_students:,} students x "
-        f"${fin['per_student']:,.0f} budget = "
-        f"${base_rev / 1_000_000_000:.1f}B annual budget",
+        f"Minimum {fin['y5_students']:,} students per year commitment.",
     )
     _add_list_item(
         doc,
-        f"Target scale: {target_students:,} students x "
-        f"${fin['per_student']:,.0f} budget = "
-        f"${target_rev / 1_000_000_000:.1f}B annual revenue",
+        "Schools can be operated as either public or private schools.",
     )
-    broader = int(target_students * 1.5)
     _add_list_item(
-        doc, f"Market opportunity: {broader:,}+ students",
+        doc,
+        "Country/State is responsible for sourcing real estate; schools pay rent.",
     )
 
     doc.add_paragraph()  # spacer
 
-    # --- Main Deal Terms Table ---
-    _add_deal_terms_table(doc, cv, fin)
+    # --- Table 2: Investment Table ---
+    doc.add_heading("Investment Required", level=2)
+    _add_investment_table(doc, cv, fin)
 
 
 def _add_school_design_section(
     doc: DocxDocument, target: str, cv: CountryVariables, fin: dict,
     model: FinancialModel,
 ) -> None:
-    """Build the School Design section with P&L table."""
-    doc.add_heading("2. School Design", level=1)
+    """Build the Flagship Alpha section with summary table.
+
+    Table 3: Alpha Flagships — Key Metrics
+    """
+    doc.add_heading("2. Alpha Flagship Schools", level=1)
+
+    _add_body(
+        doc,
+        "100% owned by Alpha. These are the Halo Brand — premium "
+        "flagship schools in the country's top metros.",
+    )
 
     _add_list_item(
         doc,
-        f"{cv.jv_program_name} schools will be based on Alpha "
-        "education system, delivering the three student "
-        "commitments.",
+        "Flagship schools operate at 25% operating margin.",
     )
     _add_list_item(
         doc,
-        "These schools are not an Alpha, and instead are based on "
-        f"Alpha Holdings ${50_000:,} tuition school models.",
-    )
-
-    doc.add_paragraph()
-
-    _add_body(doc, "Other expectations:")
-
-    _add_list_item(
-        doc,
-        "Curriculum / language of instruction waivers will be in "
-        "place for the first few years, similar to charter / "
-        "private school requirements.",
+        f"Tuition: ${fin.get('flagship_tuition', 0):,.0f}/year "
+        "(set to maximize revenue within $40K-$100K range, "
+        "exceeding the most expensive non-boarding school).",
     )
     _add_list_item(
         doc,
-        'Parents to "opt in" and agree to the same parent tenets '
-        '(e.g. "High Standards = Happiness", "Support Over Solve",'
-        ' "Privileges are Earned", etc.) like all other Alpha '
-        "Holdings schools.",
+        f"Capacity: {fin.get('flagship_per_school', 500):,} students per school "
+        "(250-1,000 range, 50-student increments).",
     )
     _add_list_item(
         doc,
-        "Existing school staff will be replaced by personnel "
-        "trained in the Alpha education system.",
+        "Country/State provides 50% capacity backstop for 5 years.",
     )
 
     doc.add_paragraph()  # spacer
 
-    # --- Per-Student P&L Table ---
-    _add_per_student_pnl_table(doc, cv, fin, model)
+    # --- Table 3: Alpha Flagship Summary ---
+    doc.add_heading("Flagship Key Metrics", level=2)
+    _add_flagship_summary_table(doc, cv, fin, model)
 
 
 # ---------------------------------------------------------------------------
@@ -1740,251 +1765,302 @@ def _add_school_design_section(
 def _add_cost_comparison_table(
     doc: DocxDocument, fin: dict,
 ) -> None:
-    """Add the cost-to-educate comparison table.
+    """Add the school cost comparison table (Table 1).
 
-    Columns: Description | Traditional | Timeback+Teachers |
-             Timeback+Life Skills
+    Per financial_rules_v1.md — fixed per-student cost breakdown at $25K.
+    Compares Traditional school vs Alpha/Timeback model.
     """
-    budget = fin["per_student"]
-    trad_personnel = round(budget * 0.55)
-    tb_teachers_personnel = round(budget * 0.10)
-    tb_ls_personnel = round(budget * 0.18)
-    timeback_cost = round(budget * 0.20)
-    workshops = round(budget * 0.17)
+    budget = fin["per_student"]  # Should be $25,000
 
-    trad_total = trad_personnel
-    tb_teachers_total = tb_teachers_personnel + timeback_cost
-    tb_ls_total = tb_ls_personnel + timeback_cost + workshops
-
-    headers = [
-        "Description",
-        f"Traditional ${budget / 1000:.0f}k School",
-        "Timeback + Teachers",
-        "Timeback + Life Skills",
-    ]
-    rows = [
-        [
-            "Budget",
-            f"${budget:,.0f}", f"${budget:,.0f}", f"${budget:,.0f}",
-        ],
-        [
-            "Personnel",
-            f"${trad_personnel:,.0f}",
-            f"${tb_teachers_personnel:,.0f}",
-            f"${tb_ls_personnel:,.0f}",
-        ],
-        [
-            "Timeback / Software",
-            "$0", f"${timeback_cost:,.0f}", f"${timeback_cost:,.0f}",
-        ],
-        [
-            "Workshops and Motivation",
-            "$0", "$0", f"${workshops:,.0f}",
-        ],
-        [
-            "Cost to educate",
-            f"${trad_total:,.0f}",
-            f"${tb_teachers_total:,.0f}",
-            f"${tb_ls_total:,.0f}",
-        ],
-        [
-            "Education Outcomes",
-            "Current Baseline", "As Good or Better", "World Class",
-        ],
-    ]
-
-    _add_styled_table(doc, headers, rows)
-
-
-def _add_deal_terms_table(
-    doc: DocxDocument, cv: CountryVariables, fin: dict,
-) -> None:
-    """Add the main deal terms table.
-
-    Columns: Item | Up-Front Commit | Ongoing | Recipient | Notes
-    """
-    mgmt_pct = fin["mgmt_pct"]
-    tb_pct = fin["timeback_pct"]
-    mgmt_min = max(2_500, fin["per_student_mgmt"])
-    tb_min = max(5_000, fin["per_student_timeback"])
-    launch_annual = fin["launch_capital_annual"]
-
-    headers = [
-        "Item", "Up-Front Commit", "Ongoing",
-        "Recipient", "Notes",
-    ]
-
-    sep_text = (
-        "Fees below are considered in the school P&L, "
-        "yielding Alpha Holdings revenue"
-    )
-    upfront_display = (
-        f"${fin['upfront_total']:,.0f}M"
-        if fin["upfront_total"] < 10_000
-        else f"${fin['upfront_total'] / 1000:.2f}B"
-    )
-
-    rows = [
-        [
-            "AlphaCore License",
-            f"${fin['upfront_alphacore']:,.0f}M", "",
-            "Alpha Holdings",
-            "One-time perpetual license",
-        ],
-        [
-            f"{cv.cultural_program_name} / EdTech App R&D",
-            f"${fin['upfront_app_rd']:,.0f}M", "",
-            "Local expense",
-            "Estimated to be spent over 3 years. "
-            "Subject to final scope.",
-        ],
-        [
-            f"{cv.cultural_program_name} R&D",
-            f"${fin['upfront_lifeskills']:,.0f}M", "",
-            "Local expense",
-            "Estimated to be spent over 3 years. "
-            "Subject to final scope.",
-        ],
-        [
-            "Parent Education / Launch / Guides",
-            "", f"${launch_annual:,.0f}M / yr",
-            "Local expense",
-            "Parent education and marketing, "
-            "guide recruiting and training",
-        ],
-        [
-            "Scholarships",
-            "", f"${fin['funding_gap_annual_100k']}B / yr",
-            "Local expense",
-            "Per 100,000 scholarship students. Scale dependent.",
-        ],
-        # Separator row (all cells identical text)
-        [sep_text, sep_text, sep_text, sep_text, sep_text],
-        [
-            "Management Fee",
-            f"${fin['upfront_mgmt']:,.0f}M",
-            f"{mgmt_pct}% budget",
-            "OpEx to Alpha Holdings",
-            f"{mgmt_pct}% of budget, with ${mgmt_min:,.0f} "
-            "per student annual minimum",
-        ],
-        [
-            "TimeBack License Fee",
-            f"${fin['upfront_timeback']:,.0f}M",
-            f"{tb_pct}% budget",
-            "OpEx to Alpha Holdings",
-            f"{tb_pct}% of budget, with ${tb_min:,.0f} "
-            "per student annual minimum",
-        ],
-        [
-            f"Total {cv.jv_program_name} Schools",
-            upfront_display,
-            "Scale dependent", "", "",
-        ],
-    ]
-
-    _add_styled_table(doc, headers, rows, bold_last_row=True)
-
-
-def _add_per_student_pnl_table(
-    doc: DocxDocument, cv: CountryVariables,
-    fin: dict, model: FinancialModel,
-) -> None:
-    """Add the per-student P&L comparison table.
-
-    Columns: Item | Alpha @ $50k | {JV} @ ${budget} | Notes
-    """
-    budget = fin["per_student"]
-    flagship = 50_000  # Alpha school reference
-
-    # Alpha @ $50k ratios (from benchmark)
-    alpha_guides = round(flagship * 0.28)
-    alpha_timeback = round(flagship * 0.20)
-    alpha_programs = round(flagship * 0.18)
+    # --- Fixed cost breakdown from financial_rules_v1.md ---
+    alpha_guides = 4_500
+    alpha_programs = 4_250
     alpha_other_hc = 1_750
-    alpha_facility = round(flagship * 0.175)
+    alpha_facility = 3_000
     alpha_misc = 1_500
+    alpha_timeback = 5_000       # 20% of $25K
+    alpha_operating_fee = 2_500  # 10% of $25K
+    alpha_margin_ip = 2_500      # Operating Margin / Amortisation of IP
     alpha_total = (
-        alpha_guides + alpha_timeback + alpha_programs
-        + alpha_other_hc + alpha_facility + alpha_misc
+        alpha_guides + alpha_programs + alpha_other_hc
+        + alpha_facility + alpha_misc + alpha_timeback
+        + alpha_operating_fee + alpha_margin_ip
     )
 
-    # Ed71 @ budget ratios (from benchmark)
-    ed71_guides = round(budget * 0.18)
-    ed71_timeback = round(budget * 0.20)
-    ed71_programs = round(budget * 0.17)
-    ed71_other_hc = 1_750
-    ed71_facility = round(budget * 0.12)
-    ed71_misc = 1_500
-    ed71_mgmt = fin["per_student_mgmt"]
-    ed71_ip_amort = fin["ip_amort_per_student"]
-    ed71_total = (
-        ed71_guides + ed71_timeback + ed71_programs
-        + ed71_other_hc + ed71_facility + ed71_misc
-        + ed71_mgmt + ed71_ip_amort
+    # --- Traditional school estimate at same budget ---
+    trad_teachers = round(budget * 0.50)   # ~50% teachers/staff
+    trad_curriculum = round(budget * 0.08)
+    trad_admin = round(budget * 0.12)
+    trad_facility = round(budget * 0.20)
+    trad_misc = round(budget * 0.10)
+    trad_total = (
+        trad_teachers + trad_curriculum + trad_admin
+        + trad_facility + trad_misc
     )
 
-    jv_col = (
-        f"AH / {cv.jv_program_name} @ ${budget:,.0f} Budget"
-    )
     headers = [
-        "Item (with per student P&L)",
-        f"Alpha @ ${flagship:,.0f} Tuition",
-        jv_col,
-        "Notes",
+        "Cost Item (Per Student)",
+        f"Traditional ${budget / 1000:.0f}k School",
+        f"Alpha/Timeback ${budget / 1000:.0f}k School",
     ]
     rows = [
         [
-            "Tuition",
-            f"${flagship:,.0f}", f"${budget:,.0f}", "",
+            "Funding/Tuition",
+            f"${budget:,.0f}", f"${budget:,.0f}",
         ],
         [
-            "Guides",
-            f"${alpha_guides:,.0f}", f"${ed71_guides:,.0f}",
-            "Alpha 11:1 ratio & higher comp, Other 25:1 ratio",
-        ],
-        [
-            "Timeback / Software",
-            f"${alpha_timeback:,.0f}", f"${ed71_timeback:,.0f}",
-            f"{fin['timeback_pct']}% of Budget",
+            "Teachers / Guides",
+            f"${trad_teachers:,.0f}", f"${alpha_guides:,.0f}",
         ],
         [
             "Programs and Life Skills",
-            f"${alpha_programs:,.0f}", f"${ed71_programs:,.0f}",
-            "Alpha > 2x Other AH",
+            f"${trad_curriculum:,.0f}", f"${alpha_programs:,.0f}",
         ],
         [
-            "Other HC",
-            f"${alpha_other_hc:,.0f}", f"${ed71_other_hc:,.0f}",
-            "-",
+            "Other Headcount",
+            f"${trad_admin:,.0f}", f"${alpha_other_hc:,.0f}",
         ],
         [
             "Facility / CapEx",
-            f"${alpha_facility:,.0f}", f"${ed71_facility:,.0f}",
-            "Includes depreciated capex to convert locations",
+            f"${trad_facility:,.0f}", f"${alpha_facility:,.0f}",
         ],
         [
-            "Misc Expense (computer, etc.)",
-            f"${alpha_misc:,.0f}", f"${ed71_misc:,.0f}", "-",
+            "Miscellaneous Expenses",
+            f"${trad_misc:,.0f}", f"${alpha_misc:,.0f}",
         ],
         [
-            "Management Fee", "-",
-            f"${ed71_mgmt:,.0f}",
-            f"{fin['mgmt_pct']}% of Budget",
+            "Timeback (Software)",
+            "$0", f"${alpha_timeback:,.0f}",
         ],
         [
-            f"{cv.jv_program_name} IP Amortization", "",
-            f"${ed71_ip_amort:,.0f}",
-            "Full amortization of IP costs over "
-            "5 year target student count",
+            "Operating Fee (10%)",
+            "$0", f"${alpha_operating_fee:,.0f}",
         ],
         [
-            "Total Spend",
-            f"${alpha_total:,.0f}", f"${ed71_total:,.0f}", "",
+            "Operating Margin / IP Amort",
+            "$0", f"${alpha_margin_ip:,.0f}",
+        ],
+        [
+            "Total",
+            f"${trad_total:,.0f}", f"${alpha_total:,.0f}",
+        ],
+        [
+            "Education Outcomes",
+            "Current Baseline", "World Class (2x faster, +93 NPS)",
         ],
     ]
 
     _add_styled_table(doc, headers, rows, bold_last_row=True)
+
+
+def _add_investment_table(
+    doc: DocxDocument, cv: CountryVariables, fin: dict,
+) -> None:
+    """Add the investment table for Country/State Owned Schools (Table 2).
+
+    Per financial_rules_v1.md — shows upfront and ongoing investment required.
+    """
+    mgmt_pct = fin["mgmt_pct"]
+    tb_pct = fin["timeback_pct"]
+    per_student = fin["per_student"]
+    y5_students = fin["y5_students"]
+    parent_ed = fin.get("parent_education_annual", 50)
+    scholarship_gap = fin.get("funding_gap_per_student", 0)
+
+    # Calculate ongoing annual fees at scale
+    ongoing_timeback = round(y5_students * per_student * (tb_pct / 100) / 1_000_000)
+    ongoing_operating = round(y5_students * per_student * (mgmt_pct / 100) / 1_000_000)
+    ongoing_scholarship = round(y5_students * scholarship_gap / 1_000_000)
+
+    headers = [
+        "Investment Item",
+        "Upfront ($M)",
+        "Ongoing ($M/yr)",
+        "Notes",
+    ]
+
+    sep_upfront = "Upfront Development Costs (FIXED — do not scale by country)"
+    sep_prepaid = "Prepaid Fees (scale by student commitment)"
+    sep_ongoing = "Ongoing Annual Costs (scale above 100,000 students)"
+
+    rows = [
+        # --- Separator: Upfront ---
+        [sep_upfront, sep_upfront, sep_upfront, sep_upfront],
+        [
+            "Alpha Core License",
+            f"${fin['upfront_alphacore']:,.0f}",
+            "",
+            "Paid upfront to Alpha Holdings",
+        ],
+        [
+            f"Country-Specific Incept EdLLM",
+            f"${fin['upfront_incept_edllm']:,.0f}",
+            "",
+            "Paid upfront",
+        ],
+        [
+            f"Country-Specific Programs & Life Skills",
+            f"${fin['upfront_lifeskills']:,.0f}",
+            "",
+            "Paid upfront",
+        ],
+        [
+            f"Country-Specific EdTech Apps",
+            f"${fin['upfront_app_rd']:,.0f}",
+            "",
+            "Paid upfront",
+        ],
+        # --- Separator: Prepaid ---
+        [sep_prepaid, sep_prepaid, sep_prepaid, sep_prepaid],
+        [
+            "Timeback (Prepaid)",
+            f"${fin['upfront_timeback']:,.0f}",
+            "",
+            f"{y5_students:,} students x ${5_000:,}/student",
+        ],
+        [
+            "Operating Fee (Prepaid)",
+            f"${fin['upfront_mgmt']:,.0f}",
+            "",
+            f"{y5_students:,} students x ${2_500:,}/student",
+        ],
+        # --- Separator: Ongoing ---
+        [sep_ongoing, sep_ongoing, sep_ongoing, sep_ongoing],
+        [
+            "Parent Education / Launch / Guides",
+            "",
+            f"${parent_ed:,.0f}",
+            "Per year, ongoing",
+        ],
+        [
+            "Scholarships / Increased Public Funding",
+            "",
+            f"${ongoing_scholarship:,.0f}" if ongoing_scholarship > 0 else "TBD",
+            f"${per_student:,} - current public funding/student",
+        ],
+        [
+            f"Timeback ({tb_pct}% of funding/tuition)",
+            "",
+            f"${ongoing_timeback:,.0f}",
+            f"Min ${5_000:,}/student/year, ongoing",
+        ],
+        [
+            f"Operating Fee ({mgmt_pct}% of funding/tuition)",
+            "",
+            f"${ongoing_operating:,.0f}",
+            f"Min ${2_500:,}/student/year, ongoing",
+        ],
+        # --- Total ---
+        [
+            "TOTAL UPFRONT",
+            f"${fin['upfront_total']:,.0f}",
+            "",
+            f"${fin['ip_development_total']:,.0f}M dev + ${fin['fee_prepays_total']:,.0f}M prepaid",
+        ],
+    ]
+
+    _add_styled_table(doc, headers, rows, bold_last_row=True)
+
+
+def _add_flagship_summary_table(
+    doc: DocxDocument, cv: CountryVariables,
+    fin: dict, model: FinancialModel,
+) -> None:
+    """Add the Alpha Flagship summary table (Table 3).
+
+    Shows: metro, number of schools, students per school, tuition, revenue.
+    Flagship Alphas are 100% Alpha-owned, operating at 25% margin.
+    """
+    flagship_tuition = fin.get("flagship_tuition", 0)
+    flagship_schools = fin.get("flagship_schools", 3)
+    flagship_per_school = fin.get("flagship_per_school", 500)
+    flagship_total_students = fin.get("flagship_students_total", 0)
+    flagship_revenue = model.flagship_revenue or 0
+
+    if flagship_tuition == 0 or flagship_schools == 0:
+        # No flagship data available — skip table
+        _add_body(
+            doc,
+            "Flagship Alpha school details to be determined based on "
+            "metro-level AGI analysis.",
+        )
+        return
+
+    # Build metro rows
+    # Capital city gets up to 3 schools; other metros get 1 each
+    capital_schools = min(3, flagship_schools)
+    remaining_schools = flagship_schools - capital_schools
+    metro_rows: list[dict] = []
+
+    metro_rows.append({
+        "metro": cv.first_launch_city or "Capital City",
+        "schools": capital_schools,
+        "students": capital_schools * flagship_per_school,
+        "tuition": flagship_tuition,
+    })
+
+    if remaining_schools >= 1:
+        metro_rows.append({
+            "metro": cv.second_city or "Second Metro",
+            "schools": min(1, remaining_schools),
+            "students": min(1, remaining_schools) * flagship_per_school,
+            "tuition": flagship_tuition,
+        })
+        remaining_schools -= 1
+
+    if remaining_schools >= 1:
+        metro_rows.append({
+            "metro": "Third Metro",
+            "schools": remaining_schools,
+            "students": remaining_schools * flagship_per_school,
+            "tuition": flagship_tuition,
+        })
+
+    headers = [
+        "Metro",
+        "Schools",
+        "Students / School",
+        "Tuition / Year",
+        "Annual Revenue",
+    ]
+
+    rows: list[list[str]] = []
+    total_schools = 0
+    total_students = 0
+    total_revenue = 0
+
+    for mr in metro_rows:
+        rev = mr["students"] * mr["tuition"]
+        total_schools += mr["schools"]
+        total_students += mr["students"]
+        total_revenue += rev
+        rows.append([
+            mr["metro"],
+            str(mr["schools"]),
+            f"{flagship_per_school:,}",
+            f"${mr['tuition']:,.0f}",
+            f"${rev / 1_000_000:.0f}M",
+        ])
+
+    # Total row
+    rows.append([
+        "TOTAL",
+        str(total_schools),
+        f"{total_students:,} total",
+        f"${flagship_tuition:,.0f}",
+        f"${total_revenue / 1_000_000:.0f}M",
+    ])
+
+    _add_styled_table(doc, headers, rows, bold_last_row=True)
+
+    # Additional notes
+    _add_body(
+        doc,
+        f"Flagship Alphas operate at 25% operating margin. "
+        f"The country/state provides a 50% capacity backstop "
+        f"for 5 years. Tuition set to exceed the most expensive "
+        f"non-boarding school in {cv.first_launch_city or 'the country'}.",
+    )
 
 
 # ---------------------------------------------------------------------------
