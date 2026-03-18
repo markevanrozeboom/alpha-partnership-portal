@@ -4,7 +4,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { storage } from "./storage";
 import { buildTermSheetDocx } from "./docx-builder";
-import type { CountryContext, GenerationResult } from "@shared/schema";
+import { computeFinancialModel } from "./financial-engine";
+import type { CountryContext, GenerationResult, FinancialResearchData } from "@shared/schema";
 
 const client = new Anthropic({
   defaultHeaders: { "anthropic-version": "2023-06-01" },
@@ -1008,6 +1009,31 @@ function generatePitchDeckHtml(ctx: CountryContext): string {
 </html>`;
 }
 
+// ─── Financial Research Data Helper ──────────────────────────────────────────
+
+function parseUsdString(s: string): number {
+  // Parse strings like "$47,000" or "47000" → 47000
+  const cleaned = s.replace(/[$,\s]/g, "");
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
+function buildFinancialResearchData(ctx: CountryContext): FinancialResearchData {
+  const gdpPerCapita = parseUsdString(ctx.gdpPerCapita);
+  const currentPublicFunding = parseUsdString(ctx.currentEdSpendPerStudent);
+
+  // Estimate most expensive non-boarding tuition from GDP per capita
+  // Typically 50-80% of GDP per capita for elite schools
+  const estimatedMaxTuition = Math.round(gdpPerCapita * 0.6 / 1000) * 1000;
+
+  return {
+    topMetros: [],  // No metro data from basic LLM context — flagship optimizer will use fallback
+    mostExpensiveNonBoardingTuitionUsd: Math.max(estimatedMaxTuition, 20_000),
+    currentPublicFundingPerStudent: currentPublicFunding,
+    gdpPerCapitaUsd: gdpPerCapita,
+  };
+}
+
 // ─── Main Generation Flow ────────────────────────────────────────────────────
 
 async function generateDocuments(target: string): Promise<GenerationResult> {
@@ -1036,12 +1062,16 @@ async function generateDocuments(target: string): Promise<GenerationResult> {
   const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   const ctx: CountryContext = JSON.parse(cleaned);
 
-  // Step 2: Generate both HTML documents using the fixed economics + country context
+  // Step 2: Build financial research data from context and compute the model
+  const financialData = buildFinancialResearchData(ctx);
+  const financialModel = computeFinancialModel(financialData, ctx.country);
+
+  // Step 3: Generate both HTML documents using the fixed economics + country context
   const termSheetHtml = generateTermSheetHtml(ctx);
   const pitchDeckHtml = generatePitchDeckHtml(ctx);
 
-  // Step 3: Generate DOCX and base64-encode it for client-side download
-  const docxBuffer = await buildTermSheetDocx(ctx);
+  // Step 4: Generate DOCX and base64-encode it for client-side download
+  const docxBuffer = await buildTermSheetDocx(ctx, financialModel);
   const termSheetDocxBase64 = docxBuffer.toString("base64");
 
   return { context: ctx, termSheetHtml, pitchDeckHtml, termSheetDocxBase64 };
@@ -1093,7 +1123,9 @@ export function registerRoutes(server: Server, app: Express) {
 
     try {
       const ctx = run.result.context;
-      const buffer = await buildTermSheetDocx(ctx);
+      const financialData = buildFinancialResearchData(ctx);
+      const model = computeFinancialModel(financialData, ctx.country);
+      const buffer = await buildTermSheetDocx(ctx, model);
       const programName = ctx.localizedProgramName || ctx.country;
       const filename = `${programName}-Term-Sheet.docx`;
 
