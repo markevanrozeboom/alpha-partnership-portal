@@ -123,16 +123,8 @@ class AlphaPDF(FPDF):
     def header(self):
         if self.page_no() == 1:
             return  # Skip header on cover page
-        self.set_font("Helvetica", "I", 8)
-        self.set_text_color(*MID_GRAY)
-        super().cell(0, 8, _clean_text(
-            f"CONFIDENTIAL - 2hr Learning (Alpha) | {self.doc_subtitle}"
-        ), align="L")
-        self.ln(4)
-        # Thin accent line
-        self.set_draw_color(*ACCENT)
-        self.set_line_width(0.3)
-        self.line(10, self.get_y(), self.w - 10, self.get_y())
+        # Body text already contains a CONFIDENTIAL header line,
+        # so we only add a small top margin here.
         self.ln(6)
 
     def footer(self):
