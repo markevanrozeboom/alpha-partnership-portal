@@ -1601,8 +1601,8 @@ def _add_funding_section(
     # Fee structure bullets
     mgmt_min = max(2_500, fin["per_student_mgmt"])
     timeback_min = max(5_000, fin["per_student_timeback"])
-    per_student = fin["per_student"]
-    y5 = fin["y5_students"]
+    # per_student and y5 available via fin dict if needed downstream
+    _ = fin["per_student"], fin["y5_students"]
 
     _add_list_item_bold_prefix(
         doc, "Operating Fee: ",
@@ -1893,19 +1893,19 @@ def _add_investment_table(
             "Paid upfront to Alpha Holdings",
         ],
         [
-            f"Country-Specific Incept EdLLM",
+            "Country-Specific Incept EdLLM",
             f"${fin['upfront_incept_edllm']:,.0f}",
             "",
             "Paid upfront",
         ],
         [
-            f"Country-Specific Programs & Life Skills",
+            "Country-Specific Programs & Life Skills",
             f"${fin['upfront_lifeskills']:,.0f}",
             "",
             "Paid upfront",
         ],
         [
-            f"Country-Specific EdTech Apps",
+            "Country-Specific EdTech Apps",
             f"${fin['upfront_app_rd']:,.0f}",
             "",
             "Paid upfront",
@@ -1974,8 +1974,8 @@ def _add_flagship_summary_table(
     flagship_tuition = fin.get("flagship_tuition", 0)
     flagship_schools = fin.get("flagship_schools", 3)
     flagship_per_school = fin.get("flagship_per_school", 500)
-    flagship_total_students = fin.get("flagship_students_total", 0)
-    flagship_revenue = model.flagship_revenue or 0
+    _flagship_total_students = fin.get("flagship_students_total", 0)  # noqa: F841
+    _flagship_revenue = model.flagship_revenue or 0  # noqa: F841
 
     if flagship_tuition == 0 or flagship_schools == 0:
         # No flagship data available — skip table

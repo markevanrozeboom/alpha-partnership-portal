@@ -93,7 +93,7 @@ def _generate_sovereign_assumptions(
     # Flagship schools: capital city + top metros, max 3 flagships in capital + 1 per other metro
     default_flagship_schools = 3
     default_flagship_students_per_school = 500  # 250-1000 range, 50-student increments
-    flagship_fill_rate = 0.50  # 50% backstop
+    _flagship_fill_rate = 0.50  # 50% backstop  # noqa: F841
 
     # --- Prong 2: National ---
     # 100K student-year minimum commitment
@@ -118,7 +118,8 @@ def _generate_sovereign_assumptions(
             value=default_flagship_tuition,
             min_val=tuition_min, max_val=tuition_max, step=5_000,
             unit="$", category="prong_1_flagship",
-            description="Set by AGI of top 20% families. $5K increments. Must exceed most expensive non-boarding school.",
+            description="Set by AGI of top 20% families. $5K increments. "
+            "Must exceed most expensive non-boarding school.",
         ),
         FinancialAssumption(
             key="flagship_schools", label="Flagship School Count",
@@ -271,7 +272,11 @@ def _generate_sovereign_assumptions(
             value=fixed_dev_total_m + prepaid_timeback + prepaid_mgmt,
             min_val=1_000, max_val=5_000, step=5,
             unit="$M", category="fees",
-            description=f"${fixed_dev_total_m:,}M fixed dev + ${prepaid_timeback:,}M Timeback + ${prepaid_mgmt:,}M Operating Fee",
+            description=(
+                f"${fixed_dev_total_m:,}M fixed dev"
+                f" + ${prepaid_timeback:,}M Timeback"
+                f" + ${prepaid_mgmt:,}M Operating Fee"
+            ),
         ),
 
         # --- Returns ---
