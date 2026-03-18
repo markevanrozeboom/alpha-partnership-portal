@@ -307,7 +307,9 @@ def _generate_sovereign_assumptions(
         default_flagship_schools = flagship_opt.total_schools
         default_flagship_students_per_school = flagship_opt.optimal_capacity
     else:
-        # Fallback: GDP-per-capita proxy (same as before)
+        # Fallback when no metro-level research data is available yet:
+        # Use GDP-per-capita proxy for tuition and sensible defaults for
+        # schools / capacity so the term sheet is not empty.
         gdp_cap = country_profile.economy.gdp_per_capita or 30_000
         gdp_ratio = min(1.0, max(0.0, (gdp_cap - 10_000) / 80_000))
         default_flagship_tuition = round(
@@ -316,8 +318,9 @@ def _generate_sovereign_assumptions(
         default_flagship_tuition = max(
             tuition_min, min(tuition_max, default_flagship_tuition),
         )
-        default_flagship_schools = 0
-        default_flagship_students_per_school = 0
+        # Reasonable defaults: 3 schools (capital max) × 500 students
+        default_flagship_schools = 3
+        default_flagship_students_per_school = 500
 
     # --- Prong 2: National ---
     # 100K student-year minimum commitment

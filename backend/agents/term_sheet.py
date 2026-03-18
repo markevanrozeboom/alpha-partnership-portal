@@ -2045,17 +2045,32 @@ def _add_flagship_summary_table(
                 f"${mr.annual_revenue / 1_000_000:.0f}M",
             ])
     else:
-        # Fallback: use cv city names
-        total_schools = flagship_schools
-        total_students = flagship_schools * flagship_per_school
-        total_revenue = total_students * flagship_tuition
-        rows.append([
-            cv.first_launch_city or "Capital City",
-            str(flagship_schools),
-            f"{flagship_per_school:,}",
-            f"${flagship_tuition:,.0f}",
-            f"${total_revenue / 1_000_000:.0f}M",
-        ])
+        # Fallback: distribute schools across capital + other metros
+        capital_schools = min(3, flagship_schools)
+        remaining = flagship_schools - capital_schools
+
+        _fallback_metros = [
+            (cv.first_launch_city or "Capital City", capital_schools),
+        ]
+        if remaining >= 1 and cv.second_city:
+            _fallback_metros.append((cv.second_city, 1))
+            remaining -= 1
+        if remaining >= 1:
+            _fallback_metros.append(("Third Metro", remaining))
+
+        for metro_name, n_schools in _fallback_metros:
+            metro_students = n_schools * flagship_per_school
+            rev = metro_students * flagship_tuition
+            total_schools += n_schools
+            total_students += metro_students
+            total_revenue += rev
+            rows.append([
+                metro_name,
+                str(n_schools),
+                f"{flagship_per_school:,}",
+                f"${flagship_tuition:,.0f}",
+                f"${rev / 1_000_000:.0f}M",
+            ])
 
     # Total row
     rows.append([
