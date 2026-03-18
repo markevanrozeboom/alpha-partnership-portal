@@ -20,43 +20,10 @@ import {
   TabStopType,
   convertInchesToTwip,
 } from "docx";
-import type { CountryContext } from "@shared/schema";
+import type { CountryContext, FinancialModel } from "@shared/schema";
+import { fmtCompact, fmtNum, fmtUsd } from "./financial-engine";
 
-// ─── Fixed Economics (same as routes.ts) ───────────────────────────────────
-
-const FIXED_ECONOMICS = {
-  upfront: [
-    { item: "AlphaCore License", amount: "$250M", recipient: "Alpha Holdings" },
-    { item: "EdTech App R&D", amount: "$250M", recipient: "Local expense" },
-    { item: "Local Life-Skills R&D", amount: "$250M", recipient: "Local expense" },
-    { item: "Management Fee Prepay", amount: "$250M", recipient: "Prepaid OpEx for 100k student-years" },
-    { item: "TimeBack License Fee Prepay", amount: "$500M", recipient: "Prepaid OpEx for 100k student-years" },
-  ],
-  upfrontTotal: "$1.5B",
-  ongoing: [
-    { item: "Parent Edu / Launch / Guides", amount: "$25-50M / yr", recipient: "Local expense" },
-    { item: "Additional School Funding", amount: "$1B / yr*", recipient: "Local expense" },
-    { item: "Management Fee", amount: "10% budget", recipient: "OpEx to Alpha Holdings" },
-    { item: "TimeBack License Fee", amount: "20% budget", recipient: "OpEx to Alpha Holdings" },
-  ],
-  costStructure: [
-    { item: "Tuition", alpha: "$50,000", national: "$25,000", notes: "Budget for $25,000 school" },
-    { item: "Guides", alpha: "$14,000", national: "$4,500", notes: "Alpha 11:1 ratio & higher comp; National 25:1 ratio & lower comp" },
-    { item: "Timeback / Software", alpha: "$10,000", national: "$5,000", notes: "20% of Budget" },
-    { item: "Programs and Life Skills", alpha: "$9,000", national: "$4,250", notes: "Alpha is 2x other National" },
-    { item: "Other HC", alpha: "$1,750", national: "$1,750", notes: "-" },
-    { item: "Facility / CapEx", alpha: "$8,750", national: "$3,000", notes: "Includes depreciated capex to convert locations" },
-    { item: "Misc Expense", alpha: "$1,500", national: "$1,500", notes: "-" },
-    { item: "Management Fee", alpha: "-", national: "$2,500", notes: "10% of Budget" },
-    { item: "IP Amortization", alpha: "", national: "$2,072", notes: "Full amortization of IP costs over 5 year target" },
-  ],
-  scaleTargets: {
-    yearOne: "2,000 students / 2 communities",
-    fiveYear: "200k students / 50+ communities",
-  },
-};
-
-// ─── Helper: create a styled table cell ─────────────────────────────────────
+// ─── Helper: create styled table cells ───────────────────────────────────────
 
 const BORDER_LIGHT = { style: BorderStyle.SINGLE, size: 1, color: "E2E8F0" };
 const BORDER_MEDIUM = { style: BorderStyle.SINGLE, size: 2, color: "0A1628" };
@@ -82,7 +49,7 @@ function headerCell(text: string, widthPct: number, opts?: { highlight?: boolean
           new TextRun({
             text: text.toUpperCase(),
             bold: true,
-            size: 16, // 8pt
+            size: 16,
             font: "Calibri",
             color: opts?.highlight ? "FFFFFF" : "4A5568",
           }),
@@ -92,7 +59,11 @@ function headerCell(text: string, widthPct: number, opts?: { highlight?: boolean
   });
 }
 
-function dataCell(text: string, widthPct: number, opts?: { bold?: boolean; highlight?: boolean; small?: boolean; color?: string }): TableCell {
+function dataCell(
+  text: string,
+  widthPct: number,
+  opts?: { bold?: boolean; highlight?: boolean; small?: boolean; color?: string },
+): TableCell {
   return new TableCell({
     width: { size: widthPct, type: WidthType.PERCENTAGE },
     shading: opts?.highlight
@@ -112,7 +83,7 @@ function dataCell(text: string, widthPct: number, opts?: { bold?: boolean; highl
           new TextRun({
             text,
             bold: opts?.bold || false,
-            size: opts?.small ? 16 : 18, // 8pt or 9pt
+            size: opts?.small ? 16 : 18,
             font: "Calibri",
             color: opts?.color || (opts?.highlight ? "1A56DB" : "1A1A2E"),
           }),
@@ -150,144 +121,70 @@ function totalCell(text: string, widthPct: number): TableCell {
   });
 }
 
+function sectionHeader(text: string, colSpan: number): TableRow {
+  return new TableRow({
+    children: [
+      new TableCell({
+        columnSpan: colSpan,
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: { top: BORDER_NONE, bottom: BORDER_NONE, left: BORDER_NONE, right: BORDER_NONE },
+        children: [
+          new Paragraph({
+            spacing: { before: 100, after: 40 },
+            children: [
+              new TextRun({
+                text,
+                bold: true,
+                size: 16,
+                font: "Calibri",
+                color: "718096",
+                allCaps: true,
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 // ─── Build the Document ──────────────────────────────────────────────────────
 
-export function buildTermSheetDocx(ctx: CountryContext): Promise<Buffer> {
+export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): Promise<Buffer> {
   const programName = ctx.localizedProgramName || ctx.country;
   const now = new Date();
   const monthYear = now.toLocaleDateString("en-US", { year: "numeric", month: "long" });
 
-  // ── Upfront Table ──
-  const upfrontTable = new Table({
+  // ── Key Metrics Table ──
+  const metricsTable = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     layout: TableLayoutType.FIXED,
     rows: [
-      new TableRow({
-        tableHeader: true,
-        children: [
-          headerCell("Item", 40),
-          headerCell("Amount", 20),
-          headerCell("Recipient", 40),
-        ],
-      }),
-      ...FIXED_ECONOMICS.upfront.map(
-        (r) =>
-          new TableRow({
-            children: [
-              dataCell(
-                r.item
-                  .replace("EdTech App R&D", `${ctx.country} EdTech App R&D`)
-                  .replace("Local Life-Skills R&D", `${programName} Life-Skills R&D`),
-                40
-              ),
-              dataCell(r.amount, 20, { bold: true }),
-              dataCell(r.recipient, 40),
-            ],
-          })
-      ),
-      new TableRow({
-        children: [
-          totalCell("Total", 40),
-          totalCell(FIXED_ECONOMICS.upfrontTotal, 20),
-          totalCell("", 40),
-        ],
-      }),
-    ],
-  });
-
-  // ── Ongoing Table ──
-  const ongoingTable = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    layout: TableLayoutType.FIXED,
-    rows: [
-      new TableRow({
-        tableHeader: true,
-        children: [
-          headerCell("Item", 40),
-          headerCell("Amount", 25),
-          headerCell("Recipient", 35),
-        ],
-      }),
-      ...FIXED_ECONOMICS.ongoing.map(
-        (r) =>
-          new TableRow({
-            children: [
-              dataCell(r.item, 40),
-              dataCell(r.amount, 25, { bold: true }),
-              dataCell(r.recipient, 35),
-            ],
-          })
-      ),
-      new TableRow({
-        children: [
-          totalCell("Total", 40),
-          totalCell("Scale dependent", 25),
-          totalCell("", 35),
-        ],
-      }),
-    ],
-  });
-
-  // ── Cost Structure Table ──
-  const costTable = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    layout: TableLayoutType.FIXED,
-    rows: [
-      new TableRow({
-        tableHeader: true,
-        children: [
-          headerCell("Item (per student P&L)", 28),
-          headerCell("Alpha @ $50k Tuition", 18),
-          headerCell(`National @ $25k Budget`, 18, { highlight: true }),
-          headerCell("Notes", 36),
-        ],
-      }),
-      // Section header
       new TableRow({
         children: [
           new TableCell({
-            columnSpan: 4,
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            borders: { top: BORDER_NONE, bottom: BORDER_NONE, left: BORDER_NONE, right: BORDER_NONE },
+            width: { size: 25, type: WidthType.PERCENTAGE },
+            shading: { type: ShadingType.SOLID, color: "F7FAFC", fill: "F7FAFC" },
+            borders: { top: BORDER_LIGHT, bottom: BORDER_LIGHT, left: BORDER_LIGHT, right: BORDER_LIGHT },
             children: [
               new Paragraph({
-                spacing: { before: 100, after: 40 },
+                spacing: { before: 60, after: 20 },
+                children: [new TextRun({ text: "FLAGSHIP SCHOOLS", bold: true, size: 14, font: "Calibri", color: "718096" })],
+              }),
+              new Paragraph({
+                spacing: { before: 0, after: 60 },
                 children: [
                   new TextRun({
-                    text: "FUNDING",
+                    text: `${model.flagship.totalSchoolCount} schools · ${fmtNum(model.flagship.totalStudents)} students`,
                     bold: true,
-                    size: 16,
+                    size: 20,
                     font: "Calibri",
-                    color: "718096",
-                    allCaps: true,
+                    color: "0A1628",
                   }),
                 ],
               }),
             ],
           }),
-        ],
-      }),
-      ...FIXED_ECONOMICS.costStructure.map(
-        (r) =>
-          new TableRow({
-            children: [
-              dataCell(r.item, 28),
-              dataCell(r.alpha, 18, { bold: true }),
-              dataCell(r.national, 18, { bold: true, highlight: true }),
-              dataCell(r.notes, 36, { small: true, color: "718096" }),
-            ],
-          })
-      ),
-    ],
-  });
-
-  // ── Scale Targets Table (inline badges) ──
-  const scaleTable = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    layout: TableLayoutType.FIXED,
-    rows: [
-      new TableRow({
-        children: [
           new TableCell({
             width: { size: 25, type: WidthType.PERCENTAGE },
             shading: { type: ShadingType.SOLID, color: "F7FAFC", fill: "F7FAFC" },
@@ -295,26 +192,19 @@ export function buildTermSheetDocx(ctx: CountryContext): Promise<Buffer> {
             children: [
               new Paragraph({
                 spacing: { before: 60, after: 20 },
-                children: [new TextRun({ text: "YEAR ONE", bold: true, size: 14, font: "Calibri", color: "718096" })],
+                children: [new TextRun({ text: "NATIONAL SCHOOLS", bold: true, size: 14, font: "Calibri", color: "718096" })],
               }),
               new Paragraph({
                 spacing: { before: 0, after: 60 },
-                children: [new TextRun({ text: FIXED_ECONOMICS.scaleTargets.yearOne, bold: true, size: 20, font: "Calibri", color: "0A1628" })],
-              }),
-            ],
-          }),
-          new TableCell({
-            width: { size: 25, type: WidthType.PERCENTAGE },
-            shading: { type: ShadingType.SOLID, color: "F7FAFC", fill: "F7FAFC" },
-            borders: { top: BORDER_LIGHT, bottom: BORDER_LIGHT, left: BORDER_LIGHT, right: BORDER_LIGHT },
-            children: [
-              new Paragraph({
-                spacing: { before: 60, after: 20 },
-                children: [new TextRun({ text: "5-YEAR PLAN", bold: true, size: 14, font: "Calibri", color: "718096" })],
-              }),
-              new Paragraph({
-                spacing: { before: 0, after: 60 },
-                children: [new TextRun({ text: FIXED_ECONOMICS.scaleTargets.fiveYear, bold: true, size: 20, font: "Calibri", color: "0A1628" })],
+                children: [
+                  new TextRun({
+                    text: `${fmtNum(model.counterparty.minStudentsPerYear)} students / year`,
+                    bold: true,
+                    size: 20,
+                    font: "Calibri",
+                    color: "0A1628",
+                  }),
+                ],
               }),
             ],
           }),
@@ -329,7 +219,15 @@ export function buildTermSheetDocx(ctx: CountryContext): Promise<Buffer> {
               }),
               new Paragraph({
                 spacing: { before: 0, after: 60 },
-                children: [new TextRun({ text: "$25,000 / year", bold: true, size: 20, font: "Calibri", color: "0A1628" })],
+                children: [
+                  new TextRun({
+                    text: `${fmtUsd(model.counterparty.perStudentBudget)} / year`,
+                    bold: true,
+                    size: 20,
+                    font: "Calibri",
+                    color: "0A1628",
+                  }),
+                ],
               }),
             ],
           }),
@@ -340,11 +238,19 @@ export function buildTermSheetDocx(ctx: CountryContext): Promise<Buffer> {
             children: [
               new Paragraph({
                 spacing: { before: 60, after: 20 },
-                children: [new TextRun({ text: "UP-FRONT INVESTMENT", bold: true, size: 14, font: "Calibri", color: "718096" })],
+                children: [new TextRun({ text: "TOTAL UPFRONT", bold: true, size: 14, font: "Calibri", color: "718096" })],
               }),
               new Paragraph({
                 spacing: { before: 0, after: 60 },
-                children: [new TextRun({ text: "$1.5B", bold: true, size: 20, font: "Calibri", color: "0A1628" })],
+                children: [
+                  new TextRun({
+                    text: fmtCompact(model.upfront.totalUsd),
+                    bold: true,
+                    size: 20,
+                    font: "Calibri",
+                    color: "0A1628",
+                  }),
+                ],
               }),
             ],
           }),
@@ -353,16 +259,197 @@ export function buildTermSheetDocx(ctx: CountryContext): Promise<Buffer> {
     ],
   });
 
-  // Tables will be placed sequentially (stacked) for better Word/Google Docs rendering
+  // ── Flagship Schools Table ──
+  const flagshipTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    layout: TableLayoutType.FIXED,
+    rows: [
+      new TableRow({
+        tableHeader: true,
+        children: [
+          headerCell("Metro Area", 30),
+          headerCell("Schools", 15),
+          headerCell("Capacity / School", 20),
+          headerCell("Tuition / Year", 15),
+          headerCell("Annual Revenue", 20),
+        ],
+      }),
+      ...model.flagship.schools.map(
+        (s) =>
+          new TableRow({
+            children: [
+              dataCell(`${s.metro}${s.isCapital ? " (Capital)" : ""}`, 30),
+              dataCell(String(s.count), 15, { bold: true }),
+              dataCell(fmtNum(model.flagship.capacityPerSchool), 20),
+              dataCell(fmtUsd(model.flagship.tuitionPerYear), 15, { bold: true }),
+              dataCell(fmtCompact(s.count * model.flagship.capacityPerSchool * model.flagship.tuitionPerYear), 20, {
+                bold: true,
+              }),
+            ],
+          }),
+      ),
+      new TableRow({
+        children: [
+          totalCell("Total", 30),
+          totalCell(String(model.flagship.totalSchoolCount), 15),
+          totalCell("", 20),
+          totalCell("", 15),
+          totalCell(fmtCompact(model.flagship.totalAnnualRevenue), 20),
+        ],
+      }),
+    ],
+  });
 
+  // ── Per-Student Cost Breakdown Table ──
+  const costTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    layout: TableLayoutType.FIXED,
+    rows: [
+      new TableRow({
+        tableHeader: true,
+        children: [
+          headerCell("Cost Item (Per Student)", 40),
+          headerCell("Amount", 20, { highlight: true }),
+          headerCell("Notes", 40),
+        ],
+      }),
+      ...model.counterparty.costBreakdown.map(
+        (c) =>
+          new TableRow({
+            children: [
+              dataCell(c.item, 40),
+              dataCell(fmtUsd(c.amount), 20, { bold: true, highlight: true }),
+              dataCell(c.note, 40, { small: true, color: "718096" }),
+            ],
+          }),
+      ),
+      new TableRow({
+        children: [
+          totalCell("Total Per Student", 40),
+          totalCell(fmtUsd(model.counterparty.perStudentBudget), 20),
+          totalCell("", 40),
+        ],
+      }),
+    ],
+  });
+
+  // ── Upfront Investment Table ──
+  const upfrontTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    layout: TableLayoutType.FIXED,
+    rows: [
+      new TableRow({
+        tableHeader: true,
+        children: [
+          headerCell("Item", 35),
+          headerCell("Amount", 20),
+          headerCell("Recipient", 25),
+          headerCell("Notes", 20),
+        ],
+      }),
+      sectionHeader("FIXED DEVELOPMENT COSTS", 4),
+      ...model.upfront.fixedItems.map(
+        (r) =>
+          new TableRow({
+            children: [
+              dataCell(r.item, 35),
+              dataCell(fmtCompact(r.amountUsd), 20, { bold: true }),
+              dataCell(r.recipient, 25),
+              dataCell("Paid upfront", 20, { small: true, color: "718096" }),
+            ],
+          }),
+      ),
+      sectionHeader("PREPAID FEES (VARIABLE WITH STUDENT COUNT)", 4),
+      ...model.upfront.variableItems.map(
+        (r) =>
+          new TableRow({
+            children: [
+              dataCell(r.item, 35),
+              dataCell(fmtCompact(r.amountUsd), 20, { bold: true }),
+              dataCell(r.recipient, 25),
+              dataCell(r.note || "", 20, { small: true, color: "718096" }),
+            ],
+          }),
+      ),
+      new TableRow({
+        children: [
+          totalCell("Total Upfront", 35),
+          totalCell(fmtCompact(model.upfront.totalUsd), 20),
+          totalCell("", 25),
+          totalCell("", 20),
+        ],
+      }),
+    ],
+  });
+
+  // ── Ongoing Investment Table ──
+  const ongoingTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    layout: TableLayoutType.FIXED,
+    rows: [
+      new TableRow({
+        tableHeader: true,
+        children: [
+          headerCell("Item", 35),
+          headerCell("Amount", 35),
+          headerCell("Recipient", 30),
+        ],
+      }),
+      ...model.ongoing.items.map(
+        (r) =>
+          new TableRow({
+            children: [
+              dataCell(r.item, 35),
+              dataCell(r.amount, 35, { bold: true }),
+              dataCell(r.recipient, 30),
+            ],
+          }),
+      ),
+    ],
+  });
+
+  // ── Deal Structure Comparison Table ──
+  const dealTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    layout: TableLayoutType.FIXED,
+    rows: [
+      new TableRow({
+        tableHeader: true,
+        children: [
+          headerCell("Parameter", 30),
+          headerCell("Flagship (Prong 1)", 35),
+          headerCell("National (Prong 2)", 35),
+        ],
+      }),
+      ...[
+        ["Ownership", "100% Alpha", `100% ${ctx.country} / 0% Alpha`],
+        ["Operated By", "Alpha", `Alpha (on behalf of ${ctx.country})`],
+        ["Students", fmtNum(model.flagship.totalStudents), `${fmtNum(model.counterparty.minStudentsPerYear)} minimum`],
+        ["Tuition / Funding", `${fmtUsd(model.flagship.tuitionPerYear)} / year`, `${fmtUsd(model.counterparty.perStudentBudget)} / year (fixed)`],
+        ["Operating Margin", "25%", "Per cost structure"],
+        ["Operating Fee", "N/A (Alpha-owned)", `10% of funding (min ${fmtUsd(2500)}/student)`],
+        ["Timeback License", "N/A (Alpha-owned)", `20% of funding (min ${fmtUsd(5000)}/student)`],
+        ["Backstop", "50% capacity, 5 years", "N/A"],
+        ["Real Estate", "Sourced by counterparty", "Sourced by counterparty"],
+      ].map(
+        ([param, prong1, prong2]) =>
+          new TableRow({
+            children: [
+              dataCell(param, 30, { bold: true }),
+              dataCell(prong1, 35),
+              dataCell(prong2, 35),
+            ],
+          }),
+      ),
+    ],
+  });
+
+  // ── Build the document ──
   const doc = new Document({
     styles: {
       default: {
         document: {
-          run: {
-            font: "Calibri",
-            size: 20,
-          },
+          run: { font: "Calibri", size: 20 },
         },
       },
     },
@@ -388,55 +475,21 @@ export function buildTermSheetDocx(ctx: CountryContext): Promise<Buffer> {
             children: [
               new Paragraph({
                 children: [
-                  new TextRun({
-                    text: `${ctx.flagEmoji} ${programName} — Term Sheet`,
-                    bold: true,
-                    size: 36,
-                    font: "Calibri",
-                    color: "0A1628",
-                  }),
+                  new TextRun({ text: `${ctx.flagEmoji} ${programName} — Term Sheet`, bold: true, size: 36, font: "Calibri", color: "0A1628" }),
                   new TextRun({ text: "\t" }),
-                  new TextRun({
-                    text: "ALPHA",
-                    bold: true,
-                    size: 22,
-                    font: "Calibri",
-                    color: "1A56DB",
-                  }),
+                  new TextRun({ text: "ALPHA", bold: true, size: 22, font: "Calibri", color: "1A56DB" }),
                 ],
-                tabStops: [
-                  {
-                    type: TabStopType.RIGHT,
-                    position: TabStopPosition.MAX,
-                  },
-                ],
+                tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
                 spacing: { after: 40 },
               }),
               new Paragraph({
                 children: [
-                  new TextRun({
-                    text: `${ctx.formalName} National Education Transformation Program`,
-                    size: 20,
-                    font: "Calibri",
-                    color: "4A5568",
-                  }),
+                  new TextRun({ text: `${ctx.formalName} National Education Transformation Program`, size: 20, font: "Calibri", color: "4A5568" }),
                   new TextRun({ text: "\t" }),
-                  new TextRun({
-                    text: `Confidential & Proprietary · ${monthYear}`,
-                    size: 16,
-                    font: "Calibri",
-                    color: "718096",
-                  }),
+                  new TextRun({ text: `Confidential & Proprietary · ${monthYear}`, size: 16, font: "Calibri", color: "718096" }),
                 ],
-                tabStops: [
-                  {
-                    type: TabStopType.RIGHT,
-                    position: TabStopPosition.MAX,
-                  },
-                ],
-                border: {
-                  bottom: { style: BorderStyle.SINGLE, size: 6, color: "0A1628" },
-                },
+                tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+                border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "0A1628" } },
                 spacing: { after: 200 },
               }),
             ],
@@ -447,26 +500,11 @@ export function buildTermSheetDocx(ctx: CountryContext): Promise<Buffer> {
             children: [
               new Paragraph({
                 children: [
-                  new TextRun({
-                    text: `© ${now.getFullYear()} Alpha Holdings. Confidential & Proprietary.`,
-                    size: 14,
-                    font: "Calibri",
-                    color: "A0AEC0",
-                  }),
+                  new TextRun({ text: `© ${now.getFullYear()} Alpha Holdings. Confidential & Proprietary.`, size: 14, font: "Calibri", color: "A0AEC0" }),
                   new TextRun({ text: "\t" }),
-                  new TextRun({
-                    text: `${programName} Term Sheet — ${ctx.formalName}`,
-                    size: 14,
-                    font: "Calibri",
-                    color: "A0AEC0",
-                  }),
+                  new TextRun({ text: `${programName} Term Sheet — ${ctx.formalName}`, size: 14, font: "Calibri", color: "A0AEC0" }),
                 ],
-                tabStops: [
-                  {
-                    type: TabStopType.RIGHT,
-                    position: TabStopPosition.MAX,
-                  },
-                ],
+                tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
               }),
             ],
           }),
@@ -490,75 +528,140 @@ export function buildTermSheetDocx(ctx: CountryContext): Promise<Buffer> {
             ],
           }),
 
-          // ── Scale targets ──
-          scaleTable,
-
-          // ── Spacer ──
+          // ── Key metrics ──
+          metricsTable,
           new Paragraph({ spacing: { before: 200, after: 0 }, children: [] }),
 
-          // ── COMMERCIAL STRUCTURE label ──
+          // ── PRONG 1: FLAGSHIP ALPHAS ──
           new Paragraph({
-            spacing: { before: 0, after: 100 },
+            spacing: { before: 0, after: 40 },
+            children: [
+              new TextRun({ text: "PRONG 1", bold: true, size: 16, font: "Calibri", color: "FFFFFF" }),
+            ],
+            shading: { type: ShadingType.SOLID, color: "1A56DB", fill: "1A56DB" },
+          }),
+          new Paragraph({
+            spacing: { before: 80, after: 80 },
+            children: [new TextRun({ text: "Flagship Alpha Schools", bold: true, size: 28, font: "Calibri", color: "0A1628" })],
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 120 },
             children: [
               new TextRun({
-                text: "COMMERCIAL STRUCTURE",
-                bold: true,
-                size: 16,
+                text: `100% owned by Alpha. Premium "halo brand" schools in ${ctx.country}'s top metropolitan areas. ` +
+                  `Tuition: ${fmtUsd(model.flagship.tuitionPerYear)}/year. 25% operating margin. ` +
+                  `50% capacity backstop required for 5 years.`,
+                size: 18,
                 font: "Calibri",
-                color: "1A56DB",
-                allCaps: true,
+                color: "4A5568",
               }),
             ],
           }),
+          flagshipTable,
 
-          // ── Upfront heading ──
+          // Scholarship note if applicable
+          ...(model.flagship.scholarshipNote
+            ? [
+                new Paragraph({
+                  shading: { type: ShadingType.SOLID, color: "FFFBEB", fill: "FFFBEB" },
+                  border: { left: { style: BorderStyle.SINGLE, size: 8, color: "D97706" } },
+                  spacing: { before: 80, after: 120 },
+                  indent: { left: 100 },
+                  children: [
+                    new TextRun({ text: "⚠️ ", size: 18, font: "Calibri" }),
+                    new TextRun({ text: model.flagship.scholarshipNote, size: 18, font: "Calibri", color: "78350F" }),
+                  ],
+                }),
+              ]
+            : []),
+
+          new Paragraph({ spacing: { before: 120, after: 0 }, children: [] }),
+
+          // ── PRONG 2: COUNTERPARTY SCHOOLS ──
           new Paragraph({
-            spacing: { before: 0, after: 80 },
-            children: [new TextRun({ text: "Upfront", bold: true, size: 28, font: "Calibri", color: "0A1628" })],
+            spacing: { before: 0, after: 40 },
+            children: [
+              new TextRun({ text: "PRONG 2", bold: true, size: 16, font: "Calibri", color: "FFFFFF" }),
+            ],
+            shading: { type: ShadingType.SOLID, color: "0A1628", fill: "0A1628" },
           }),
-          upfrontTable,
-
-          // ── Spacer ──
-          new Paragraph({ spacing: { before: 200, after: 0 }, children: [] }),
-
-          // ── Ongoing heading ──
           new Paragraph({
-            spacing: { before: 0, after: 80 },
-            children: [new TextRun({ text: "Ongoing", bold: true, size: 28, font: "Calibri", color: "0A1628" })],
+            spacing: { before: 80, after: 80 },
+            children: [new TextRun({ text: "Counterparty-Owned Schools Operated by Alpha", bold: true, size: 28, font: "Calibri", color: "0A1628" })],
           }),
-          ongoingTable,
+          new Paragraph({
+            spacing: { before: 0, after: 120 },
+            children: [
+              new TextRun({
+                text: `100% owned by ${ctx.country}. 0% owned by Alpha. Alpha operates schools on behalf of the country/state. ` +
+                  `Minimum commitment: ${fmtNum(model.counterparty.minStudentsPerYear)} students/year. ` +
+                  `Per-student funding: ${fmtUsd(model.counterparty.perStudentBudget)}/year.`,
+                size: 18,
+                font: "Calibri",
+                color: "4A5568",
+              }),
+            ],
+          }),
+          costTable,
 
-          // ── Page break before cost structure ──
+          // ── Page break before investment ──
           new Paragraph({
             pageBreakBefore: true,
             spacing: { before: 0, after: 100 },
             children: [
-              new TextRun({
-                text: `${programName.toUpperCase()} COST STRUCTURE`,
-                bold: true,
-                size: 16,
-                font: "Calibri",
-                color: "1A56DB",
-                allCaps: true,
-              }),
+              new TextRun({ text: "INVESTMENT REQUIRED", bold: true, size: 16, font: "Calibri", color: "1A56DB", allCaps: true }),
             ],
           }),
-
           new Paragraph({
-            spacing: { before: 0, after: 200 },
+            spacing: { before: 0, after: 80 },
+            children: [new TextRun({ text: "Upfront Investment", bold: true, size: 28, font: "Calibri", color: "0A1628" })],
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 120 },
             children: [
               new TextRun({
-                text: "Budget like other $25k Alpha Holdings Schools",
-                bold: true,
-                size: 28,
+                text: `Indicative of ${fmtNum(model.counterparty.minStudentsPerYear)} students. Upfront development costs do not change; prepaid fees scale above ${fmtNum(model.counterparty.minStudentsPerYear)} students.`,
+                size: 16,
                 font: "Calibri",
-                color: "0A1628",
+                color: "718096",
               }),
             ],
           }),
+          upfrontTable,
 
-          // ── Cost structure table ──
-          costTable,
+          new Paragraph({ spacing: { before: 200, after: 0 }, children: [] }),
+          new Paragraph({
+            spacing: { before: 0, after: 80 },
+            children: [new TextRun({ text: "Ongoing Annual Investment", bold: true, size: 28, font: "Calibri", color: "0A1628" })],
+          }),
+          ongoingTable,
+
+          // ── Funding gap callout ──
+          new Paragraph({
+            shading: { type: ShadingType.SOLID, color: "F0F4FF", fill: "F0F4FF" },
+            border: { left: { style: BorderStyle.SINGLE, size: 8, color: "1A56DB" } },
+            spacing: { before: 120, after: 200 },
+            indent: { left: 100 },
+            children: [
+              new TextRun({
+                text: model.scholarshipGap.perStudentGap > 0 ? "Funding Gap: " : "Funding: ",
+                bold: true,
+                size: 18,
+                font: "Calibri",
+                color: "2D3748",
+              }),
+              new TextRun({ text: model.scholarshipGap.note, size: 18, font: "Calibri", color: "2D3748" }),
+            ],
+          }),
+
+          // ── Deal Structure Summary ──
+          new Paragraph({
+            spacing: { before: 0, after: 100 },
+            children: [
+              new TextRun({ text: "DEAL STRUCTURE SUMMARY", bold: true, size: 16, font: "Calibri", color: "1A56DB", allCaps: true }),
+            ],
+          }),
+          dealTable,
         ],
       },
     ],
