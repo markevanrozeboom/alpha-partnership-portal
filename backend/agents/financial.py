@@ -54,19 +54,43 @@ def _apply_income_floors(
 ) -> list[MetroFlagshipInput]:
     """Ensure income-bracket data has reasonable OECD floors.
 
-    If the LLM returned zeros or suspiciously low values for a metro
-    that has a known population, we apply a population-based floor so
-    the grid search can still size flagships for that metro.
+    If the LLM returned zeros or suspiciously low values for a metro,
+    we apply a population-based floor so the grid search can still
+    size flagships for that metro.
+
+    Three tiers of fallback:
+      1. metro_population > 0 → use population-based floor
+      2. metro_population == 0 but k12_children > 0 → derive pop, apply floor
+      3. Both == 0 → apply hard minimum (any top-3 OECD metro has wealthy
+         families; 2,000 children > $200K is very conservative)
     """
+    # Hard minimums for any metro that appears in the top-3 list of an
+    # OECD country.  2,000 children >$200K at 20% penetration = 400
+    # demand, comfortably above the 250-student minimum.
+    _HARD_FLOOR_200K = 2_000
+    _HARD_FLOOR_500K = 400
+
     patched: list[MetroFlagshipInput] = []
     for m in metros:
-        if m.metro_population <= 0:
-            patched.append(m)
-            continue
+        # Determine the best population estimate available
+        if m.metro_population > 0:
+            base_pop = m.metro_population
+        elif m.k12_children > 0:
+            # Reverse-derive metro pop from k12 count
+            base_pop = int(m.k12_children / _K12_RATIO)
+        else:
+            base_pop = 0
 
-        k12_est = int(m.metro_population * _K12_RATIO)
-        floor_200k = int(k12_est * _PCT_ABOVE_200K)
-        floor_500k = int(k12_est * _PCT_ABOVE_500K)
+        # Compute population-based floors (or use hard minimums)
+        if base_pop > 0:
+            k12_est = int(base_pop * _K12_RATIO)
+            floor_200k = max(int(k12_est * _PCT_ABOVE_200K), _HARD_FLOOR_200K)
+            floor_500k = max(int(k12_est * _PCT_ABOVE_500K), _HARD_FLOOR_500K)
+        else:
+            # No population data at all — use hard minimums
+            k12_est = 0
+            floor_200k = _HARD_FLOOR_200K
+            floor_500k = _HARD_FLOOR_500K
 
         new_200k = max(m.children_in_families_income_above_200k, floor_200k)
         new_500k = max(m.children_in_families_income_above_500k, floor_500k)
@@ -75,19 +99,26 @@ def _apply_income_floors(
                 or new_500k != m.children_in_families_income_above_500k):
             logger.info(
                 "Income floor applied for %s: "
-                ">$200K %s→%s, >$500K %s→%s (pop=%s)",
+                ">$200K %s→%s, >$500K %s→%s "
+                "(pop=%s, k12=%s, base_pop=%s)",
                 m.metro_name,
                 f"{m.children_in_families_income_above_200k:,}",
                 f"{new_200k:,}",
                 f"{m.children_in_families_income_above_500k:,}",
                 f"{new_500k:,}",
                 f"{m.metro_population:,}",
+                f"{m.k12_children:,}",
+                f"{base_pop:,}",
             )
-            m = m.model_copy(update={
+            updates: dict = {
                 "children_in_families_income_above_200k": new_200k,
                 "children_in_families_income_above_500k": new_500k,
-                "k12_children": max(m.k12_children, k12_est),
-            })
+            }
+            if k12_est > 0:
+                updates["k12_children"] = max(m.k12_children, k12_est)
+            if base_pop > 0 and m.metro_population == 0:
+                updates["metro_population"] = base_pop
+            m = m.model_copy(update=updates)
 
         patched.append(m)
     return patched
