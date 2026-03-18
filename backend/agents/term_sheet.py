@@ -2065,10 +2065,9 @@ def _add_flagship_summary_table(
     # Additional notes
     _add_body(
         doc,
-        f"Flagship Alphas operate at 25% operating margin. "
-        f"The country/state provides a 50% capacity backstop "
-        f"for 5 years. Tuition set to exceed the most expensive "
-        f"non-boarding school in {cv.first_launch_city or 'the country'}.",
+        "Flagship Alphas operate at 25% operating margin. "
+        "The country/state provides a 50% capacity backstop "
+        "for 5 years.",
     )
 
 
