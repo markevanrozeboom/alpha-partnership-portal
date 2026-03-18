@@ -30,7 +30,6 @@ from models.schemas import (
 from services.llm import call_llm, call_llm_plain
 from services.perplexity import (
     research_country, research_education, research_us_state,
-    research_flagship_markets,
 )
 from services.world_bank import get_country_data
 from config import OUTPUT_DIR
@@ -285,8 +284,6 @@ async def run_country_research(
     # ------------------------------------------------------------------
     # Data gathering — Perplexity research + World Bank + Spending Spotlight
     # ------------------------------------------------------------------
-    flagship_research_text = ""
-    flagship_citations: list = []
 
     if target_type == TargetType.US_STATE:
         perplexity_result = await research_us_state(target)
@@ -294,19 +291,17 @@ async def run_country_research(
         edu_research_text = ""
         edu_citations: list = []
     else:
-        # Three Perplexity calls + World Bank run concurrently
+        # Two deep-research Perplexity calls + World Bank run concurrently
+        # (flagship data is extracted from these same results — no separate call)
         (
-            perplexity_result, wb_data, edu_perplexity, flagship_perplexity,
+            perplexity_result, wb_data, edu_perplexity,
         ) = await asyncio.gather(
             research_country(target),
             get_country_data(target),
             research_education(target),
-            research_flagship_markets(target),
         )
         edu_research_text = edu_perplexity.get("answer", "")
         edu_citations = edu_perplexity.get("citations", [])
-        flagship_research_text = flagship_perplexity.get("answer", "")
-        flagship_citations = flagship_perplexity.get("citations", [])
 
     research_text = perplexity_result.get("answer", "")
     citations = perplexity_result.get("citations", [])
@@ -320,8 +315,6 @@ async def run_country_research(
         profile.research_sources = [str(c) for c in citations]
     if isinstance(edu_citations, list):
         profile.research_sources.extend(str(c) for c in edu_citations)
-    if isinstance(flagship_citations, list):
-        profile.research_sources.extend(str(c) for c in flagship_citations)
 
     if wb_data:
         profile.demographics.total_population = wb_data.get("population")
@@ -360,31 +353,36 @@ async def run_country_research(
 
     # ------------------------------------------------------------------
     # LLM call 1b: flagship market data extraction (sovereign only)
+    #
+    # Uses the country + education research already gathered above —
+    # no separate Perplexity call needed. The deep-research results
+    # contain city populations, income distributions, private school
+    # tuitions, and UHNW data that the LLM can synthesize.
     # ------------------------------------------------------------------
     if target_type != TargetType.US_STATE:
-        if not flagship_research_text:
+        if not research_text and not edu_research_text:
             logger.warning(
-                "Flagship research returned empty text for %s "
-                "— Perplexity call may have failed. "
-                "Flagship optimization will use fallback defaults.",
+                "No research text available for %s "
+                "— flagship optimization will use fallback defaults.",
                 target,
             )
         else:
             logger.info(
-                "Flagship research text received for %s: %d chars",
-                target, len(flagship_research_text),
+                "Extracting flagship market data for %s from "
+                "country research (%d chars) + education research (%d chars)",
+                target, len(research_text), len(edu_research_text),
             )
             try:
                 fmd: FlagshipMarketData = await call_llm(
                     system_prompt=FLAGSHIP_EXTRACTION_PROMPT,
                     user_prompt=(
                         f"Target country: {target}\n\n"
-                        f"Flagship Market Research:\n"
-                        f"{flagship_research_text}\n\n"
-                        f"General Country Research:\n"
-                        f"{research_text[:3000]}\n\n"
-                        f"Education Research:\n"
-                        f"{edu_research_text[:2000]}"
+                        f"Country Research (demographics, economy, "
+                        f"income distribution, cities, UHNW data):\n"
+                        f"{research_text[:6000]}\n\n"
+                        f"Education Research (school tuitions, private "
+                        f"school market, premium schools):\n"
+                        f"{edu_research_text[:4000]}"
                     ),
                     output_schema=FlagshipMarketData,
                 )
