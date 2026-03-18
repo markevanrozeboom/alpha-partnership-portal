@@ -250,14 +250,14 @@ def convert_docx_to_pdf(docx_path: str) -> str:
 
             text = _clean_text(para.text.strip())
             if not text:
-                pdf.ln(3)
+                pdf.ln(4)
                 continue
 
             style_name = para.style.name if para.style else ""
 
             # --- Headings ---
             if style_name.startswith("Heading 1") or style_name == "Heading 1":
-                pdf.ln(6)
+                pdf.ln(10)
                 pdf.set_font("Helvetica", "B", 18)
                 pdf.set_text_color(*DARK)
                 pdf.multi_cell(0, 9, text)
@@ -265,23 +265,23 @@ def convert_docx_to_pdf(docx_path: str) -> str:
                 pdf.set_draw_color(*ACCENT)
                 pdf.set_line_width(0.5)
                 pdf.line(10, pdf.get_y() + 1, 80, pdf.get_y() + 1)
-                pdf.ln(5)
+                pdf.ln(6)
                 pdf.set_text_color(*TEXT_COLOR)
 
             elif style_name.startswith("Heading 2"):
-                pdf.ln(5)
+                pdf.ln(8)
                 pdf.set_font("Helvetica", "B", 14)
                 pdf.set_text_color(*ACCENT)
                 pdf.multi_cell(0, 8, text)
-                pdf.ln(2)
+                pdf.ln(4)
                 pdf.set_text_color(*TEXT_COLOR)
 
             elif style_name.startswith("Heading 3"):
-                pdf.ln(3)
+                pdf.ln(6)
                 pdf.set_font("Helvetica", "B", 12)
                 pdf.set_text_color(*TEXT_COLOR)
                 pdf.multi_cell(0, 7, text)
-                pdf.ln(2)
+                pdf.ln(3)
 
             # --- List items ---
             elif style_name.startswith("List Bullet"):
@@ -290,14 +290,14 @@ def convert_docx_to_pdf(docx_path: str) -> str:
                 pdf.get_x()
                 pdf.cell(8, 6, "-")
                 pdf.multi_cell(0, 6, text)
-                pdf.ln(1)
+                pdf.ln(3)
 
             elif style_name.startswith("List Number"):
                 pdf.set_font("Helvetica", "", 10)
                 pdf.set_text_color(*TEXT_COLOR)
                 pdf.cell(8, 6, " ")
                 pdf.multi_cell(0, 6, text)
-                pdf.ln(1)
+                pdf.ln(3)
 
             # --- Regular paragraphs ---
             else:
@@ -317,7 +317,7 @@ def convert_docx_to_pdf(docx_path: str) -> str:
                     pdf.set_font("Helvetica", "", 10)
 
                 pdf.multi_cell(0, 6, text)
-                pdf.ln(2)
+                pdf.ln(5)
                 pdf.set_text_color(*TEXT_COLOR)
 
         # --- Table ---
