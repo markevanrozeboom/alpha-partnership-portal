@@ -119,19 +119,24 @@ Given the research text below, extract data for each of the TOP 3 METROS \
 (by population) in the country.
 
 For EACH metro provide:
-- metro_name: name of the metropolitan area
+- metro_name: name of the metropolitan area (e.g. "Paris", "Lyon", "Marseille")
 - is_capital: true if this metro contains the national capital
-- metro_population: estimated metro area population (integer)
+- metro_population: estimated metro area population (integer, e.g. 12000000)
 - k12_children: estimated K-12 age children (ages 5-18) in the metro (integer)
 - children_in_families_income_above_200k: estimated K-12 children living in \
-families with annual household income ≥ $200,000 USD (integer). Use PPP \
-conversion if the research provides local-currency data.
+families with annual household income ≥ $200,000 USD (integer). \
+ESTIMATION METHOD: Use the country's income distribution and Gini coefficient. \
+For example, if a metro has 2M K-12 children and ~5% of households earn >$200K \
+(PPP-adjusted), that's ~100,000 children. In wealthy OECD countries (France, UK, \
+Germany), typically 3-8% of households exceed $200K. YOU MUST provide a non-zero \
+estimate for any OECD or high-income country.
 - children_in_families_income_above_500k: estimated K-12 children living in \
-families with annual household income ≥ $500,000 USD (integer). Use PPP \
-conversion if the research provides local-currency data.
+families with annual household income ≥ $500,000 USD (integer). \
+Typically 0.5-2% of households in wealthy countries. YOU MUST estimate this.
 - most_expensive_nonboarding_tuition: annual tuition in USD of the most \
 expensive NON-BOARDING private school in this metro (float). If only local \
-currency is given, convert to USD.
+currency is given, convert to USD. For major world cities, elite non-boarding \
+schools typically charge $20,000-$50,000/year.
 - most_expensive_nonboarding_school: name of that school (string)
 
 Also provide:
@@ -139,13 +144,17 @@ Also provide:
 private school annual tuition in the entire country (float, USD)
 - country_most_expensive_nonboarding_school: name of that school (string)
 
-IMPORTANT:
-- Provide your best numerical ESTIMATE for every field. Never leave zeros \
-unless you truly believe the answer is zero.
-- For income thresholds, reason from the country's income distribution, \
-Gini coefficient, and wealth data.
-- Order metros by population (largest first).
-- Output valid JSON matching the FlagshipMarketData schema.
+CRITICAL RULES:
+1. NEVER return zeros for children_in_families_income_above_200k or \
+children_in_families_income_above_500k for any OECD or high-income country. \
+Every major metro in a wealthy country has thousands of affluent families.
+2. ALWAYS provide your best numerical ESTIMATE. Educated estimates with \
+clear reasoning are better than zeros.
+3. For income thresholds, reason step by step: metro population → households → \
+income distribution → % above threshold → children per household.
+4. Order metros by population (largest first).
+5. You MUST return exactly 3 metros for countries with 3+ major cities.
+6. Output valid JSON matching the FlagshipMarketData schema.
 """
 
 # ---------------------------------------------------------------------------
@@ -388,14 +397,32 @@ async def run_country_research(
                 )
                 profile.flagship_market_data = fmd
                 logger.info(
-                    "Flagship market data extracted: %d metros, "
-                    "top school $%s",
+                    "Flagship market data extracted for %s: "
+                    "%d metros, top school $%s (%s)",
+                    target,
                     len(fmd.metros),
                     f"{fmd.country_most_expensive_nonboarding_tuition:,.0f}",
+                    fmd.country_most_expensive_nonboarding_school,
                 )
+                # Log detailed metro data for debugging
+                for i, m in enumerate(fmd.metros):
+                    logger.info(
+                        "  Metro %d: %s (capital=%s) — "
+                        "pop=%s, k12=%s, "
+                        ">$200K=%s, >$500K=%s, "
+                        "top school=$%s (%s)",
+                        i + 1, m.metro_name, m.is_capital,
+                        f"{m.metro_population:,}",
+                        f"{m.k12_children:,}",
+                        f"{m.children_in_families_income_above_200k:,}",
+                        f"{m.children_in_families_income_above_500k:,}",
+                        f"{m.most_expensive_nonboarding_tuition:,.0f}",
+                        m.most_expensive_nonboarding_school,
+                    )
             except Exception as exc:
                 logger.warning(
-                    "Flagship market data extraction failed: %s", exc,
+                    "Flagship market data extraction FAILED for %s: %s",
+                    target, exc, exc_info=True,
                 )
 
     # ------------------------------------------------------------------

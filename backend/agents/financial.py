@@ -101,8 +101,29 @@ def optimize_flagships(
     result = FlagshipOptimizationResult()
 
     if not market_data or not market_data.metros:
-        logger.warning("No flagship market data — returning empty result")
+        logger.warning(
+            "No flagship market data — returning empty result. "
+            "market_data=%s, metros=%s",
+            "present" if market_data else "None",
+            len(market_data.metros) if market_data else 0,
+        )
         return result
+
+    logger.info(
+        "optimize_flagships: %d metros provided, "
+        "country top school $%s (%s)",
+        len(market_data.metros),
+        f"{market_data.country_most_expensive_nonboarding_tuition:,.0f}",
+        market_data.country_most_expensive_nonboarding_school,
+    )
+    for i, m in enumerate(market_data.metros):
+        logger.info(
+            "  Input metro %d: %s (capital=%s) — "
+            ">$200K=%s children, >$500K=%s children",
+            i + 1, m.metro_name, m.is_capital,
+            f"{m.children_in_families_income_above_200k:,}",
+            f"{m.children_in_families_income_above_500k:,}",
+        )
 
     # Store school comparison data
     result.most_expensive_school_tuition = (
@@ -119,13 +140,19 @@ def optimize_flagships(
     for metro in market_data.metros[:3]:  # Limited to top 3
         eligible = _interpolate_eligible_children(metro, min_agi_at_floor)
         demand = int(eligible * penetration_rate)
+        logger.info(
+            "  Qualifying check: %s — eligible_children=%s, "
+            "demand_at_20%%=%d, min_capacity=%d → %s",
+            metro.metro_name, f"{eligible:,}", demand, capacity_min,
+            "QUALIFIES" if demand >= capacity_min else "DOES NOT QUALIFY",
+        )
         if demand >= capacity_min:
             qualifying_metros.append(metro)
-        else:
-            logger.info(
-                "Metro %s does not qualify: demand=%d (need %d)",
-                metro.metro_name, demand, capacity_min,
-            )
+
+    logger.info(
+        "  %d of %d metros qualify for flagships",
+        len(qualifying_metros), len(market_data.metros[:3]),
+    )
 
     if not qualifying_metros:
         result.scholarship_needed = True
