@@ -1027,6 +1027,13 @@ def _extract_financial_values(
                 "students": p.students,
             })
 
+    # --- National student commitment (Prong 2 only, excludes flagship) ---
+    national_students = int(
+        model.national_students
+        if model.national_students
+        else 100_000
+    )
+
     # --- Flagship data ---
     flagship_tuition = model.flagship_tuition or 0
     flagship_students_total = model.flagship_students or 0
@@ -1039,6 +1046,7 @@ def _extract_financial_values(
     return {
         "per_student": per_student,
         "y5_students": y5_students,
+        "national_students": national_students,
         "num_schools": num_schools,
         "upfront_alphacore": upfront_alphacore,
         "upfront_incept_edllm": upfront_incept_edllm,
@@ -1430,11 +1438,11 @@ def _add_school_network_section(
         "adoption.",
     )
 
-    y5 = fin["y5_students"]
-    broader_market = int(y5 * 1.5)
+    nat = fin["national_students"]
+    broader_market = int(nat * 1.5)
     _add_body(
         doc,
-        f"A staged scaling plan targets {y5:,} "
+        f"A staged scaling plan targets {nat:,} "
         f"{cv.country_adjective} students by Year 5, with a "
         f"broader market opportunity of {broader_market:,}+ "
         "students:",
@@ -1484,10 +1492,11 @@ def _add_sequencing_section(
     """Build the High-level Sequencing Plan (UAE benchmark)."""
     doc.add_heading("High-level Sequencing Plan", level=1)
 
-    # Extract student counts for phase descriptions
-    phase1_students = fin["y5_students"] // 20   # ~5% of target
-    phase2_mid = fin["y5_students"] // 4         # ~25% of target
-    phase2_high = fin["y5_students"] // 2        # ~50% of target
+    # Extract student counts for phase descriptions (national commitment)
+    nat = fin["national_students"]
+    phase1_students = nat // 20   # ~5% of target
+    phase2_mid = nat // 4         # ~25% of target
+    phase2_high = nat // 2        # ~50% of target
 
     # Launch school year
     launch_sy_start = 26  # SY26-27 as baseline
@@ -1679,7 +1688,7 @@ def _add_deal_terms_section(
     )
     _add_list_item(
         doc,
-        f"Minimum {fin['y5_students']:,} students per year commitment.",
+        f"Minimum {fin['national_students']:,} students per year commitment.",
     )
     _add_list_item(
         doc,
@@ -1857,14 +1866,20 @@ def _add_investment_table(
     mgmt_pct = fin["mgmt_pct"]
     tb_pct = fin["timeback_pct"]
     per_student = fin["per_student"]
-    y5_students = fin["y5_students"]
+    national_students = fin["national_students"]  # Prong 2 commitment (100K)
     parent_ed = fin.get("parent_education_annual", 50)
     scholarship_gap = fin.get("funding_gap_per_student", 0)
 
-    # Calculate ongoing annual fees at scale
-    ongoing_timeback = round(y5_students * per_student * (tb_pct / 100) / 1_000_000)
-    ongoing_operating = round(y5_students * per_student * (mgmt_pct / 100) / 1_000_000)
-    ongoing_scholarship = round(y5_students * scholarship_gap / 1_000_000)
+    # Calculate ongoing annual fees at scale (based on national commitment)
+    ongoing_timeback = round(
+        national_students * per_student * (tb_pct / 100) / 1_000_000
+    )
+    ongoing_operating = round(
+        national_students * per_student * (mgmt_pct / 100) / 1_000_000
+    )
+    ongoing_scholarship = round(
+        national_students * scholarship_gap / 1_000_000
+    )
 
     headers = [
         "Investment Item",
@@ -1910,13 +1925,13 @@ def _add_investment_table(
             "Timeback (Prepaid)",
             f"${fin['upfront_timeback']:,.0f}",
             "",
-            f"{y5_students:,} students x ${5_000:,}/student",
+            f"{national_students:,} students x ${5_000:,}/student",
         ],
         [
             "Operating Fee (Prepaid)",
             f"${fin['upfront_mgmt']:,.0f}",
             "",
-            f"{y5_students:,} students x ${2_500:,}/student",
+            f"{national_students:,} students x ${2_500:,}/student",
         ],
         # --- Separator: Ongoing ---
         [sep_ongoing, sep_ongoing, sep_ongoing, sep_ongoing],
