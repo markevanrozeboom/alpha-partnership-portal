@@ -12,6 +12,9 @@ import unicodedata
 from datetime import datetime
 
 from docx import Document as DocxDocument
+from docx.oxml.ns import qn
+from docx.table import Table as DocxTable
+from docx.text.paragraph import Paragraph
 from fpdf import FPDF
 
 logger = logging.getLogger(__name__)
@@ -222,112 +225,126 @@ def convert_docx_to_pdf(docx_path: str) -> str:
         target=f"2hr Learning (Alpha) x {target_name}",
     )
 
-    # Content pages
+    # Content pages — iterate body elements in document order so
+    # tables appear exactly where they were inserted (not all at the end).
     pdf.add_page()
     pdf.set_text_color(*TEXT_COLOR)
 
-    for para in doc.paragraphs:
-        text = _clean_text(para.text.strip())
-        if not text:
-            pdf.ln(3)
-            continue
+    for element in doc.element.body:
+        tag = element.tag
 
-        style_name = para.style.name if para.style else ""
+        # --- Paragraph ---
+        if tag == qn("w:p"):
+            para = Paragraph(element, doc)
+            text = _clean_text(para.text.strip())
+            if not text:
+                pdf.ln(3)
+                continue
 
-        # --- Headings ---
-        if style_name.startswith("Heading 1") or style_name == "Heading 1":
-            pdf.ln(6)
-            pdf.set_font("Helvetica", "B", 18)
-            pdf.set_text_color(*DARK)
-            pdf.multi_cell(0, 9, text)
-            # Accent underline
-            pdf.set_draw_color(*ACCENT)
-            pdf.set_line_width(0.5)
-            pdf.line(10, pdf.get_y() + 1, 80, pdf.get_y() + 1)
-            pdf.ln(5)
-            pdf.set_text_color(*TEXT_COLOR)
+            style_name = para.style.name if para.style else ""
 
-        elif style_name.startswith("Heading 2"):
-            pdf.ln(5)
-            pdf.set_font("Helvetica", "B", 14)
-            pdf.set_text_color(*ACCENT)
-            pdf.multi_cell(0, 8, text)
-            pdf.ln(2)
-            pdf.set_text_color(*TEXT_COLOR)
+            # --- Headings ---
+            if style_name.startswith("Heading 1") or style_name == "Heading 1":
+                pdf.ln(6)
+                pdf.set_font("Helvetica", "B", 18)
+                pdf.set_text_color(*DARK)
+                pdf.multi_cell(0, 9, text)
+                # Accent underline
+                pdf.set_draw_color(*ACCENT)
+                pdf.set_line_width(0.5)
+                pdf.line(10, pdf.get_y() + 1, 80, pdf.get_y() + 1)
+                pdf.ln(5)
+                pdf.set_text_color(*TEXT_COLOR)
 
-        elif style_name.startswith("Heading 3"):
-            pdf.ln(3)
-            pdf.set_font("Helvetica", "B", 12)
-            pdf.set_text_color(*TEXT_COLOR)
-            pdf.multi_cell(0, 7, text)
-            pdf.ln(2)
+            elif style_name.startswith("Heading 2"):
+                pdf.ln(5)
+                pdf.set_font("Helvetica", "B", 14)
+                pdf.set_text_color(*ACCENT)
+                pdf.multi_cell(0, 8, text)
+                pdf.ln(2)
+                pdf.set_text_color(*TEXT_COLOR)
 
-        # --- List items ---
-        elif style_name.startswith("List Bullet"):
-            pdf.set_font("Helvetica", "", 10)
-            pdf.set_text_color(*TEXT_COLOR)
-            pdf.get_x()
-            pdf.cell(8, 6, "-")
-            pdf.multi_cell(0, 6, text)
-            pdf.ln(1)
+            elif style_name.startswith("Heading 3"):
+                pdf.ln(3)
+                pdf.set_font("Helvetica", "B", 12)
+                pdf.set_text_color(*TEXT_COLOR)
+                pdf.multi_cell(0, 7, text)
+                pdf.ln(2)
 
-        elif style_name.startswith("List Number"):
-            pdf.set_font("Helvetica", "", 10)
-            pdf.set_text_color(*TEXT_COLOR)
-            pdf.cell(8, 6, " ")
-            pdf.multi_cell(0, 6, text)
-            pdf.ln(1)
-
-        # --- Regular paragraphs ---
-        else:
-            # Check for bold runs
-            has_bold = any(run.bold for run in para.runs if run.text.strip())
-            has_italic = any(run.italic for run in para.runs if run.text.strip())
-
-            if has_bold and len(para.runs) == 1:
-                pdf.set_font("Helvetica", "B", 10)
-            elif has_italic and len(para.runs) == 1:
-                pdf.set_font("Helvetica", "I", 9)
-                pdf.set_text_color(*MID_GRAY)
-            else:
+            # --- List items ---
+            elif style_name.startswith("List Bullet"):
                 pdf.set_font("Helvetica", "", 10)
-
-            pdf.multi_cell(0, 6, text)
-            pdf.ln(2)
-            pdf.set_text_color(*TEXT_COLOR)
-
-    # --- Render tables ---
-    for table in doc.tables:
-        pdf.ln(4)
-        num_cols = len(table.columns)
-        if num_cols == 0:
-            continue
-
-        col_width = (pdf.w - 20) / num_cols
-
-        for ri, row in enumerate(table.rows):
-            # Header row gets accent background
-            if ri == 0:
-                pdf.set_fill_color(*ACCENT)
-                pdf.set_text_color(*WHITE)
-                pdf.set_font("Helvetica", "B", 9)
-            elif ri % 2 == 0:
-                pdf.set_fill_color(*LIGHT_GRAY)
                 pdf.set_text_color(*TEXT_COLOR)
-                pdf.set_font("Helvetica", "", 9)
+                pdf.get_x()
+                pdf.cell(8, 6, "-")
+                pdf.multi_cell(0, 6, text)
+                pdf.ln(1)
+
+            elif style_name.startswith("List Number"):
+                pdf.set_font("Helvetica", "", 10)
+                pdf.set_text_color(*TEXT_COLOR)
+                pdf.cell(8, 6, " ")
+                pdf.multi_cell(0, 6, text)
+                pdf.ln(1)
+
+            # --- Regular paragraphs ---
             else:
-                pdf.set_fill_color(*WHITE)
+                has_bold = any(
+                    run.bold for run in para.runs if run.text.strip()
+                )
+                has_italic = any(
+                    run.italic for run in para.runs if run.text.strip()
+                )
+
+                if has_bold and len(para.runs) == 1:
+                    pdf.set_font("Helvetica", "B", 10)
+                elif has_italic and len(para.runs) == 1:
+                    pdf.set_font("Helvetica", "I", 9)
+                    pdf.set_text_color(*MID_GRAY)
+                else:
+                    pdf.set_font("Helvetica", "", 10)
+
+                pdf.multi_cell(0, 6, text)
+                pdf.ln(2)
                 pdf.set_text_color(*TEXT_COLOR)
-                pdf.set_font("Helvetica", "", 9)
 
-            row_height = 7
-            for ci, cell in enumerate(row.cells):
-                cell_text = _clean_text(cell.text.strip())[:60]  # Truncate long cells
-                pdf.cell(col_width, row_height, cell_text, border=1, fill=True)
+        # --- Table ---
+        elif tag == qn("w:tbl"):
+            table = DocxTable(element, doc)
+            pdf.ln(4)
+            num_cols = len(table.columns)
+            if num_cols == 0:
+                continue
 
-            pdf.ln(row_height)
+            col_width = (pdf.w - 20) / num_cols
 
-        pdf.ln(4)
+            for ri, row in enumerate(table.rows):
+                if ri == 0:
+                    pdf.set_fill_color(*ACCENT)
+                    pdf.set_text_color(*WHITE)
+                    pdf.set_font("Helvetica", "B", 9)
+                elif ri % 2 == 0:
+                    pdf.set_fill_color(*LIGHT_GRAY)
+                    pdf.set_text_color(*TEXT_COLOR)
+                    pdf.set_font("Helvetica", "", 9)
+                else:
+                    pdf.set_fill_color(*WHITE)
+                    pdf.set_text_color(*TEXT_COLOR)
+                    pdf.set_font("Helvetica", "", 9)
+
+                row_height = 7
+                for ci, cell in enumerate(row.cells):
+                    cell_text = _clean_text(
+                        cell.text.strip()
+                    )[:60]
+                    pdf.cell(
+                        col_width, row_height,
+                        cell_text, border=1, fill=True,
+                    )
+
+                pdf.ln(row_height)
+
+            pdf.ln(4)
 
     # Save
     pdf.output(pdf_path)
