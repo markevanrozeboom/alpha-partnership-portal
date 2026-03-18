@@ -157,6 +157,30 @@ class USStateESA(BaseModel):
     program_name: Optional[str] = None
 
 
+# ---------------------------------------------------------------------------
+# Flagship Market Data (metro-level inputs for grid search)
+# ---------------------------------------------------------------------------
+
+class MetroFlagshipInput(BaseModel):
+    """Metro-level data for flagship school sizing per financial_rules_v1.md."""
+    metro_name: str = ""
+    is_capital: bool = False
+    metro_population: int = 0
+    k12_children: int = 0
+    # Wealth thresholds: K-12 children in families with income ≥ threshold
+    children_in_families_income_above_200k: int = 0  # AGI ≥ $200K (5× $40K)
+    children_in_families_income_above_500k: int = 0  # AGI ≥ $500K (5× $100K)
+    most_expensive_nonboarding_tuition: float = 0
+    most_expensive_nonboarding_school: str = ""
+
+
+class FlagshipMarketData(BaseModel):
+    """Country-level flagship market data from research."""
+    metros: list[MetroFlagshipInput] = Field(default_factory=list)
+    country_most_expensive_nonboarding_tuition: float = 0
+    country_most_expensive_nonboarding_school: str = ""
+
+
 class CountryProfile(BaseModel):
     target: TargetInfo = Field(default_factory=TargetInfo)
     demographics: Demographics = Field(default_factory=Demographics)
@@ -166,6 +190,7 @@ class CountryProfile(BaseModel):
     political_context: PoliticalContext = Field(default_factory=PoliticalContext)
     competitive_landscape: CompetitiveLandscape = Field(default_factory=CompetitiveLandscape)
     us_state_esa: Optional[USStateESA] = None
+    flagship_market_data: Optional[FlagshipMarketData] = None
     research_sources: list[str] = Field(default_factory=list)
 
 
@@ -272,6 +297,8 @@ class FinancialAssumption(BaseModel):
 class FinancialAssumptions(BaseModel):
     """All assumptions for the financial model, grouped by category."""
     assumptions: list[FinancialAssumption] = Field(default_factory=list)
+    # Carries the flagship optimization result through to model builder
+    flagship_optimization: Optional["FlagshipOptimizationResult"] = None
 
 
 # ---------------------------------------------------------------------------
@@ -324,6 +351,34 @@ class SensitivityScenario(BaseModel):
     upside: float = 0
 
 
+class FlagshipMetroResult(BaseModel):
+    """Optimized flagship result for a single metro."""
+    metro_name: str = ""
+    is_capital: bool = False
+    schools: int = 0
+    capacity_per_school: int = 0
+    tuition: float = 0
+    annual_revenue: float = 0
+    eligible_children: int = 0
+    demand_at_penetration: int = 0
+
+
+class FlagshipOptimizationResult(BaseModel):
+    """Complete flagship optimization result across all metros."""
+    metros: list[FlagshipMetroResult] = Field(default_factory=list)
+    total_schools: int = 0
+    total_students: int = 0
+    optimal_tuition: float = 0
+    optimal_capacity: int = 0
+    total_annual_revenue: float = 0
+    tuition_exceeds_most_expensive: bool = True
+    most_expensive_school_name: str = ""
+    most_expensive_school_tuition: float = 0
+    # If no metros qualify, note scholarship requirements
+    scholarship_needed: bool = False
+    scholarship_note: str = ""
+
+
 class FinancialModel(BaseModel):
     pnl_projection: list[YearProjection] = Field(default_factory=list)
     unit_economics: list[UnitEconomics] = Field(default_factory=list)
@@ -343,10 +398,12 @@ class FinancialModel(BaseModel):
     upfront_timeback_fee: float = 0    # Timeback prepaid
     total_management_fee_revenue: float = 0
     total_timeback_license_revenue: float = 0
-    # Two-prong model
+    # Two-prong model — Flagship (Prong 1)
     flagship_tuition: float = 0
     flagship_students: int = 0
     flagship_revenue: float = 0
+    flagship_optimization: Optional[FlagshipOptimizationResult] = None
+    # Two-prong model — National (Prong 2)
     national_per_student_budget: float = 25_000
     national_students: int = 0
     national_revenue: float = 0

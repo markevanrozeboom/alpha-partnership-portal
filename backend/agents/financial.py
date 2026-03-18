@@ -19,6 +19,8 @@ from models.schemas import (
     FinancialModel, YearProjection, UnitEconomics, CapitalDeployment,
     ReturnsAnalysis, SensitivityScenario,
     Strategy, CountryProfile,
+    FlagshipMarketData, MetroFlagshipInput,
+    FlagshipOptimizationResult, FlagshipMetroResult,
 )
 from config import OUTPUT_DIR
 from config.rules_loader import (
@@ -31,6 +33,220 @@ from config.rules_loader import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Flagship Revenue-Maximizing Grid Search (financial_rules_v1.md)
+# ---------------------------------------------------------------------------
+
+def _interpolate_eligible_children(
+    metro: MetroFlagshipInput,
+    min_agi: float,
+) -> int:
+    """Estimate K-12 children in families with income ≥ min_agi.
+
+    Uses a Pareto (power-law) interpolation between the two known
+    data points: children at $200K and children at $500K thresholds.
+
+    Pareto model: N(x) = N_low × (x_low / x)^α
+    where α = ln(N_low / N_high) / ln(x_high / x_low)
+    """
+    n_200k = metro.children_in_families_income_above_200k
+    n_500k = metro.children_in_families_income_above_500k
+
+    # Guard: if no data, return 0
+    if n_200k <= 0:
+        return 0
+    # If asking for ≤ $200K threshold, return the $200K count
+    if min_agi <= 200_000:
+        return n_200k
+    # If asking for ≥ $500K threshold, return the $500K count
+    if min_agi >= 500_000:
+        return max(0, n_500k)
+
+    # Pareto interpolation
+    if n_500k <= 0 or n_500k >= n_200k:
+        # Can't compute alpha; linear fallback
+        frac = (min_agi - 200_000) / (500_000 - 200_000)
+        return max(0, int(n_200k + (n_500k - n_200k) * frac))
+
+    alpha = math.log(n_200k / n_500k) / math.log(500_000 / 200_000)
+    estimated = n_200k * (200_000 / min_agi) ** alpha
+    return max(0, int(estimated))
+
+
+def optimize_flagships(
+    market_data: FlagshipMarketData | None,
+    tuition_min: int = 40_000,
+    tuition_max: int = 100_000,
+    tuition_step: int = 5_000,
+    capacity_min: int = 250,
+    capacity_max: int = 1_000,
+    capacity_step: int = 50,
+    penetration_rate: float = 0.20,
+) -> FlagshipOptimizationResult:
+    """Revenue-maximizing grid search per financial_rules_v1.md.
+
+    For each (tuition, capacity) pair, calculate total revenue across
+    all qualifying metros and pick the combination that maximizes it.
+
+    Rules:
+    - Max 3 flagships in the capital city, 1 in each other top metro
+    - Top metros limited to 3 largest, each must support ≥ 250 students
+      at the minimum $40K tuition
+    - Tuition must exceed most expensive non-boarding school
+    - 20% penetration rate of eligible families
+    - Eligible = K-12 children in families with AGI ≥ 5× tuition
+    """
+    result = FlagshipOptimizationResult()
+
+    if not market_data or not market_data.metros:
+        logger.warning("No flagship market data — returning empty result")
+        return result
+
+    # Store school comparison data
+    result.most_expensive_school_tuition = (
+        market_data.country_most_expensive_nonboarding_tuition
+    )
+    result.most_expensive_school_name = (
+        market_data.country_most_expensive_nonboarding_school
+    )
+
+    # --- Step 1: Filter qualifying metros ---
+    # Each metro must have ≥ 250 eligible children at minimum tuition
+    min_agi_at_floor = 5 * tuition_min  # $200K
+    qualifying_metros: list[MetroFlagshipInput] = []
+    for metro in market_data.metros[:3]:  # Limited to top 3
+        eligible = _interpolate_eligible_children(metro, min_agi_at_floor)
+        demand = int(eligible * penetration_rate)
+        if demand >= capacity_min:
+            qualifying_metros.append(metro)
+        else:
+            logger.info(
+                "Metro %s does not qualify: demand=%d (need %d)",
+                metro.metro_name, demand, capacity_min,
+            )
+
+    if not qualifying_metros:
+        result.scholarship_needed = True
+        # Calculate the gap
+        if market_data.metros:
+            best_metro = market_data.metros[0]
+            eligible = _interpolate_eligible_children(
+                best_metro, min_agi_at_floor,
+            )
+            demand = int(eligible * penetration_rate)
+            gap = capacity_min - demand
+            result.scholarship_note = (
+                f"No metro supports a {capacity_min}-student, "
+                f"${tuition_min:,}/year flagship. "
+                f"{best_metro.metro_name} has ~{demand:,} eligible "
+                f"students at ${tuition_min:,} tuition. "
+                f"The country/state would need to fund ~{gap:,} "
+                f"scholarships to reach the minimum requirement."
+            )
+        return result
+
+    # --- Step 2: Determine minimum tuition floor ---
+    # Must exceed the most expensive non-boarding school
+    school_tuition_floor = (
+        market_data.country_most_expensive_nonboarding_tuition
+    )
+    # Round up to next $5K increment
+    if school_tuition_floor > 0:
+        effective_min = (
+            math.ceil(school_tuition_floor / tuition_step) * tuition_step
+        )
+        # Must strictly exceed, so bump if equal
+        if effective_min <= school_tuition_floor:
+            effective_min += tuition_step
+    else:
+        effective_min = tuition_min
+    effective_min = max(effective_min, tuition_min)
+
+    # --- Step 3: Grid search over (tuition, capacity) ---
+    best_revenue = 0
+    best_tuition = effective_min
+    best_capacity = capacity_min
+    best_metro_configs: list[dict] = []
+
+    for tuition in range(effective_min, tuition_max + 1, tuition_step):
+        min_agi = 5 * tuition
+
+        for capacity in range(capacity_min, capacity_max + 1, capacity_step):
+            total_revenue = 0
+            metro_configs: list[dict] = []
+
+            for metro in qualifying_metros:
+                max_schools = 3 if metro.is_capital else 1
+                eligible = _interpolate_eligible_children(metro, min_agi)
+                demand = int(eligible * penetration_rate)
+
+                if demand < capacity:
+                    # Not enough demand for even 1 school at this config
+                    continue
+
+                schools = min(max_schools, demand // capacity)
+                if schools < 1:
+                    continue
+
+                rev = schools * capacity * tuition
+                total_revenue += rev
+                metro_configs.append({
+                    "metro": metro.metro_name,
+                    "is_capital": metro.is_capital,
+                    "schools": schools,
+                    "capacity": capacity,
+                    "tuition": tuition,
+                    "revenue": rev,
+                    "eligible": eligible,
+                    "demand": demand,
+                })
+
+            if total_revenue > best_revenue:
+                best_revenue = total_revenue
+                best_tuition = tuition
+                best_capacity = capacity
+                best_metro_configs = metro_configs
+
+    # --- Step 4: Build result ---
+    result.optimal_tuition = best_tuition
+    result.optimal_capacity = best_capacity
+    result.total_annual_revenue = best_revenue
+    result.tuition_exceeds_most_expensive = (
+        best_tuition > school_tuition_floor if school_tuition_floor > 0
+        else True
+    )
+
+    total_schools = 0
+    total_students = 0
+    for cfg in best_metro_configs:
+        metro_students = cfg["schools"] * cfg["capacity"]
+        total_schools += cfg["schools"]
+        total_students += metro_students
+        result.metros.append(FlagshipMetroResult(
+            metro_name=cfg["metro"],
+            is_capital=cfg["is_capital"],
+            schools=cfg["schools"],
+            capacity_per_school=cfg["capacity"],
+            tuition=cfg["tuition"],
+            annual_revenue=cfg["revenue"],
+            eligible_children=cfg["eligible"],
+            demand_at_penetration=cfg["demand"],
+        ))
+
+    result.total_schools = total_schools
+    result.total_students = total_students
+
+    logger.info(
+        "Flagship optimization: tuition=$%s, capacity=%d, "
+        "schools=%d, students=%d, revenue=$%sM",
+        f"{best_tuition:,.0f}", best_capacity,
+        total_schools, total_students,
+        f"{best_revenue / 1_000_000:,.0f}",
+    )
+
+    return result
 
 # ---------------------------------------------------------------------------
 # Phase 1: Generate Assumptions
@@ -79,21 +295,29 @@ def _generate_sovereign_assumptions(
     dev_costs = get_fixed_development_costs()
     fee_floors = get_fee_floors()
 
-    # --- Prong 1: Flagship ---
-    # Tuition set by AGI of top 20% families; default to midpoint of range
-    gdp_cap = country_profile.economy.gdp_per_capita or 30_000
-    # Use GDP per capita as a rough proxy for flagship tuition positioning
-    # Higher GDP → higher in the $40K-$100K range
-    gdp_ratio = min(1.0, max(0.0, (gdp_cap - 10_000) / 80_000))
-    default_flagship_tuition = round(
-        (tuition_min + (tuition_max - tuition_min) * gdp_ratio) / 5_000
-    ) * 5_000  # $5K increments per rules
-    default_flagship_tuition = max(tuition_min, min(tuition_max, default_flagship_tuition))
+    # --- Prong 1: Flagship (revenue-maximizing grid search) ---
+    flagship_opt = optimize_flagships(
+        market_data=country_profile.flagship_market_data,
+        tuition_min=tuition_min,
+        tuition_max=tuition_max,
+    )
 
-    # Flagship schools: capital city + top metros, max 3 flagships in capital + 1 per other metro
-    default_flagship_schools = 3
-    default_flagship_students_per_school = 500  # 250-1000 range, 50-student increments
-    _flagship_fill_rate = 0.50  # 50% backstop  # noqa: F841
+    if flagship_opt.total_schools > 0:
+        default_flagship_tuition = int(flagship_opt.optimal_tuition)
+        default_flagship_schools = flagship_opt.total_schools
+        default_flagship_students_per_school = flagship_opt.optimal_capacity
+    else:
+        # Fallback: GDP-per-capita proxy (same as before)
+        gdp_cap = country_profile.economy.gdp_per_capita or 30_000
+        gdp_ratio = min(1.0, max(0.0, (gdp_cap - 10_000) / 80_000))
+        default_flagship_tuition = round(
+            (tuition_min + (tuition_max - tuition_min) * gdp_ratio) / 5_000
+        ) * 5_000
+        default_flagship_tuition = max(
+            tuition_min, min(tuition_max, default_flagship_tuition),
+        )
+        default_flagship_schools = 0
+        default_flagship_students_per_school = 0
 
     # --- Prong 2: National ---
     # 100K student-year minimum commitment
@@ -111,6 +335,24 @@ def _generate_sovereign_assumptions(
     # Fixed development total: $1B (4 × $250M)
     fixed_dev_total_m = round(dev_costs["total"] / 1_000_000)
 
+    # Build description strings from optimization
+    _opt_desc_tuition = (
+        f"Optimized via grid search. $5K increments. "
+        f"Exceeds most expensive non-boarding school "
+        f"(${flagship_opt.most_expensive_school_tuition:,.0f})."
+        if flagship_opt.most_expensive_school_tuition > 0
+        else "Set by AGI of top 20% families. $5K increments."
+    )
+    _opt_desc_schools = (
+        "From grid search: "
+        + ", ".join(
+            f"{m.metro_name} ({m.schools})"
+            for m in flagship_opt.metros
+        )
+        if flagship_opt.metros
+        else "Max 3 in capital + 1 per other top metro"
+    )
+
     assumptions = [
         # --- Prong 1: Flagship ---
         FinancialAssumption(
@@ -118,15 +360,14 @@ def _generate_sovereign_assumptions(
             value=default_flagship_tuition,
             min_val=tuition_min, max_val=tuition_max, step=5_000,
             unit="$", category="prong_1_flagship",
-            description="Set by AGI of top 20% families. $5K increments. "
-            "Must exceed most expensive non-boarding school.",
+            description=_opt_desc_tuition,
         ),
         FinancialAssumption(
             key="flagship_schools", label="Flagship School Count",
             value=default_flagship_schools,
-            min_val=1, max_val=10, step=1,
+            min_val=0, max_val=10, step=1,
             unit="schools", category="prong_1_flagship",
-            description="Max 3 in capital + 1 per other top metro (limited to 3 largest metros)",
+            description=_opt_desc_schools,
         ),
         FinancialAssumption(
             key="flagship_students_per_school",
@@ -297,7 +538,10 @@ def _generate_sovereign_assumptions(
         ),
     ]
 
-    return FinancialAssumptions(assumptions=assumptions)
+    return FinancialAssumptions(
+        assumptions=assumptions,
+        flagship_optimization=flagship_opt,
+    )
 
 
 def _generate_us_state_assumptions(
@@ -513,12 +757,15 @@ def build_model(
 
     # Detect sovereign two-prong model vs US state model
     if "flagship_tuition" in a:
-        return _build_sovereign_model(a)
+        return _build_sovereign_model(a, assumptions.flagship_optimization)
 
     return _build_us_state_model(a)
 
 
-def _build_sovereign_model(a: dict) -> FinancialModel:
+def _build_sovereign_model(
+    a: dict,
+    flagship_opt: FlagshipOptimizationResult | None = None,
+) -> FinancialModel:
     """Build the two-prong sovereign nation model.
 
     Prong 1: Flagship schools × students × tuition × fill rate
@@ -725,6 +972,7 @@ def _build_sovereign_model(a: dict) -> FinancialModel:
         flagship_tuition=flagship_tuition,
         flagship_students=flagship_students,
         flagship_revenue=round(flagship_students * flagship_tuition),
+        flagship_optimization=flagship_opt,
         national_per_student_budget=national_budget,
         national_students=national_students_y5,
         national_revenue=round(national_students_y5 * national_budget),

@@ -235,6 +235,46 @@ async def research_education(country: str) -> dict:
     return await deep_research(query)
 
 
+async def research_flagship_markets(country: str) -> dict:
+    """Research metro-level wealth and school data for flagship sizing.
+
+    Gathers the data needed by the revenue-maximizing grid search
+    defined in financial_rules_v1.md:
+      - Top 3 metros: K-12 children, wealthy-family income distribution
+      - Most expensive non-boarding school and tuition per metro
+    """
+    query = (
+        f"I am sizing premium flagship schools in {country}'s top "
+        f"metropolitan areas. I need SPECIFIC NUMBERS for each of the "
+        f"3 largest metro areas (by population).\n\n"
+        f"For EACH of the top 3 metro areas in {country}, provide:\n"
+        f"1. Metro area name and whether it is the capital city\n"
+        f"2. Metro area total population\n"
+        f"3. Estimated number of school-age children (K-12, ages 5-18) "
+        f"living in that metro area\n"
+        f"4. Estimated number of K-12 children living in families/households "
+        f"with annual household income (or AGI) of $200,000 USD or more "
+        f"(use purchasing power parity if needed to convert local currency). "
+        f"Show your reasoning.\n"
+        f"5. Estimated number of K-12 children living in families/households "
+        f"with annual household income (or AGI) of $500,000 USD or more. "
+        f"Show your reasoning.\n"
+        f"6. The single most expensive NON-BOARDING private school in that "
+        f"metro area: school name AND annual tuition in USD\n"
+        f"7. Any other ultra-premium non-boarding private schools and their "
+        f"tuitions (top 3-5 by price)\n\n"
+        f"Also provide:\n"
+        f"8. The single most expensive non-boarding private school in "
+        f"{country} overall: name and annual tuition in USD\n"
+        f"9. Average number of school-age children per affluent family in "
+        f"{country} (fertility / family size data for top income bracket)\n\n"
+        f"IMPORTANT: I need NUMBERS, not ranges. Best estimates with "
+        f"sourced reasoning are acceptable. Convert all currencies to USD.\n"
+        f"Provide specific numbers, years, and source citations."
+    )
+    return await deep_research(query)
+
+
 async def research_us_state(state: str) -> dict:
     """Research a US state's education and ESA/voucher landscape."""
     query = (

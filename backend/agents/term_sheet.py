@@ -333,20 +333,29 @@ def generate_term_sheet_assumptions(
         FinancialAssumption(
             key="ts_num_flagship_schools",
             label="Flagship Alpha Schools",
-            value=2, min_val=0, max_val=10, step=1,
+            value=(
+                financial_model.flagship_optimization.total_schools
+                if financial_model.flagship_optimization
+                else int(fa.get("flagship_schools", 0))
+            ),
+            min_val=0, max_val=10, step=1,
             unit="schools", category="school_portfolio",
             description=(
-                "Premium flagship schools ($100K+ tuition) "
-                "for halo effect"
+                "From revenue-maximizing grid search on "
+                "metro-level AGI data"
             ),
         ),
         FinancialAssumption(
             key="ts_flagship_tuition",
             label="Flagship School Tuition ($)",
-            value=100_000 if not is_us_state else 50_000,
-            min_val=25_000, max_val=200_000, step=5_000,
+            value=(
+                financial_model.flagship_tuition
+                if financial_model.flagship_tuition > 0
+                else (100_000 if not is_us_state else 50_000)
+            ),
+            min_val=40_000, max_val=100_000, step=5_000,
             unit="$", category="school_portfolio",
-            description="Annual tuition for flagship Alpha schools",
+            description="Optimized tuition from grid search",
         ),
         FinancialAssumption(
             key="ts_num_schools",
@@ -1034,14 +1043,22 @@ def _extract_financial_values(
         else 100_000
     )
 
-    # --- Flagship data ---
+    # --- Flagship data (from optimization result) ---
+    flagship_opt = model.flagship_optimization
     flagship_tuition = model.flagship_tuition or 0
     flagship_students_total = model.flagship_students or 0
-    flagship_schools = int(ts.get("ts_num_flagship_schools", 3))
-    flagship_per_school = (
-        flagship_students_total // max(1, flagship_schools)
-        if flagship_students_total else 500
-    )
+
+    # Derive schools and per-school from optimization metros
+    if flagship_opt and flagship_opt.total_schools > 0:
+        flagship_schools = flagship_opt.total_schools
+        flagship_per_school = flagship_opt.optimal_capacity
+    else:
+        flagship_schools = int(ts.get("ts_num_flagship_schools", 0))
+        flagship_per_school = (
+            flagship_students_total // max(1, flagship_schools)
+            if flagship_students_total and flagship_schools
+            else 0
+        )
 
     return {
         "per_student": per_student,
@@ -1076,6 +1093,7 @@ def _extract_financial_values(
         "flagship_students_total": flagship_students_total,
         "flagship_schools": flagship_schools,
         "flagship_per_school": flagship_per_school,
+        "flagship_optimization": flagship_opt,
     }
 
 
@@ -1730,9 +1748,11 @@ def _add_school_design_section(
 
     _add_body(
         doc,
-        "100% owned by Alpha. These are the Halo Brand — premium "
-        "flagship schools in the country's top metros.",
+        "100% owned by Alpha. These are the Halo Brand \u2014 premium "
+        "flagship schools in the country\u2019s top metros.",
     )
+
+    flagship_opt = fin.get("flagship_optimization")
 
     _add_list_item(
         doc,
@@ -1744,13 +1764,18 @@ def _add_school_design_section(
     )
     _add_list_item(
         doc,
-        f"Capacity: {fin.get('flagship_per_school', 500):,} students per school "
-        "(250-1,000 range, 50-student increments).",
+        f"Capacity: {fin.get('flagship_per_school', 0):,} "
+        "students per school.",
     )
     _add_list_item(
         doc,
         "Country/State provides 50% capacity backstop for 5 years.",
     )
+
+    # If no metros qualified, note the scholarship requirement
+    if flagship_opt and flagship_opt.scholarship_needed:
+        doc.add_paragraph()
+        _add_body(doc, flagship_opt.scholarship_note)
 
     doc.add_paragraph()  # spacer
 
@@ -1975,53 +2000,22 @@ def _add_flagship_summary_table(
 ) -> None:
     """Add the Alpha Flagship summary table (Table 3).
 
-    Shows: metro, number of schools, students per school, tuition, revenue.
-    Flagship Alphas are 100% Alpha-owned, operating at 25% margin.
+    Uses the optimization result when available — shows real metro names,
+    data-driven school counts, capacity, and tuition from the grid search.
+    Falls back to synthetic rows when no optimization data exists.
     """
+    flagship_opt = fin.get("flagship_optimization")
     flagship_tuition = fin.get("flagship_tuition", 0)
-    flagship_schools = fin.get("flagship_schools", 3)
-    flagship_per_school = fin.get("flagship_per_school", 500)
-    _flagship_total_students = fin.get("flagship_students_total", 0)  # noqa: F841
-    _flagship_revenue = model.flagship_revenue or 0  # noqa: F841
+    flagship_schools = fin.get("flagship_schools", 0)
+    flagship_per_school = fin.get("flagship_per_school", 0)
 
     if flagship_tuition == 0 or flagship_schools == 0:
-        # No flagship data available — skip table
         _add_body(
             doc,
             "Flagship Alpha school details to be determined based on "
             "metro-level AGI analysis.",
         )
         return
-
-    # Build metro rows
-    # Capital city gets up to 3 schools; other metros get 1 each
-    capital_schools = min(3, flagship_schools)
-    remaining_schools = flagship_schools - capital_schools
-    metro_rows: list[dict] = []
-
-    metro_rows.append({
-        "metro": cv.first_launch_city or "Capital City",
-        "schools": capital_schools,
-        "students": capital_schools * flagship_per_school,
-        "tuition": flagship_tuition,
-    })
-
-    if remaining_schools >= 1:
-        metro_rows.append({
-            "metro": cv.second_city or "Second Metro",
-            "schools": min(1, remaining_schools),
-            "students": min(1, remaining_schools) * flagship_per_school,
-            "tuition": flagship_tuition,
-        })
-        remaining_schools -= 1
-
-    if remaining_schools >= 1:
-        metro_rows.append({
-            "metro": "Third Metro",
-            "schools": remaining_schools,
-            "students": remaining_schools * flagship_per_school,
-            "tuition": flagship_tuition,
-        })
 
     headers = [
         "Metro",
@@ -2036,17 +2030,31 @@ def _add_flagship_summary_table(
     total_students = 0
     total_revenue = 0
 
-    for mr in metro_rows:
-        rev = mr["students"] * mr["tuition"]
-        total_schools += mr["schools"]
-        total_students += mr["students"]
-        total_revenue += rev
+    # --- Build metro rows from optimization result ---
+    if flagship_opt and flagship_opt.metros:
+        for mr in flagship_opt.metros:
+            metro_students = mr.schools * mr.capacity_per_school
+            total_schools += mr.schools
+            total_students += metro_students
+            total_revenue += mr.annual_revenue
+            rows.append([
+                mr.metro_name,
+                str(mr.schools),
+                f"{mr.capacity_per_school:,}",
+                f"${mr.tuition:,.0f}",
+                f"${mr.annual_revenue / 1_000_000:.0f}M",
+            ])
+    else:
+        # Fallback: use cv city names
+        total_schools = flagship_schools
+        total_students = flagship_schools * flagship_per_school
+        total_revenue = total_students * flagship_tuition
         rows.append([
-            mr["metro"],
-            str(mr["schools"]),
+            cv.first_launch_city or "Capital City",
+            str(flagship_schools),
             f"{flagship_per_school:,}",
-            f"${mr['tuition']:,.0f}",
-            f"${rev / 1_000_000:.0f}M",
+            f"${flagship_tuition:,.0f}",
+            f"${total_revenue / 1_000_000:.0f}M",
         ])
 
     # Total row

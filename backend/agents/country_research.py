@@ -25,9 +25,13 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from models.schemas import (
     CountryProfile, TargetInfo, TargetType,
     Demographics, Economy, EducationData, Regulatory, PoliticalContext,
+    FlagshipMarketData,
 )
 from services.llm import call_llm, call_llm_plain
-from services.perplexity import research_country, research_education, research_us_state
+from services.perplexity import (
+    research_country, research_education, research_us_state,
+    research_flagship_markets,
+)
 from services.world_bank import get_country_data
 from config import OUTPUT_DIR
 from config.rules_loader import (
@@ -104,6 +108,46 @@ Also extract any education system pain points, reform initiatives, and governmen
 for foreign education models — these will be used to seed the education analysis stage.
 
 Output a JSON matching the CountryProfile schema."""
+
+# ---------------------------------------------------------------------------
+# LLM call 1b — flagship market data extraction
+# ---------------------------------------------------------------------------
+
+FLAGSHIP_EXTRACTION_PROMPT = """You are a senior research analyst extracting \
+structured metro-level data for premium school sizing.
+
+Given the research text below, extract data for each of the TOP 3 METROS \
+(by population) in the country.
+
+For EACH metro provide:
+- metro_name: name of the metropolitan area
+- is_capital: true if this metro contains the national capital
+- metro_population: estimated metro area population (integer)
+- k12_children: estimated K-12 age children (ages 5-18) in the metro (integer)
+- children_in_families_income_above_200k: estimated K-12 children living in \
+families with annual household income ≥ $200,000 USD (integer). Use PPP \
+conversion if the research provides local-currency data.
+- children_in_families_income_above_500k: estimated K-12 children living in \
+families with annual household income ≥ $500,000 USD (integer). Use PPP \
+conversion if the research provides local-currency data.
+- most_expensive_nonboarding_tuition: annual tuition in USD of the most \
+expensive NON-BOARDING private school in this metro (float). If only local \
+currency is given, convert to USD.
+- most_expensive_nonboarding_school: name of that school (string)
+
+Also provide:
+- country_most_expensive_nonboarding_tuition: the highest non-boarding \
+private school annual tuition in the entire country (float, USD)
+- country_most_expensive_nonboarding_school: name of that school (string)
+
+IMPORTANT:
+- Provide your best numerical ESTIMATE for every field. Never leave zeros \
+unless you truly believe the answer is zero.
+- For income thresholds, reason from the country's income distribution, \
+Gini coefficient, and wealth data.
+- Order metros by population (largest first).
+- Output valid JSON matching the FlagshipMarketData schema.
+"""
 
 # ---------------------------------------------------------------------------
 # LLM call 2 — combined narrative report (~500 words)
@@ -241,20 +285,28 @@ async def run_country_research(
     # ------------------------------------------------------------------
     # Data gathering — Perplexity research + World Bank + Spending Spotlight
     # ------------------------------------------------------------------
+    flagship_research_text = ""
+    flagship_citations: list = []
+
     if target_type == TargetType.US_STATE:
         perplexity_result = await research_us_state(target)
         wb_data: dict = {}
         edu_research_text = ""
         edu_citations: list = []
     else:
-        # Two Perplexity calls + World Bank run concurrently
-        perplexity_result, wb_data, edu_perplexity = await asyncio.gather(
+        # Three Perplexity calls + World Bank run concurrently
+        (
+            perplexity_result, wb_data, edu_perplexity, flagship_perplexity,
+        ) = await asyncio.gather(
             research_country(target),
             get_country_data(target),
             research_education(target),
+            research_flagship_markets(target),
         )
         edu_research_text = edu_perplexity.get("answer", "")
         edu_citations = edu_perplexity.get("citations", [])
+        flagship_research_text = flagship_perplexity.get("answer", "")
+        flagship_citations = flagship_perplexity.get("citations", [])
 
     research_text = perplexity_result.get("answer", "")
     citations = perplexity_result.get("citations", [])
@@ -268,6 +320,8 @@ async def run_country_research(
         profile.research_sources = [str(c) for c in citations]
     if isinstance(edu_citations, list):
         profile.research_sources.extend(str(c) for c in edu_citations)
+    if isinstance(flagship_citations, list):
+        profile.research_sources.extend(str(c) for c in flagship_citations)
 
     if wb_data:
         profile.demographics.total_population = wb_data.get("population")
@@ -303,6 +357,31 @@ async def run_country_research(
 
     if not profile.target.region:
         profile.target.region = "North America" if target_type == TargetType.US_STATE else ""
+
+    # ------------------------------------------------------------------
+    # LLM call 1b: flagship market data extraction (sovereign only)
+    # ------------------------------------------------------------------
+    if target_type != TargetType.US_STATE and flagship_research_text:
+        try:
+            fmd: FlagshipMarketData = await call_llm(
+                system_prompt=FLAGSHIP_EXTRACTION_PROMPT,
+                user_prompt=(
+                    f"Target country: {target}\n\n"
+                    f"Flagship Market Research:\n{flagship_research_text}\n\n"
+                    f"General Country Research:\n{research_text[:3000]}\n\n"
+                    f"Education Research:\n{edu_research_text[:2000]}"
+                ),
+                output_schema=FlagshipMarketData,
+            )
+            profile.flagship_market_data = fmd
+            logger.info(
+                "Flagship market data extracted: %d metros, "
+                "top school $%s",
+                len(fmd.metros),
+                f"{fmd.country_most_expensive_nonboarding_tuition:,.0f}",
+            )
+        except Exception as exc:
+            logger.warning("Flagship market data extraction failed: %s", exc)
 
     # ------------------------------------------------------------------
     # Populate US state education data from Spending Spotlight
