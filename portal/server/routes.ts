@@ -1336,6 +1336,6 @@ export function registerRoutes(server: Server, app: Express) {
   });
 
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", version: "2.3.0-slides-revamp", slides: 11 });
   });
 }
