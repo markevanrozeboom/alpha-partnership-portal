@@ -566,7 +566,7 @@ async def get_state_spotlight_data(state: str):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "2.2.0"}
+    return {"status": "ok", "version": "2.3.0"}
 
 
 @app.get("/api/debug/flagship-test")
@@ -608,7 +608,8 @@ async def flagship_test():
 
     result = optimize_flagships(test_data)
     return {
-        "version": "2.2.0",
+        "version": "2.3.0",
+        "test_type": "synthetic",
         "metros": [
             {
                 "name": m.metro_name,
@@ -625,4 +626,58 @@ async def flagship_test():
         "total_students": result.total_students,
         "total_revenue": result.total_annual_revenue,
         "scholarship_needed": result.scholarship_needed,
+    }
+
+
+@app.get("/api/debug/flagship-live/{country}")
+async def flagship_live_test(country: str):
+    """Run real LLM extraction + optimization for a country and return full diagnostics."""
+    from agents.country_research import run_country_research
+    from agents.financial import optimize_flagships
+
+    profile, _, _ = await run_country_research(country)
+    fmd = profile.flagship_market_data
+
+    raw_metros = []
+    if fmd and fmd.metros:
+        for m in fmd.metros:
+            raw_metros.append({
+                "metro_name": m.metro_name,
+                "is_capital": m.is_capital,
+                "metro_population": m.metro_population,
+                "k12_children": m.k12_children,
+                "above_200k": m.children_in_families_income_above_200k,
+                "above_500k": m.children_in_families_income_above_500k,
+                "local_top_school_tuition": m.most_expensive_nonboarding_tuition,
+                "local_top_school_name": m.most_expensive_nonboarding_school,
+            })
+
+    opt = optimize_flagships(fmd) if fmd else None
+
+    return {
+        "version": "2.3.0",
+        "country": country,
+        "flagship_market_data_present": fmd is not None,
+        "country_top_school_tuition": fmd.country_most_expensive_nonboarding_tuition if fmd else None,
+        "country_top_school_name": fmd.country_most_expensive_nonboarding_school if fmd else None,
+        "raw_metro_count": len(raw_metros),
+        "raw_metros": raw_metros,
+        "optimization": {
+            "metro_count": len(opt.metros) if opt else 0,
+            "metros": [
+                {
+                    "name": m.metro_name,
+                    "schools": m.schools,
+                    "capacity": m.capacity_per_school,
+                    "tuition": m.tuition,
+                    "revenue": m.annual_revenue,
+                    "eligible": m.eligible_children,
+                    "demand": m.demand_at_penetration,
+                }
+                for m in opt.metros
+            ] if opt else [],
+            "total_schools": opt.total_schools if opt else 0,
+            "total_revenue": opt.total_annual_revenue if opt else 0,
+            "scholarship_needed": opt.scholarship_needed if opt else False,
+        } if opt else None,
     }
