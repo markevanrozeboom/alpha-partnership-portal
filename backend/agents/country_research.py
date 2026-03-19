@@ -369,61 +369,71 @@ async def run_country_research(
     # tuitions, and UHNW data that the LLM can synthesize.
     # ------------------------------------------------------------------
     if target_type != TargetType.US_STATE:
-        if not research_text and not edu_research_text:
-            logger.warning(
-                "No research text available for %s "
-                "— flagship optimization will use fallback defaults.",
-                target,
+        # Build the user prompt from whatever research text is available.
+        # Even when Perplexity returns empty text, the LLM can extract
+        # metro-level data from its own knowledge of the country.
+        research_context = ""
+        if research_text:
+            research_context += (
+                f"Country Research (demographics, economy, "
+                f"income distribution, cities, UHNW data):\n"
+                f"{research_text[:6000]}\n\n"
             )
-        else:
+        if edu_research_text:
+            research_context += (
+                f"Education Research (school tuitions, private "
+                f"school market, premium schools):\n"
+                f"{edu_research_text[:4000]}"
+            )
+        if not research_context:
+            research_context = (
+                "(No external research available — use your "
+                "knowledge of this country's demographics, "
+                "income distribution, and private school market.)"
+            )
+
+        logger.info(
+            "Extracting flagship market data for %s "
+            "(research=%d chars, edu=%d chars)",
+            target, len(research_text), len(edu_research_text),
+        )
+        try:
+            fmd: FlagshipMarketData = await call_llm(
+                system_prompt=FLAGSHIP_EXTRACTION_PROMPT,
+                user_prompt=(
+                    f"Target country: {target}\n\n"
+                    f"{research_context}"
+                ),
+                output_schema=FlagshipMarketData,
+            )
+            profile.flagship_market_data = fmd
             logger.info(
-                "Extracting flagship market data for %s from "
-                "country research (%d chars) + education research (%d chars)",
-                target, len(research_text), len(edu_research_text),
+                "Flagship market data extracted for %s: "
+                "%d metros, top school $%s (%s)",
+                target,
+                len(fmd.metros),
+                f"{fmd.country_most_expensive_nonboarding_tuition:,.0f}",
+                fmd.country_most_expensive_nonboarding_school,
             )
-            try:
-                fmd: FlagshipMarketData = await call_llm(
-                    system_prompt=FLAGSHIP_EXTRACTION_PROMPT,
-                    user_prompt=(
-                        f"Target country: {target}\n\n"
-                        f"Country Research (demographics, economy, "
-                        f"income distribution, cities, UHNW data):\n"
-                        f"{research_text[:6000]}\n\n"
-                        f"Education Research (school tuitions, private "
-                        f"school market, premium schools):\n"
-                        f"{edu_research_text[:4000]}"
-                    ),
-                    output_schema=FlagshipMarketData,
-                )
-                profile.flagship_market_data = fmd
+            for i, m in enumerate(fmd.metros):
                 logger.info(
-                    "Flagship market data extracted for %s: "
-                    "%d metros, top school $%s (%s)",
-                    target,
-                    len(fmd.metros),
-                    f"{fmd.country_most_expensive_nonboarding_tuition:,.0f}",
-                    fmd.country_most_expensive_nonboarding_school,
+                    "  Metro %d: %s (capital=%s) — "
+                    "pop=%s, k12=%s, "
+                    ">$200K=%s, >$500K=%s, "
+                    "top school=$%s (%s)",
+                    i + 1, m.metro_name, m.is_capital,
+                    f"{m.metro_population:,}",
+                    f"{m.k12_children:,}",
+                    f"{m.children_in_families_income_above_200k:,}",
+                    f"{m.children_in_families_income_above_500k:,}",
+                    f"{m.most_expensive_nonboarding_tuition:,.0f}",
+                    m.most_expensive_nonboarding_school,
                 )
-                # Log detailed metro data for debugging
-                for i, m in enumerate(fmd.metros):
-                    logger.info(
-                        "  Metro %d: %s (capital=%s) — "
-                        "pop=%s, k12=%s, "
-                        ">$200K=%s, >$500K=%s, "
-                        "top school=$%s (%s)",
-                        i + 1, m.metro_name, m.is_capital,
-                        f"{m.metro_population:,}",
-                        f"{m.k12_children:,}",
-                        f"{m.children_in_families_income_above_200k:,}",
-                        f"{m.children_in_families_income_above_500k:,}",
-                        f"{m.most_expensive_nonboarding_tuition:,.0f}",
-                        m.most_expensive_nonboarding_school,
-                    )
-            except Exception as exc:
-                logger.warning(
-                    "Flagship market data extraction FAILED for %s: %s",
-                    target, exc, exc_info=True,
-                )
+        except Exception as exc:
+            logger.warning(
+                "Flagship market data extraction FAILED for %s: %s",
+                target, exc, exc_info=True,
+            )
 
     # ------------------------------------------------------------------
     # Populate US state education data from Spending Spotlight
