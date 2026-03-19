@@ -636,38 +636,40 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 2 — THE OPPORTUNITY
+     SLIDE 2 — VISION
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
-  <div class="label">The Opportunity</div>
-  <h2>${ctx.country}: <span>A Generational Investment in Human Capital</span></h2>
+  <div class="label">Vision</div>
+  <h2>'Educated in ${ctx.country}' <span>as a Global Credential</span></h2>
 
-  <div class="facts-grid">
-    <div class="fact-card">
-      <div class="fact-value">${ctx.population}</div>
-      <div class="fact-label">Population</div>
+  <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:40px; margin-top:32px; align-items:start;">
+    <div style="text-align:center; padding-top:16px;">
+      <div style="font-size:48px; margin-bottom:12px;">${ctx.flagEmoji}</div>
+      <div style="font-size:28px; font-weight:800; color:#1a56db; letter-spacing:0.02em;">ALPHA</div>
+      <div style="font-size:13px; font-weight:600; color:#4a5568; margin-top:8px;">The "Stanford of K-12 Education"</div>
     </div>
-    <div class="fact-card">
-      <div class="fact-value">${ctx.gdpPerCapita}</div>
-      <div class="fact-label">GDP per Capita</div>
-    </div>
-    <div class="fact-card">
-      <div class="fact-value">${ctx.schoolAgePopulation}</div>
-      <div class="fact-label">School-Age Population</div>
-    </div>
-    <div class="fact-card">
-      <div class="fact-value">${ctx.currentEdSpendPerStudent}</div>
-      <div class="fact-label">Current Ed Spend / Student</div>
+    <div>
+      <ul style="list-style:none; padding:0; margin:0;">
+        <li style="display:flex; align-items:flex-start; gap:12px; margin-bottom:20px;">
+          <span style="flex-shrink:0; width:28px; height:28px; background:#f0f4ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; color:#1a56db; font-weight:700;">1</span>
+          <span style="font-size:14px; color:#2d3748; line-height:1.6;">Only AI-native education system, purposefully designed for national scale</span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:12px; margin-bottom:20px;">
+          <span style="flex-shrink:0; width:28px; height:28px; background:#f0f4ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; color:#1a56db; font-weight:700;">2</span>
+          <span style="font-size:14px; color:#2d3748; line-height:1.6;">Commitments to students: love school, learn 2× faster, life skills for the AI age</span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:12px; margin-bottom:20px;">
+          <span style="flex-shrink:0; width:28px; height:28px; background:#f0f4ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; color:#1a56db; font-weight:700;">3</span>
+          <span style="font-size:14px; color:#2d3748; line-height:1.6;">Creating the next generation of global leaders through life skills and academic mastery</span>
+        </li>
+      </ul>
     </div>
   </div>
 
-  <div class="callout-box">
-    <p>${ctx.culturalNarrative}</p>
-  </div>
-
-  <div style="margin-top: 20px;">
-    <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">National Education Vision</div>
-    <p style="font-size:14px; color:#2d3748; line-height:1.6;">${ctx.nationalEdVision}</p>
+  <div style="background:#f0f4ff; border-radius:8px; padding:16px 24px; margin-top:28px;">
+    <p style="font-size:14px; color:#0a1628; line-height:1.6; margin:0;">
+      <strong>Our mission:</strong> ${programName} is the AI-native public education system for all of ${ctx.country}
+    </p>
   </div>
 
   <div class="slide-footer">
@@ -678,7 +680,77 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 3 — ALPHA'S PROVEN RESULTS
+     SLIDE 3 — THE KEY TO SUCCESS
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="slide slide-content">
+  <div class="label">The Key to Success</div>
+  <h2>We have reinvented <span>the school day</span></h2>
+
+  <div style="display:grid; grid-template-columns:1fr 1.5fr; gap:36px; margin-top:24px; align-items:start;">
+
+    <!-- Left: Core truths -->
+    <div>
+      <div style="display:inline-block; background:#1a56db; color:#fff; font-size:12px; font-weight:700; padding:6px 14px; border-radius:20px; margin-bottom:20px;">Core truths of transformation</div>
+
+      <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:18px;">
+        <span style="flex-shrink:0; color:#1a56db; font-size:18px; margin-top:1px;">✓</span>
+        <span style="font-size:14px; color:#2d3748; line-height:1.5;">Children should <strong style="color:#1a56db;">love school</strong> more than vacation</span>
+      </div>
+      <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:18px;">
+        <span style="flex-shrink:0; color:#1a56db; font-size:18px; margin-top:1px;">✓</span>
+        <span style="font-size:14px; color:#2d3748; line-height:1.5;">Children can <strong style="color:#1a56db;">master academics</strong> in 2 hours per day</span>
+      </div>
+      <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:18px;">
+        <span style="flex-shrink:0; color:#1a56db; font-size:18px; margin-top:1px;">✓</span>
+        <span style="font-size:14px; color:#2d3748; line-height:1.5;">The key to your children's happiness is <strong style="color:#1a56db;">high standards</strong></span>
+      </div>
+    </div>
+
+    <!-- Right: Traditional vs Alpha comparison -->
+    <div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+        <div style="text-align:center;">
+          <div style="font-size:14px; font-weight:700; color:#4a5568; margin-bottom:12px;">Traditional</div>
+          <div style="width:100px; height:100px; border-radius:50%; border:4px solid #a0aec0; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; background:#f7fafc;">
+            <span style="font-size:22px; font-weight:800; color:#4a5568;">6 hrs</span>
+          </div>
+          <div style="font-size:12px; color:#4a5568; line-height:1.4;">6 hours of<br><strong>classroom instruction</strong></div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:14px; font-weight:700; color:#1a56db; margin-bottom:12px;">Alpha Model</div>
+          <div style="display:flex; gap:8px; justify-content:center; margin-bottom:10px;">
+            <div style="width:60px; height:60px; border-radius:50%; border:4px solid #1a56db; display:flex; align-items:center; justify-content:center; background:#f0f4ff;">
+              <span style="font-size:14px; font-weight:800; color:#1a56db;">2 hrs</span>
+            </div>
+            <div style="font-size:18px; font-weight:700; color:#1a56db; align-self:center;">+</div>
+            <div style="width:60px; height:60px; border-radius:50%; border:4px solid #1a56db; display:flex; align-items:center; justify-content:center; background:#f0f4ff;">
+              <span style="font-size:14px; font-weight:800; color:#1a56db;">4 hrs</span>
+            </div>
+          </div>
+          <div style="font-size:12px; color:#2d3748; line-height:1.4;"><strong style="color:#1a56db;">2 hours</strong> academic mastery<br><strong style="color:#1a56db;">4 hours</strong> life-skills development</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #e2e8f0; padding-top:14px;">
+        <p style="font-size:12px; color:#2d3748; line-height:1.5; margin:0 0 8px;">
+          <strong style="color:#0a1628;">Timeback:</strong> the AI and learning science platform delivering academic mastery 10× faster than traditional schooling
+        </p>
+        <p style="font-size:12px; color:#2d3748; line-height:1.5; margin:0;">
+          <strong style="color:#0a1628;">AlphaCore:</strong> an AI-age life-skills curriculum developing student leadership, teamwork, communication, resilience, and other non-academic capabilities
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <span class="brand">ALPHA</span>
+    <span>© ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">3</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 4 — ALPHA'S PROVEN RESULTS
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">Proven Results</div>
@@ -709,12 +781,12 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   <div class="slide-footer">
     <span class="brand">ALPHA</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">3</span>
+    <span class="slide-num">4</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 4 — THE 2HR LEARNING MODEL
+     SLIDE 5 — THE 2HR LEARNING MODEL
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">The 2hr Learning Model</div>
@@ -747,12 +819,142 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   <div class="slide-footer">
     <span class="brand">ALPHA</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">4</span>
+    <span class="slide-num">5</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 5 — THE COMPLETE PLATFORM
+     SLIDE 6 — OUR RESULTS
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="slide slide-content">
+  <div class="label">Our Results</div>
+  <h2>The learning science has been known for 40 years… <span>we have made it work</span></h2>
+
+  <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:32px; margin-top:20px;">
+
+    <!-- Left column -->
+    <div>
+      <!-- Bloom's 2-Sigma -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px; font-weight:700; color:#4a5568; margin-bottom:8px;">Bloom's 2-Sigma Problem (1984)</div>
+        <div style="background:#f7fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px;">
+          <p style="font-size:11px; color:#4a5568; line-height:1.5; margin:0;">1:1 tutoring produces <strong style="color:#1a56db;">2 standard deviations</strong> of improvement — moving an average student to the 98th percentile. AI makes this possible at national scale for the first time.</p>
+        </div>
+      </div>
+
+      <!-- Exceptional Growth -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px; font-weight:700; color:#4a5568; margin-bottom:8px;">Exceptional Growth (vs. 1× "expected")</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div style="background:#f0f4ff; border-radius:6px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:11px; color:#4a5568;">Avg all students growth</span>
+            <span style="font-size:16px; font-weight:800; color:#1a56db;">2.2×</span>
+          </div>
+          <div style="background:#f0f4ff; border-radius:6px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:11px; color:#4a5568;">Top 20% growth</span>
+            <span style="font-size:16px; font-weight:800; color:#1a56db;">3.9×</span>
+          </div>
+          <div style="background:#f0f4ff; border-radius:6px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:11px; color:#4a5568;">Top ⅓ growth</span>
+            <span style="font-size:16px; font-weight:800; color:#1a56db;">2.6×</span>
+          </div>
+          <div style="background:#f0f4ff; border-radius:6px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:11px; color:#4a5568;">2 years behind growth</span>
+            <span style="font-size:16px; font-weight:800; color:#1a56db;">4.9×</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- World-Class College Admissions -->
+      <div>
+        <div style="font-size:12px; font-weight:700; color:#4a5568; margin-bottom:8px;">World-Class College Admissions</div>
+        <div style="display:flex; gap:16px;">
+          <div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; flex:1; text-align:center;">
+            <div style="font-size:11px; color:#718096;">Avg. SAT</div>
+            <div style="font-size:20px; font-weight:800; color:#0a1628;">1530</div>
+            <div style="font-size:9px; color:#a0aec0;">vs. 1063 national</div>
+          </div>
+          <div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; flex:1; text-align:center;">
+            <div style="font-size:11px; color:#718096;">AP Scores</div>
+            <div style="font-size:20px; font-weight:800; color:#0a1628;">94%</div>
+            <div style="font-size:9px; color:#a0aec0;">students with 4 or 5</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div>
+      <!-- 97% love school -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:28px; font-weight:800; color:#1a56db; margin-bottom:6px;">97% <span style="font-size:18px; color:#0a1628;">love school</span></div>
+        <ul style="list-style:none; padding:0; margin:0;">
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+            <span style="font-size:11px; color:#4a5568; line-height:1.4;">High School students voted to keep school open over summer</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+            <span style="font-size:11px; color:#4a5568; line-height:1.4;">Over 60% of students would rather go to school than go on vacation</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:8px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+            <span style="font-size:11px; color:#4a5568; line-height:1.4;">80% of older students say their Guide is one of the most influential people in their life</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 100+ life skills projects -->
+      <div>
+        <div style="font-size:28px; font-weight:800; color:#1a56db; margin-bottom:6px;">100+ <span style="font-size:18px; color:#0a1628;">life skills projects</span></div>
+        <ul style="list-style:none; padding:0; margin:0;">
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+            <span style="font-size:11px; color:#4a5568; line-height:1.4;">All <strong>Third Graders</strong> can solve the Rubik's cube</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Fifth Graders</strong> presented TED-style talks at NYC open mic nights</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Middle Schoolers</strong> placed 2nd in the world and 1st in the U.S. in the Global AI Debates</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>High Schoolers</strong> traveled to Ukraine on a humanitarian mission to help kids whose schools were destroyed</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Maddie</strong> created the first teen-produced Broadway musical with 67,000 TikTok followers</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Alex</strong> created "Berry," an AI-powered plush toy for teens' mental health</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Sloane</strong> built "InnerWorld" app with 2.5M+ social media following, solving teen girl mental health crisis</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:8px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Grace</strong> produced a documentary on cancer with 5 million views, testifying at the U.S. Senate</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="slide-footer">
+    <span class="brand">ALPHA</span>
+    <span>© ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">6</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 7 — THE COMPLETE PLATFORM
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">The Complete Platform</div>
@@ -799,12 +1001,74 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   <div class="slide-footer">
     <span class="brand">ALPHA</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">5</span>
+    <span class="slide-num">7</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 6 — PARTNERSHIP MODEL
+     SLIDE 8 — DEPLOYMENT & INVESTMENT OVERVIEW
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="slide slide-content">
+  <div class="label">The Complete Platform</div>
+  <h2>Launching ${ctx.country}'s ${programName} on <span>Alpha's full education stack</span></h2>
+
+  <div class="two-pane" style="margin-top:16px;">
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-icon">📚</div>
+        <div class="pane-title">Alpha Education Stack</div>
+      </div>
+      <div class="stack-item"><strong>Parent Education System:</strong> Parents demand outcomes</div>
+      <div class="stack-item"><strong>Reinvented School Day:</strong> 2 hrs of academics + life skills</div>
+      <div class="stack-item"><strong>Timeback®:</strong> AI platform for 10× faster mastery</div>
+      <div class="stack-item"><strong>AlphaCore™:</strong> The strongest K-12 life-skills curriculum</div>
+      <div class="stack-item"><strong>Guide School:</strong> Talent academy for training Guides</div>
+      <div class="stack-item"><strong>Incept eduLLM:</strong> Personalised content generation engine</div>
+      <div class="scale-row">
+        <div class="scale-box"><div class="period">This Year</div><div class="figure">2,500 students · 22 campuses</div></div>
+        <div class="scale-arrow">→</div>
+        <div class="scale-box"><div class="period">3-Year Target</div><div class="figure">100k students · 100 campuses</div></div>
+      </div>
+    </div>
+
+    <div class="pane">
+      <div class="pane-header">
+        <div class="pane-icon">${ctx.flagEmoji}</div>
+        <div class="pane-title">${programName}: ${ctx.country} Owned</div>
+      </div>
+      <div class="stack-item"><strong>Education Sovereignty:</strong> ${ctx.country} owns the critical pieces</div>
+      <div class="stack-item"><strong>Infrastructure:</strong> Built to scale across 100+ schools</div>
+      <div class="stack-item"><strong>Localised AI Apps:</strong> ${ctx.languageApps}</div>
+      <div class="stack-item"><strong>Local Life-Skills:</strong> ${ctx.localLifeSkillsFocus}</div>
+      <div class="stack-item"><strong>Talent Academy:</strong> Recruit and train ${programName} Guides</div>
+      <div class="stack-item"><strong>National eduLLM:</strong> Embedded local laws, values, and culture</div>
+      <div class="scale-row">
+        <div class="scale-box"><div class="period">Next Year</div><div class="figure">${fmtNum(Math.round(model.counterparty.minStudentsPerYear / 50))} students · 2 communities</div></div>
+        <div class="scale-arrow">→</div>
+        <div class="scale-box"><div class="period">5-Year Target</div><div class="figure">${fmtNum(model.counterparty.minStudentsPerYear)}+ students · 50+ communities</div></div>
+      </div>
+
+      <div style="margin-top:14px; background:#f0f4ff; border-radius:6px; padding:12px 14px;">
+        <ul style="list-style:none; padding:0; margin:0; font-size:11px; color:#2d3748; line-height:1.6;">
+          <li style="margin-bottom:4px;">• <strong>${fmtUsd(model.counterparty.perStudentBudget)}</strong> per student annual budget — ~2× current public funding</li>
+          <li style="margin-bottom:4px;">• <strong>${fmtCompact(model.upfront.totalUsd)}</strong> up-front spend</li>
+          <li style="margin-bottom:4px;">• ${ctx.country} asset and infrastructure development</li>
+          <li style="margin-bottom:4px;">• Prepaid fees to Alpha (for first ${fmtNum(model.counterparty.minStudentsPerYear)} student-years)</li>
+          <li>• <strong>First schools open SY26-27</strong> — start with ${model.flagship.schools.length > 0 ? model.flagship.schools.slice(0, 2).map(s => s.metro).join(' & ') : ctx.country} model schools</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <span class="brand">ALPHA</span>
+    <span>© ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">8</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 9 — PARTNERSHIP MODEL
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">Partnership Model</div>
@@ -845,114 +1109,72 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   <div class="slide-footer">
     <span class="brand">ALPHA</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">6</span>
+    <span class="slide-num">9</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 7 — ADDRESSABLE MARKET & SCALE
+     SLIDE 10 — COUNTRY-OWNED SCHOOLS & INVESTMENT
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
-  <div class="label">Addressable Market</div>
-  <h2>${programName}: <span>Massive Scale Opportunity</span></h2>
+  <div class="label">Country-Owned Schools</div>
+  <h2>Alpha ${ctx.country} Schools: <span>${ctx.country} Owned, Alpha Operated</span></h2>
 
-  <div class="two-pane">
-    <div class="pane">
-      <div class="callout-box" style="margin-top: 0; margin-bottom: 16px; display: flex; align-items: center; gap: 16px;">
-        <div style="min-width: 140px;">
-          <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #718096; margin-bottom: 4px;">Addressable Market</div>
-          <div style="font-size: 28px; font-weight: 800; color: #1a56db; line-height: 1.1;">${ctx.addressableStudentPopulation || ctx.schoolAgePopulation}</div>
-          <div style="font-size: 10px; color: #718096; margin-top: 2px;">families with AGI &gt; $250k</div>
-        </div>
-        <div>
-          <p style="font-size: 12px; line-height: 1.5; color: #2d3748;"><strong>Significant room to scale.</strong> The initial commitment targets ${fmtNum(model.counterparty.minStudentsPerYear)} students.${ctx.addressableMethodology ? ` <span style="font-size: 10px; color: #718096;">(${ctx.addressableMethodology})</span>` : ''}</p>
-        </div>
-      </div>
+  <div style="display:grid; grid-template-columns:1fr 1.6fr; gap:28px; margin-top:16px;">
 
-      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Per-Student Economics ($${model.counterparty.perStudentBudget.toLocaleString("en-US")} Budget)</div>
-      <table class="deck-table">
-        <thead><tr><th>Cost Item</th><th>Per Student</th><th>Notes</th></tr></thead>
-        <tbody>
-          ${model.counterparty.costBreakdown.map(c => `<tr><td>${c.item}</td><td class="amt">$${c.amount.toLocaleString("en-US")}</td><td class="notes">${c.note || '—'}</td></tr>`).join("\n          ")}
-          <tr class="total-row"><td>Total</td><td class="amt">$${model.counterparty.perStudentBudget.toLocaleString("en-US")}</td><td></td></tr>
-        </tbody>
-      </table>
+    <!-- Left: Key terms -->
+    <div>
+      <ul style="list-style:none; padding:0; margin:0;">
+        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
+          <span style="font-size:13px; color:#2d3748; line-height:1.5;">100% ${ctx.country} owned, 0% Alpha owned. Alpha operates on behalf of the Country/State.</span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
+          <span style="font-size:13px; color:#2d3748; line-height:1.5;">Per student funding/tuition: <strong>${fmtUsd(model.counterparty.perStudentBudget)}/year.</strong></span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
+          <span style="font-size:13px; color:#2d3748; line-height:1.5;">Minimum <strong>${fmtNum(model.counterparty.minStudentsPerYear)}</strong> students per year commitment.</span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
+          <span style="font-size:13px; color:#2d3748; line-height:1.5;">Schools can be operated as either public or private schools.</span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:10px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
+          <span style="font-size:13px; color:#2d3748; line-height:1.5;">${ctx.country} is responsible for sourcing real estate; schools pay rent.</span>
+        </li>
+      </ul>
     </div>
 
-    <div class="pane">
-      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Scale Trajectory</div>
-      <div class="scale-row" style="margin-top: 0;">
-        <div class="scale-box" style="background: #f0f4ff; border-radius: 8px; padding: 16px; border: 1px solid #c7d2fe;">
-          <div class="period">Year 1</div>
-          <div class="figure">${fmtNum(Math.round(model.counterparty.minStudentsPerYear / 50))} students</div>
-        </div>
-        <div class="scale-arrow" style="font-size: 20px;">→</div>
-        <div class="scale-box" style="background: #e8eeff; border-radius: 8px; padding: 16px; border: 1px solid #93a9ff;">
-          <div class="period">5-Year Plan</div>
-          <div class="figure">${fmtNum(model.counterparty.minStudentsPerYear)}+ students</div>
-        </div>
-      </div>
-
-      <div style="margin-top: 20px;">
-        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Flagship Schools (Revenue-Optimized)</div>
-        ${model.flagship.schools.map(s => `<div class="stack-item"><strong>${s.metro}</strong>: ${s.count} school${s.count !== 1 ? 's' : ''} · ${fmtUsd(s.tuitionPerYear)}/yr · ${fmtNum(s.capacityPerSchool)} students</div>`).join("\n        ")}
-        ${model.flagship.scholarshipNote ? `<div class="callout-box" style="margin-top: 8px;"><p style="font-size: 11px;">${model.flagship.scholarshipNote}</p></div>` : ''}
-      </div>
-
-      ${gapCallout}
-    </div>
-  </div>
-
-  <div class="slide-footer">
-    <span class="brand">ALPHA</span>
-    <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">7</span>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 8 — COMMERCIAL & INVESTMENT STRUCTURE  (exact Ed71 layout)
-     ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="slide slide-content">
-  <div class="label">Publicly Funded, Privately Operated Schools</div>
-  <h2>${programName} <span>Commercial &amp; Investment Structure</span></h2>
-
-  <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 24px; flex: 1;">
-
-    <!-- LEFT: Commercial Structure -->
-    <div class="comm-panel">
-      <div class="comm-header">Commercial Structure</div>
-
-      <div class="comm-sub-header">Upfront</div>
-      <table class="comm-table">
-        <thead><tr><th style="width:40%">Item</th><th style="width:20%; text-align:center;">Upfront</th><th style="width:40%">Recipient</th></tr></thead>
+    <!-- Right: Investment table -->
+    <div>
+      <div style="font-size:15px; font-weight:700; color:#0a1628; margin-bottom:10px;">Investment Required</div>
+      <table class="deck-table" style="font-size:11px;">
+        <thead>
+          <tr>
+            <th>Investment Item</th>
+            <th style="text-align:right;">Upfront ($M)</th>
+            <th style="text-align:right;">Ongoing ($M/yr)</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
         <tbody>
-          ${allUpfrontItems.map(r => `<tr><td>${r.item}</td><td class="amt">${fmtCompact(r.amountUsd)}</td><td>${r.recipient}</td></tr>`).join("\n          ")}
-          <tr class="total-row"><td>Total ${programName} Schools</td><td class="amt">${fmtCompact(model.upfront.totalUsd)}</td><td></td></tr>
+          <tr class="section-header"><td colspan="4">Upfront Development Costs (FIXED — do not scale by country)</td></tr>
+          ${model.upfront.fixedItems.map(r => `<tr><td>${r.item}</td><td class="amt" style="text-align:right;">${fmtCompact(r.amountUsd)}</td><td></td><td class="notes">Paid upfront${r.recipient === 'Alpha Holdings' ? ' to Alpha Holdings' : ''}</td></tr>`).join("\n          ")}
+          <tr class="section-header"><td colspan="4">Prepaid Fees (scale by student commitment)</td></tr>
+          ${model.upfront.variableItems.map(r => `<tr><td>${r.item}</td><td class="amt" style="text-align:right;">${fmtCompact(r.amountUsd)}</td><td></td><td class="notes">${r.note || r.recipient}</td></tr>`).join("\n          ")}
+          <tr class="section-header"><td colspan="4">Ongoing Annual Costs (scale above ${fmtNum(model.counterparty.minStudentsPerYear)} students)</td></tr>
+          ${model.ongoing.items.map(r => `<tr><td>${r.item}</td><td></td><td class="amt" style="text-align:right;">${r.amount}</td><td class="notes">${r.recipient}</td></tr>`).join("\n          ")}
+          <tr class="total-row">
+            <td>TOTAL UPFRONT</td>
+            <td class="amt" style="text-align:right;">${fmtCompact(model.upfront.totalUsd)}</td>
+            <td></td>
+            <td class="notes"></td>
+          </tr>
         </tbody>
       </table>
-
-      <div class="comm-sub-header">Ongoing</div>
-      <table class="comm-table">
-        <thead><tr><th style="width:40%">Item</th><th style="width:20%; text-align:center;">Ongoing</th><th style="width:40%">Recipient</th></tr></thead>
-        <tbody>
-          ${ongoingRows}
-          <tr class="total-row"><td>Total ${programName} Schools</td><td class="amt">Scale dependent</td><td></td></tr>
-        </tbody>
-      </table>
-      <div class="comm-footnote">* per ${fmtNum(model.counterparty.minStudentsPerYear)} students</div>
-    </div>
-
-    <!-- RIGHT: Investment Structure -->
-    <div class="invest-panel">
-      <div class="comm-header">Investment Structure</div>
-
-      ${investmentRows}
-
-      <div class="invest-total">
-        <span>Total</span>
-        <span>${fmtCompact(model.upfront.totalUsd)}</span>
-      </div>
     </div>
 
   </div>
@@ -960,7 +1182,22 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   <div class="slide-footer">
     <span class="brand">ALPHA</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">8</span>
+    <span class="slide-num">10</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 11 — THANK YOU / CLOSING
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="slide slide-cover" style="display:flex; align-items:center; justify-content:center; text-align:center;">
+  <div>
+    <div style="font-size:24px; font-weight:600; color:#1a56db; margin-bottom:16px; font-style:italic;">Thank You</div>
+    <h1 style="font-size:48px; font-weight:800; color:#0a1628; line-height:1.2; margin:0 0 32px;">2hr Learning —<br>Transforming Education<br>Globally</h1>
+    <div style="display:inline-block; border:2px solid #1a56db; border-radius:4px; padding:8px 24px; font-size:13px; font-weight:600; color:#1a56db; letter-spacing:0.08em;">CONFIDENTIAL</div>
+  </div>
+  <div class="slide-footer" style="color: rgba(255,255,255,0.3);">
+    <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA</span>
+    <span class="slide-num">11</span>
   </div>
 </div>
 
