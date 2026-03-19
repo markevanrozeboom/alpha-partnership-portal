@@ -131,28 +131,33 @@ export function fmtUsd(n: number): string {
 
 // ─── Flagship Optimization ───────────────────────────────────────────────────
 
+function metroTuitionFloor(metro: MetroFinancialData): number {
+  const localTop = metro.mostExpensiveNonBoardingSchoolTuition || 0;
+  if (localTop > 0) {
+    let floor = Math.ceil((localTop + 1) / FLAGSHIP.TUITION_STEP) * FLAGSHIP.TUITION_STEP;
+    if (floor <= localTop) floor += FLAGSHIP.TUITION_STEP;
+    return Math.max(floor, FLAGSHIP.MIN_TUITION);
+  }
+  return FLAGSHIP.MIN_TUITION;
+}
+
 function optimizeFlagships(data: FinancialResearchData): FlagshipModel {
   const metros = data.topMetros || [];
 
-  // Tuition floor: must be more expensive than most expensive non-boarding school
-  const tuitionFloor = Math.max(
-    FLAGSHIP.MIN_TUITION,
-    Math.ceil((data.mostExpensiveNonBoardingTuitionUsd + 1) / FLAGSHIP.TUITION_STEP) * FLAGSHIP.TUITION_STEP,
-  );
-
-  // Qualify metros: each must support ≥ MIN_CAPACITY students at minimum tuition
+  // Qualify metros: each must support ≥ MIN_CAPACITY students at minimum tuition ($40K)
   const minAgiAtFloor = 5 * FLAGSHIP.MIN_TUITION;
   const qualifyingMetros = metros.filter((m) => {
     const eligible = interpolateWealthyChildren(m, minAgiAtFloor);
     return eligible * FLAGSHIP.PENETRATION_RATE >= FLAGSHIP.MIN_CAPACITY;
   });
 
-  // Per-metro independent optimization: each metro gets its own tuition/capacity
+  // Per-metro independent optimization: each metro gets its own tuition floor & capacity
   const allSchools: FlagshipSchoolAllocation[] = [];
   let totalRevenue = 0;
 
   for (const metro of qualifyingMetros) {
     const maxSchools = metro.isCapital ? FLAGSHIP.MAX_FLAGSHIPS_CAPITAL : FLAGSHIP.MAX_FLAGSHIPS_OTHER;
+    const tuitionFloor = metroTuitionFloor(metro);
     let bestMetroRev = 0;
     let bestAlloc: FlagshipSchoolAllocation | null = null;
 

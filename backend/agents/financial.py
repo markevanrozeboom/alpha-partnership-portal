@@ -264,22 +264,25 @@ def optimize_flagships(
             )
         return result
 
-    # --- Step 2: Determine minimum tuition floor ---
-    # Must exceed the most expensive non-boarding school
-    school_tuition_floor = (
+    # --- Step 2: Per-metro tuition floor ---
+    # Each metro's tuition must exceed its own most expensive non-boarding
+    # school, but the absolute floor is always tuition_min ($40K).
+    country_school_floor = (
         market_data.country_most_expensive_nonboarding_tuition
     )
-    # Round up to next $5K increment
-    if school_tuition_floor > 0:
-        effective_min = (
-            math.ceil(school_tuition_floor / tuition_step) * tuition_step
-        )
-        # Must strictly exceed, so bump if equal
-        if effective_min <= school_tuition_floor:
-            effective_min += tuition_step
-    else:
-        effective_min = tuition_min
-    effective_min = max(effective_min, tuition_min)
+
+    def _metro_tuition_floor(metro: MetroFlagshipInput) -> int:
+        """Compute the minimum tuition for a specific metro."""
+        local_top = metro.most_expensive_nonboarding_tuition
+        if local_top > 0:
+            floor = (
+                math.ceil(local_top / tuition_step) * tuition_step
+            )
+            if floor <= local_top:
+                floor += tuition_step
+        else:
+            floor = tuition_min
+        return max(floor, tuition_min)
 
     # --- Step 3: Per-metro grid search ---
     # Each metro is optimized independently so tuition/capacity can vary
@@ -289,8 +292,18 @@ def optimize_flagships(
 
     for metro in qualifying_metros:
         max_schools = 3 if metro.is_capital else 1
+        effective_min = _metro_tuition_floor(metro)
         best_metro_rev = 0
         best_metro_cfg: dict | None = None
+
+        logger.info(
+            "  Grid search for %s: tuition floor=$%s "
+            "(local top school=$%s), max_schools=%d",
+            metro.metro_name,
+            f"{effective_min:,}",
+            f"{metro.most_expensive_nonboarding_tuition:,.0f}",
+            max_schools,
+        )
 
         for tuition in range(effective_min, tuition_max + 1, tuition_step):
             min_agi = 5 * tuition
@@ -369,9 +382,9 @@ def optimize_flagships(
         result.optimal_capacity = capacity_min
 
     result.tuition_exceeds_most_expensive = all(
-        cfg["tuition"] > school_tuition_floor
+        cfg["tuition"] > country_school_floor
         for cfg in all_metro_configs
-    ) if (school_tuition_floor > 0 and all_metro_configs) else True
+    ) if (country_school_floor > 0 and all_metro_configs) else True
 
     logger.info(
         "Flagship optimization: %d metro(s), "
