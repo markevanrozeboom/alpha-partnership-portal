@@ -1675,15 +1675,32 @@ def _build_gamma_investor_input(
 
     # --- Slide 10: 5-Year Rollout Plan ---
     if strategy.phased_rollout:
-        rollout_lines = []
-        for ph in strategy.phased_rollout[:5]:
-            if ph.student_count:
-                rollout_lines.append(f"- {ph.phase}: {ph.timeline} — {ph.student_count:,} students")
-            else:
-                rollout_lines.append(f"- {ph.phase}: {ph.timeline}")
-        slides.append("# 5-Year Rollout Plan\n\n" + "\n".join(rollout_lines))
+        phases = strategy.phased_rollout[:3]
+        phase_rows = []
+        for ph in phases:
+            students = (
+                f"{ph.student_count:,} students"
+                if ph.student_count else "TBD"
+            )
+            phase_rows.append(
+                f"| **{ph.phase}** | {ph.timeline} "
+                f"| {students} |"
+            )
+        slides.append(
+            "# 5-Year Rollout Plan\n\n"
+            f"Alpha {target} scales systematically — "
+            "building operational excellence before expanding, "
+            "ensuring every cohort of students receives the "
+            "full Alpha experience from day one.\n\n"
+            "| Phase | Timeline | Target |\n"
+            "| --- | --- | --- |\n"
+            + "\n".join(phase_rows)
+        )
     else:
-        slides.append("# 5-Year Rollout Plan\n\n- Phased rollout details in strategy report")
+        slides.append(
+            "# 5-Year Rollout Plan\n\n"
+            "Phased rollout details in strategy report"
+        )
 
     # --- Slide 11: Thank You ---
     slides.append(
@@ -1726,7 +1743,8 @@ async def _build_investor_deck_gamma(
                 "The audience is C-suite / head-of-state level. "
                 "Use a professional, data-driven tone. Keep slides clean with clear hierarchy. "
                 "Use the markdown headings (# Title) as card titles. "
-                "Preserve all financial figures, percentages, and data points exactly as provided."
+                "Preserve all financial figures, percentages, and data points exactly as provided. "
+                "Do NOT generate charts, graphs, or bar charts. Use tables and text layouts only."
             ),
             export_as=export_as,
         )
