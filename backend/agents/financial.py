@@ -281,26 +281,24 @@ def optimize_flagships(
         effective_min = tuition_min
     effective_min = max(effective_min, tuition_min)
 
-    # --- Step 3: Grid search over (tuition, capacity) ---
-    best_revenue = 0
-    best_tuition = effective_min
-    best_capacity = capacity_min
-    best_metro_configs: list[dict] = []
+    # --- Step 3: Per-metro grid search ---
+    # Each metro is optimized independently so tuition/capacity can vary
+    # (e.g. Paris at $65K, Lyon at $40K).
+    all_metro_configs: list[dict] = []
+    total_revenue = 0
 
-    for tuition in range(effective_min, tuition_max + 1, tuition_step):
-        min_agi = 5 * tuition
+    for metro in qualifying_metros:
+        max_schools = 3 if metro.is_capital else 1
+        best_metro_rev = 0
+        best_metro_cfg: dict | None = None
 
-        for capacity in range(capacity_min, capacity_max + 1, capacity_step):
-            total_revenue = 0
-            metro_configs: list[dict] = []
+        for tuition in range(effective_min, tuition_max + 1, tuition_step):
+            min_agi = 5 * tuition
+            eligible = _interpolate_eligible_children(metro, min_agi)
+            demand = int(eligible * penetration_rate)
 
-            for metro in qualifying_metros:
-                max_schools = 3 if metro.is_capital else 1
-                eligible = _interpolate_eligible_children(metro, min_agi)
-                demand = int(eligible * penetration_rate)
-
+            for capacity in range(capacity_min, capacity_max + 1, capacity_step):
                 if demand < capacity:
-                    # Not enough demand for even 1 school at this config
                     continue
 
                 schools = min(max_schools, demand // capacity)
@@ -308,36 +306,36 @@ def optimize_flagships(
                     continue
 
                 rev = schools * capacity * tuition
-                total_revenue += rev
-                metro_configs.append({
-                    "metro": metro.metro_name,
-                    "is_capital": metro.is_capital,
-                    "schools": schools,
-                    "capacity": capacity,
-                    "tuition": tuition,
-                    "revenue": rev,
-                    "eligible": eligible,
-                    "demand": demand,
-                })
+                if rev > best_metro_rev:
+                    best_metro_rev = rev
+                    best_metro_cfg = {
+                        "metro": metro.metro_name,
+                        "is_capital": metro.is_capital,
+                        "schools": schools,
+                        "capacity": capacity,
+                        "tuition": tuition,
+                        "revenue": rev,
+                        "eligible": eligible,
+                        "demand": demand,
+                    }
 
-            if total_revenue > best_revenue:
-                best_revenue = total_revenue
-                best_tuition = tuition
-                best_capacity = capacity
-                best_metro_configs = metro_configs
+        if best_metro_cfg:
+            all_metro_configs.append(best_metro_cfg)
+            total_revenue += best_metro_rev
+            logger.info(
+                "  Metro %s optimized: %d school(s) × %d students "
+                "@ $%s → $%sM/yr",
+                best_metro_cfg["metro"],
+                best_metro_cfg["schools"],
+                best_metro_cfg["capacity"],
+                f"{best_metro_cfg['tuition']:,}",
+                f"{best_metro_cfg['revenue'] / 1_000_000:,.1f}",
+            )
 
     # --- Step 4: Build result ---
-    result.optimal_tuition = best_tuition
-    result.optimal_capacity = best_capacity
-    result.total_annual_revenue = best_revenue
-    result.tuition_exceeds_most_expensive = (
-        best_tuition > school_tuition_floor if school_tuition_floor > 0
-        else True
-    )
-
     total_schools = 0
     total_students = 0
-    for cfg in best_metro_configs:
+    for cfg in all_metro_configs:
         metro_students = cfg["schools"] * cfg["capacity"]
         total_schools += cfg["schools"]
         total_students += metro_students
@@ -354,13 +352,33 @@ def optimize_flagships(
 
     result.total_schools = total_schools
     result.total_students = total_students
+    result.total_annual_revenue = total_revenue
+
+    # Summary fields: revenue-weighted averages for downstream consumers
+    if total_revenue > 0:
+        result.optimal_tuition = sum(
+            c["tuition"] * c["revenue"] for c in all_metro_configs
+        ) / total_revenue
+        result.optimal_capacity = round(
+            sum(
+                c["capacity"] * c["revenue"] for c in all_metro_configs
+            ) / total_revenue
+        )
+    else:
+        result.optimal_tuition = effective_min
+        result.optimal_capacity = capacity_min
+
+    result.tuition_exceeds_most_expensive = all(
+        cfg["tuition"] > school_tuition_floor
+        for cfg in all_metro_configs
+    ) if (school_tuition_floor > 0 and all_metro_configs) else True
 
     logger.info(
-        "Flagship optimization: tuition=$%s, capacity=%d, "
+        "Flagship optimization: %d metro(s), "
         "schools=%d, students=%d, revenue=$%sM",
-        f"{best_tuition:,.0f}", best_capacity,
+        len(all_metro_configs),
         total_schools, total_students,
-        f"{best_revenue / 1_000_000:,.0f}",
+        f"{total_revenue / 1_000_000:,.0f}",
     )
 
     return result

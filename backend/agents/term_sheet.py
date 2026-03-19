@@ -1765,15 +1765,33 @@ def _add_school_design_section(
         doc,
         "Flagship schools operate at 25% operating margin.",
     )
-    _add_list_item(
-        doc,
-        f"Tuition: ${fin.get('flagship_tuition', 0):,.0f}/year.",
-    )
-    _add_list_item(
-        doc,
-        f"Capacity: {fin.get('flagship_per_school', 0):,} "
-        "students per school.",
-    )
+
+    # Tuition / capacity may vary per metro — show range when they differ
+    if flagship_opt and flagship_opt.metros:
+        tuitions = [mr.tuition for mr in flagship_opt.metros]
+        capacities = [mr.capacity_per_school for mr in flagship_opt.metros]
+        if len(set(tuitions)) == 1:
+            tuition_str = f"${tuitions[0]:,.0f}/year"
+        else:
+            tuition_str = (
+                f"${min(tuitions):,.0f} – ${max(tuitions):,.0f}/year "
+                "(varies by metro)"
+            )
+        if len(set(capacities)) == 1:
+            capacity_str = f"{capacities[0]:,} students per school"
+        else:
+            capacity_str = (
+                f"{min(capacities):,} – {max(capacities):,} "
+                "students per school (varies by metro)"
+            )
+    else:
+        tuition_str = f"${fin.get('flagship_tuition', 0):,.0f}/year"
+        capacity_str = (
+            f"{fin.get('flagship_per_school', 0):,} students per school"
+        )
+
+    _add_list_item(doc, f"Tuition: {tuition_str}.")
+    _add_list_item(doc, f"Capacity: {capacity_str}.")
     _add_list_item(
         doc,
         "Country/State provides 50% capacity backstop for 5 years.",
@@ -2079,12 +2097,24 @@ def _add_flagship_summary_table(
                 f"${rev / 1_000_000:.0f}M",
             ])
 
-    # Total row
+    # Total row — show tuition only if uniform across metros
+    tuition_values = [mr.tuition for mr in flagship_opt.metros] if (
+        flagship_opt and flagship_opt.metros
+    ) else []
+    if tuition_values and len(set(tuition_values)) == 1:
+        total_tuition_str = f"${tuition_values[0]:,.0f}"
+    elif tuition_values:
+        total_tuition_str = (
+            f"${min(tuition_values):,.0f} – "
+            f"${max(tuition_values):,.0f}"
+        )
+    else:
+        total_tuition_str = f"${flagship_tuition:,.0f}"
     rows.append([
         "TOTAL",
         str(total_schools),
         f"{total_students:,} total",
-        f"${flagship_tuition:,.0f}",
+        total_tuition_str,
         f"${total_revenue / 1_000_000:.0f}M",
     ])
 

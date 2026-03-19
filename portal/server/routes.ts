@@ -818,8 +818,8 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
     </div>
     <div class="partner-card">
       <div class="partner-label">Flagship Schools</div>
-      <div class="partner-value">${model.flagship.totalSchoolCount} School${model.flagship.totalSchoolCount !== 1 ? 's' : ''} · ${fmtUsd(model.flagship.tuitionPerYear)}/yr</div>
-      <div class="partner-detail">${model.flagship.schools.map(s => `${s.metro} (${s.count})`).join(', ')}. ${model.flagship.scholarshipNote ? model.flagship.scholarshipNote : `${fmtNum(model.flagship.capacityPerSchool)} students per school.`}</div>
+      <div class="partner-value">${model.flagship.totalSchoolCount} School${model.flagship.totalSchoolCount !== 1 ? 's' : ''} · ${(() => { const t = Array.from(new Set(model.flagship.schools.map(s => s.tuitionPerYear))); return t.length === 1 ? fmtUsd(t[0]) : `${fmtUsd(Math.min(...t))} – ${fmtUsd(Math.max(...t))}`; })()}/yr</div>
+      <div class="partner-detail">${model.flagship.schools.map(s => `${s.metro} (${s.count} @ ${fmtUsd(s.tuitionPerYear)})`).join(', ')}. ${model.flagship.scholarshipNote ? model.flagship.scholarshipNote : `${fmtNum(model.flagship.capacityPerSchool)} students per school.`}</div>
     </div>
     <div class="partner-card">
       <div class="partner-label">National Schools</div>
@@ -895,9 +895,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 
       <div style="margin-top: 20px;">
         <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Flagship Schools (Revenue-Optimized)</div>
-        ${model.flagship.schools.map(s => `<div class="stack-item"><strong>${s.metro}</strong>: ${s.count} school${s.count !== 1 ? 's' : ''}</div>`).join("\n        ")}
-        <div class="stack-item"><strong>Tuition:</strong> ${fmtUsd(model.flagship.tuitionPerYear)} / year</div>
-        <div class="stack-item"><strong>Capacity:</strong> ${fmtNum(model.flagship.capacityPerSchool)} students per school</div>
+        ${model.flagship.schools.map(s => `<div class="stack-item"><strong>${s.metro}</strong>: ${s.count} school${s.count !== 1 ? 's' : ''} · ${fmtUsd(s.tuitionPerYear)}/yr · ${fmtNum(s.capacityPerSchool)} students</div>`).join("\n        ")}
         ${model.flagship.scholarshipNote ? `<div class="callout-box" style="margin-top: 8px;"><p style="font-size: 11px;">${model.flagship.scholarshipNote}</p></div>` : ''}
       </div>
 

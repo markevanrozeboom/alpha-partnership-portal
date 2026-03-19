@@ -280,9 +280,9 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
             children: [
               dataCell(`${s.metro}${s.isCapital ? " (Capital)" : ""}`, 30),
               dataCell(String(s.count), 15, { bold: true }),
-              dataCell(fmtNum(model.flagship.capacityPerSchool), 20),
-              dataCell(fmtUsd(model.flagship.tuitionPerYear), 15, { bold: true }),
-              dataCell(fmtCompact(s.count * model.flagship.capacityPerSchool * model.flagship.tuitionPerYear), 20, {
+              dataCell(fmtNum(s.capacityPerSchool), 20),
+              dataCell(fmtUsd(s.tuitionPerYear), 15, { bold: true }),
+              dataCell(fmtCompact(s.count * s.capacityPerSchool * s.tuitionPerYear), 20, {
                 bold: true,
               }),
             ],
@@ -292,7 +292,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
         children: [
           totalCell("Total", 30),
           totalCell(String(model.flagship.totalSchoolCount), 15),
-          totalCell("", 20),
+          totalCell(fmtNum(model.flagship.totalStudents) + " total", 20),
           totalCell("", 15),
           totalCell(fmtCompact(model.flagship.totalAnnualRevenue), 20),
         ],
@@ -553,9 +553,18 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
             spacing: { before: 0, after: 120 },
             children: [
               new TextRun({
-                text: `100% owned by Alpha. Premium "halo brand" schools in ${ctx.country}'s top metropolitan areas. ` +
-                  `Tuition: ${fmtUsd(model.flagship.tuitionPerYear)}/year. 25% operating margin. ` +
-                  `50% capacity backstop required for 5 years.`,
+                text: (() => {
+                  const tuitions = model.flagship.schools.map(s => s.tuitionPerYear);
+                  const capacities = model.flagship.schools.map(s => s.capacityPerSchool);
+                  const tuitionStr = new Set(tuitions).size === 1
+                    ? `Tuition: ${fmtUsd(tuitions[0])}/year.`
+                    : `Tuition: ${fmtUsd(Math.min(...tuitions))} – ${fmtUsd(Math.max(...tuitions))}/year (varies by metro).`;
+                  const capStr = new Set(capacities).size === 1
+                    ? `${fmtNum(capacities[0])} students per school.`
+                    : `${fmtNum(Math.min(...capacities))} – ${fmtNum(Math.max(...capacities))} students per school.`;
+                  return `100% owned by Alpha. Premium "halo brand" schools in ${ctx.country}'s top metropolitan areas. ` +
+                    `${tuitionStr} ${capStr} 25% operating margin. 50% capacity backstop required for 5 years.`;
+                })(),
                 size: 18,
                 font: "Calibri",
                 color: "4A5568",

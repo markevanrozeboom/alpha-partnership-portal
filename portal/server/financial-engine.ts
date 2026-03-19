@@ -140,47 +140,59 @@ function optimizeFlagships(data: FinancialResearchData): FlagshipModel {
     Math.ceil((data.mostExpensiveNonBoardingTuitionUsd + 1) / FLAGSHIP.TUITION_STEP) * FLAGSHIP.TUITION_STEP,
   );
 
-  let bestRevenue = 0;
-  let bestTuition = tuitionFloor;
-  let bestCapacity = FLAGSHIP.MIN_CAPACITY;
-  let bestSchools: FlagshipSchoolAllocation[] = [];
+  // Qualify metros: each must support ≥ MIN_CAPACITY students at minimum tuition
+  const minAgiAtFloor = 5 * FLAGSHIP.MIN_TUITION;
+  const qualifyingMetros = metros.filter((m) => {
+    const eligible = interpolateWealthyChildren(m, minAgiAtFloor);
+    return eligible * FLAGSHIP.PENETRATION_RATE >= FLAGSHIP.MIN_CAPACITY;
+  });
 
-  // Grid search: maximize total flagship revenue over tuition × capacity
-  for (let tuition = tuitionFloor; tuition <= FLAGSHIP.MAX_TUITION; tuition += FLAGSHIP.TUITION_STEP) {
-    const agiThreshold = 5 * tuition; // families pay up to 20% of AGI
+  // Per-metro independent optimization: each metro gets its own tuition/capacity
+  const allSchools: FlagshipSchoolAllocation[] = [];
+  let totalRevenue = 0;
 
-    for (let capacity = FLAGSHIP.MIN_CAPACITY; capacity <= FLAGSHIP.MAX_CAPACITY; capacity += FLAGSHIP.CAPACITY_STEP) {
-      let totalRevenue = 0;
-      const allocations: FlagshipSchoolAllocation[] = [];
+  for (const metro of qualifyingMetros) {
+    const maxSchools = metro.isCapital ? FLAGSHIP.MAX_FLAGSHIPS_CAPITAL : FLAGSHIP.MAX_FLAGSHIPS_OTHER;
+    let bestMetroRev = 0;
+    let bestAlloc: FlagshipSchoolAllocation | null = null;
 
-      for (const metro of metros) {
-        const eligibleChildren = interpolateWealthyChildren(metro, agiThreshold);
-        const market = eligibleChildren * FLAGSHIP.PENETRATION_RATE;
-        const maxSchools = metro.isCapital ? FLAGSHIP.MAX_FLAGSHIPS_CAPITAL : FLAGSHIP.MAX_FLAGSHIPS_OTHER;
+    for (let tuition = tuitionFloor; tuition <= FLAGSHIP.MAX_TUITION; tuition += FLAGSHIP.TUITION_STEP) {
+      const agiThreshold = 5 * tuition;
+      const eligible = interpolateWealthyChildren(metro, agiThreshold);
+      const market = eligible * FLAGSHIP.PENETRATION_RATE;
+
+      for (let capacity = FLAGSHIP.MIN_CAPACITY; capacity <= FLAGSHIP.MAX_CAPACITY; capacity += FLAGSHIP.CAPACITY_STEP) {
         const schools = Math.min(maxSchools, Math.floor(market / capacity));
+        if (schools < 1) continue;
 
-        if (schools > 0) {
-          allocations.push({ metro: metro.name, isCapital: metro.isCapital, count: schools });
-          totalRevenue += schools * capacity * tuition;
+        const rev = schools * capacity * tuition;
+        if (rev > bestMetroRev) {
+          bestMetroRev = rev;
+          bestAlloc = {
+            metro: metro.name,
+            isCapital: metro.isCapital,
+            count: schools,
+            tuitionPerYear: tuition,
+            capacityPerSchool: capacity,
+          };
         }
       }
+    }
 
-      if (totalRevenue > bestRevenue) {
-        bestRevenue = totalRevenue;
-        bestTuition = tuition;
-        bestCapacity = capacity;
-        bestSchools = allocations;
-      }
+    if (bestAlloc) {
+      allSchools.push(bestAlloc);
+      totalRevenue += bestMetroRev;
     }
   }
 
-  const totalSchoolCount = bestSchools.reduce((s, a) => s + a.count, 0);
-  const totalStudents = totalSchoolCount * bestCapacity;
+  const totalSchoolCount = allSchools.reduce((s, a) => s + a.count, 0);
+  const totalStudents = allSchools.reduce(
+    (s, a) => s + a.count * a.capacityPerSchool, 0,
+  );
 
   // Handle case where no metros support a flagship
   let scholarshipNote: string | null = null;
   if (totalSchoolCount === 0) {
-    // Find the largest metro for the scholarship fallback
     let largestName = metros[0]?.name || "Capital City";
     let largestChildren = 0;
     for (const m of metros) {
@@ -197,9 +209,12 @@ function optimizeFlagships(data: FinancialResearchData): FlagshipModel {
       `${fmtUsd(FLAGSHIP.MIN_TUITION)}/year tuition. The country/state would need to fund ` +
       `approximately ${fmtNum(gap)} scholarship places in ${largestName} to reach the minimum requirement.`;
 
-    // Return a single minimum flagship with scholarship backing
     return {
-      schools: [{ metro: largestName, isCapital: true, count: 1 }],
+      schools: [{
+        metro: largestName, isCapital: true, count: 1,
+        tuitionPerYear: FLAGSHIP.MIN_TUITION,
+        capacityPerSchool: FLAGSHIP.MIN_CAPACITY,
+      }],
       tuitionPerYear: FLAGSHIP.MIN_TUITION,
       capacityPerSchool: FLAGSHIP.MIN_CAPACITY,
       totalStudents: FLAGSHIP.MIN_CAPACITY,
@@ -210,12 +225,26 @@ function optimizeFlagships(data: FinancialResearchData): FlagshipModel {
     };
   }
 
+  // Summary-level tuition/capacity: revenue-weighted averages
+  const weightedTuition = totalRevenue > 0
+    ? allSchools.reduce((s, a) => {
+        const rev = a.count * a.capacityPerSchool * a.tuitionPerYear;
+        return s + a.tuitionPerYear * rev;
+      }, 0) / totalRevenue
+    : tuitionFloor;
+  const weightedCapacity = totalRevenue > 0
+    ? Math.round(allSchools.reduce((s, a) => {
+        const rev = a.count * a.capacityPerSchool * a.tuitionPerYear;
+        return s + a.capacityPerSchool * rev;
+      }, 0) / totalRevenue)
+    : FLAGSHIP.MIN_CAPACITY;
+
   return {
-    schools: bestSchools,
-    tuitionPerYear: bestTuition,
-    capacityPerSchool: bestCapacity,
+    schools: allSchools,
+    tuitionPerYear: weightedTuition,
+    capacityPerSchool: weightedCapacity,
     totalStudents,
-    totalAnnualRevenue: bestRevenue,
+    totalAnnualRevenue: totalRevenue,
     operatingMarginPct: FLAGSHIP.OPERATING_MARGIN,
     totalSchoolCount,
     scholarshipNote,

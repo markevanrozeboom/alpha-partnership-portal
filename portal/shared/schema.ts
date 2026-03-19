@@ -49,6 +49,8 @@ export interface FlagshipSchoolAllocation {
   metro: string;
   isCapital: boolean;
   count: number;
+  tuitionPerYear: number;
+  capacityPerSchool: number;
 }
 
 /** Prong 1: Flagship Alphas model result */
