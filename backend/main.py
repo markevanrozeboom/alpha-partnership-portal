@@ -632,52 +632,82 @@ async def flagship_test():
 @app.get("/api/debug/flagship-live/{country}")
 async def flagship_live_test(country: str):
     """Run real LLM extraction + optimization for a country and return full diagnostics."""
-    from agents.country_research import run_country_research
+    import traceback
+    from models.schemas import FlagshipMarketData
+    from agents.country_research import (
+        FLAGSHIP_EXTRACTION_PROMPT, run_country_research,
+    )
     from agents.financial import optimize_flagships
+    from services.llm import call_llm
+    from services.perplexity import research_country, research_education
 
-    profile, _, _ = await run_country_research(country)
-    fmd = profile.flagship_market_data
+    diag: dict = {"version": "2.3.0", "country": country, "steps": {}}
 
-    raw_metros = []
-    if fmd and fmd.metros:
-        for m in fmd.metros:
-            raw_metros.append({
-                "metro_name": m.metro_name,
-                "is_capital": m.is_capital,
-                "metro_population": m.metro_population,
-                "k12_children": m.k12_children,
-                "above_200k": m.children_in_families_income_above_200k,
-                "above_500k": m.children_in_families_income_above_500k,
-                "local_top_school_tuition": m.most_expensive_nonboarding_tuition,
-                "local_top_school_name": m.most_expensive_nonboarding_school,
-            })
+    # Step 1: Get research text (same as the real pipeline)
+    try:
+        perp_res, edu_res = await asyncio.gather(
+            research_country(country), research_education(country),
+        )
+        research_text = perp_res.get("answer", "")
+        edu_text = edu_res.get("answer", "")
+        diag["steps"]["perplexity"] = {
+            "ok": True,
+            "research_chars": len(research_text),
+            "edu_chars": len(edu_text),
+        }
+    except Exception as exc:
+        diag["steps"]["perplexity"] = {"ok": False, "error": str(exc)}
+        return diag
 
-    opt = optimize_flagships(fmd) if fmd else None
-
-    return {
-        "version": "2.3.0",
-        "country": country,
-        "flagship_market_data_present": fmd is not None,
-        "country_top_school_tuition": fmd.country_most_expensive_nonboarding_tuition if fmd else None,
-        "country_top_school_name": fmd.country_most_expensive_nonboarding_school if fmd else None,
-        "raw_metro_count": len(raw_metros),
-        "raw_metros": raw_metros,
-        "optimization": {
-            "metro_count": len(opt.metros) if opt else 0,
+    # Step 2: Extract FlagshipMarketData via LLM
+    fmd = None
+    try:
+        fmd = await call_llm(
+            system_prompt=FLAGSHIP_EXTRACTION_PROMPT,
+            user_prompt=(
+                f"Target country: {country}\n\n"
+                f"Country Research:\n{research_text[:6000]}\n\n"
+                f"Education Research:\n{edu_text[:4000]}"
+            ),
+            output_schema=FlagshipMarketData,
+        )
+        diag["steps"]["llm_extraction"] = {
+            "ok": True,
+            "metro_count": len(fmd.metros) if fmd else 0,
             "metros": [
                 {
-                    "name": m.metro_name,
-                    "schools": m.schools,
-                    "capacity": m.capacity_per_school,
-                    "tuition": m.tuition,
-                    "revenue": m.annual_revenue,
-                    "eligible": m.eligible_children,
-                    "demand": m.demand_at_penetration,
+                    "name": m.metro_name, "is_capital": m.is_capital,
+                    "pop": m.metro_population, "k12": m.k12_children,
+                    "above_200k": m.children_in_families_income_above_200k,
+                    "above_500k": m.children_in_families_income_above_500k,
+                    "local_tuition": m.most_expensive_nonboarding_tuition,
+                    "local_school": m.most_expensive_nonboarding_school,
                 }
+                for m in (fmd.metros if fmd else [])
+            ],
+            "country_top_tuition": fmd.country_most_expensive_nonboarding_tuition if fmd else None,
+        }
+    except Exception as exc:
+        diag["steps"]["llm_extraction"] = {
+            "ok": False,
+            "error": str(exc),
+            "traceback": traceback.format_exc(),
+        }
+        return diag
+
+    # Step 3: Run optimization
+    if fmd:
+        opt = optimize_flagships(fmd)
+        diag["steps"]["optimization"] = {
+            "ok": True,
+            "result_metros": [
+                {"name": m.metro_name, "schools": m.schools,
+                 "capacity": m.capacity_per_school, "tuition": m.tuition,
+                 "revenue": m.annual_revenue}
                 for m in opt.metros
-            ] if opt else [],
-            "total_schools": opt.total_schools if opt else 0,
-            "total_revenue": opt.total_annual_revenue if opt else 0,
-            "scholarship_needed": opt.scholarship_needed if opt else False,
-        } if opt else None,
-    }
+            ],
+            "total_schools": opt.total_schools,
+            "total_revenue": opt.total_annual_revenue,
+        }
+
+    return diag
