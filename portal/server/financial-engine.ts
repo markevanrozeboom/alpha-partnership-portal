@@ -236,7 +236,7 @@ function optimizeFlagships(data: FinancialResearchData): FlagshipModel {
         const rev = a.count * a.capacityPerSchool * a.tuitionPerYear;
         return s + a.tuitionPerYear * rev;
       }, 0) / totalRevenue
-    : tuitionFloor;
+    : FLAGSHIP.MIN_TUITION;
   const weightedCapacity = totalRevenue > 0
     ? Math.round(allSchools.reduce((s, a) => {
         const rev = a.count * a.capacityPerSchool * a.tuitionPerYear;
