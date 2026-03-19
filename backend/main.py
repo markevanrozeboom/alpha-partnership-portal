@@ -635,7 +635,7 @@ async def flagship_live_test(country: str):
     import traceback
     from models.schemas import FlagshipMarketData
     from agents.country_research import (
-        FLAGSHIP_EXTRACTION_PROMPT, run_country_research,
+        FLAGSHIP_EXTRACTION_PROMPT,
     )
     from agents.financial import optimize_flagships
     from services.llm import call_llm
