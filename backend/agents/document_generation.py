@@ -364,7 +364,7 @@ async def generate_documents(
             target=target,
             context=context,
             audience_label=audience_labels.get(audience, "investor"),
-            slide_count=18,
+            slide_count=11,
         ),
         user_prompt=(
             f"Produce the detailed slide outline for {target}."
@@ -957,31 +957,30 @@ drafting an investor/government presentation deck outline for a {audience_label}
 Target market: {target}
 {context}
 
-IMPORTANT: Use the Ed71 deck (slide 8) as the template reference for deal structure presentation.
+IMPORTANT: Use the Ed71 deck as the template reference for deal structure presentation.
 Reference file: Ed71_ The World's First AI-Native National Education System.pptx
 
 Deal model:
-- Operator & Licensor (Marriott model) — NOT a JV. Counterparty owns 100%, Alpha operates.
+- Operator & Licensor — NOT a JV. Counterparty owns 100%, Alpha operates.
 - Two-prong: Flagship ($40K-$100K) + National ($25K FIXED, 100K student-year min)
 - Fixed development: $750M total ($250M × 3). Management fee 10%, Timeback 20%.
 
-Produce a detailed slide-by-slide outline for a {slide_count}-slide presentation deck
+Produce a detailed slide-by-slide outline for an {slide_count}-slide presentation deck
 covering:
 1. Title slide with tagline
-2. Executive summary (2 slides)
-3. Market opportunity (2 slides) — macro data, education market sizing
-4. The Alpha Model — how 2hr Learning works, key outcomes data
-5. Deal structure — Operator & Licensor model, 100/0 ownership, revenue split
-6. Two-prong school model — Flagship (Prong 1) + National (Prong 2) with pricing
-7. 5-year rollout plan with milestones
-8. Financial overview — P&L summary, returns, unit economics
-9. Capital deployment — FIXED $750M development + school buildout
-10. Risk mitigation
-11. The team (placeholder)
-12. Key asks and next steps
-13. Appendix: detailed financial projections
-14. Appendix: competitive landscape
-15. Appendix: regulatory overview
+2. Vision — 'Educated in [Country]' as a Global Credential, Alpha as the Stanford of K-12 Education
+3. The Key to Success — reinvented school day, core truths, Traditional vs Alpha Model comparison
+4. The 2hr Learning Model — Timeback, AlphaCore, Guide School, Incept eduLLM
+5. Our Results — Bloom's 2-Sigma, growth metrics, SAT/AP scores, 97% love school, life skills projects
+6. Market Opportunity — why this country, why now, key market drivers
+7. The Complete Platform — Alpha education stack vs country-owned stack, deployment overview
+8. School Type Portfolio — Flagship and National school descriptions
+9. Country-Owned Schools & Investment — ownership structure, per-student budget, investment table
+10. 5-Year Rollout Plan — phased approach with student targets
+11. Thank You / closing
+
+DO NOT include slides about: financial returns (IRR/MOIC), unit economics, risk mitigation,
+key asks, P&L appendix, or capital deployment appendix.
 
 For each slide provide: title, key bullet points (4-6), data callouts, and speaker notes.
 """
@@ -1195,11 +1194,7 @@ def _build_pptx(
             p2.alignment = PP_ALIGN.CENTER
 
     # Calculate total slides for numbering
-    total_slides = 14
-    if model.pnl_projection:
-        total_slides += 1  # P&L table slide
-    if model.capital_deployment:
-        total_slides += 1
+    total_slides = 11
     slide_num = 0
 
     # ── Slide 1: Title ─────────────────────────────────────────────────
@@ -1530,7 +1525,10 @@ def _build_gamma_investor_input(
     outline: str,
     audience: AudienceType,
 ) -> str:
-    """Build Gamma inputText for the investor deck with slide separators."""
+    """Build Gamma inputText for the investor deck with slide separators.
+
+    11-slide structure aligned with the Ed71 reference deck.
+    """
     slides: list[str] = []
 
     # --- Slide 1: Title ---
@@ -1540,84 +1538,130 @@ def _build_gamma_investor_input(
         f"CONFIDENTIAL"
     )
 
-    # --- Slide 2: Executive Summary ---
-    exec_lines = [
-        f"- Opportunity: Transform K-12 education in {target} through AI-powered learning",
-        "- Partnership: Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
-        "- Two-prong: Flagship schools ($40K-$100K) + National schools ($25K FIXED)",
-    ]
-    if model.pnl_projection:
-        last = model.pnl_projection[-1]
-        exec_lines.append(
-            f"- Scale: {last.students:,} students across {last.schools} schools by Year 5"
-        )
-        exec_lines.append(f"- Investment: Year 5 revenue of ${last.revenue:,.0f}")
-    if model.returns_analysis.irr:
-        exec_lines.append(f"- Returns: {model.returns_analysis.irr}% IRR, {model.returns_analysis.moic}x MOIC")
-    exec_lines.append("- Proven model: UAE deal ($1.5B, 200K students) as reference")
-    slides.append("# Executive Summary\n\n" + "\n".join(exec_lines))
+    # --- Slide 2: Vision ---
+    slides.append(
+        f"# 'Educated in {target}' as a Global Credential\n\n"
+        "Alpha — The \"Stanford of K-12 Education\"\n\n"
+        "1. Only AI-native education system, purposefully designed for national scale\n"
+        "2. Commitments to students: love school, learn 2× faster, life skills for the AI age\n"
+        "3. Creating the next generation of global leaders through life skills and academic mastery\n\n"
+        f"Our mission: Alpha is the AI-native public education system for all of {target}"
+    )
 
-    # --- Slide 3: The Alpha Model ---
+    # --- Slide 3: The Key to Success ---
+    slides.append(
+        "# We have reinvented the school day\n\n"
+        "Core truths of transformation:\n"
+        "- Children should love school more than vacation\n"
+        "- Children can master academics in 2 hours per day\n"
+        "- The key to your children's happiness is high standards\n\n"
+        "Traditional: 6 hours of classroom instruction\n"
+        "Alpha Model: 2 hours academic mastery + 4 hours life-skills development\n\n"
+        "Timeback: the AI and learning science platform delivering academic mastery "
+        "10× faster than traditional schooling\n"
+        "AlphaCore: an AI-age life-skills curriculum developing student leadership, "
+        "teamwork, communication, resilience, and other non-academic capabilities"
+    )
+
+    # --- Slide 4: The 2hr Learning Model ---
     slides.append(
         "# The 2hr Learning Model\n\n"
-        "- Timeback: AI compresses core academics into 2 hours/day\n"
-        "- Remaining time: STEM, sports, arts, entrepreneurship, life skills\n"
-        "- AlphaCore: Curriculum OS managing the full student journey\n"
-        "- Guide School: 12-month program transforming teachers into Guides\n"
-        "- Incept eduLLM: Custom AI adapted to local curriculum & culture\n"
-        "- Three commitments: Love school | Learn 2x faster | Future-ready skills"
+        "2hr Learning reimagines the school day by compressing core academics into just two hours through AI, "
+        "freeing the remaining time for STEM, sports, arts, entrepreneurship, and life skills. "
+        "Three core commitments underpin every school: Love school | Learn 2× faster | Future-ready skills.\n\n"
+        "Timeback: Proprietary AI engine that compresses core academic instruction into 2 hours per day "
+        "without sacrificing depth or rigor, unlocking time for enrichment.\n"
+        "AlphaCore: The Curriculum OS that manages the full student journey — from onboarding through assessment — "
+        "ensuring consistency and continuous improvement across every school.\n"
+        "Guide School: A 12-month transformation program that converts traditional teachers into Guides — "
+        "facilitators of self-directed, AI-augmented learning experiences.\n"
+        f"Incept eduLLM: A custom large language model adapted to the local curriculum, language, and cultural context "
+        f"— ensuring the AI layer is authentically {target}, not merely translated."
     )
 
-    # --- Slide 4: Market Opportunity ---
+    # --- Slide 5: Our Results ---
+    slides.append(
+        "# The learning science has been known for 40 years… we have made it work\n\n"
+        "Bloom's 2-Sigma Problem (1984): 1:1 tutoring produces 2 standard deviations of improvement. "
+        "AI makes this possible at national scale for the first time.\n\n"
+        "Exceptional Growth (vs. 1× expected): Avg all students 2.2×, Top 20% 3.9×, Top ⅓ 2.6×, 2 years behind 4.9×\n\n"
+        "World-Class College Admissions: Avg. SAT 1530 (vs. 1063 national), 94% students with 4 or 5 on AP\n\n"
+        "97% love school: High School students voted to keep school open over summer. "
+        "Over 60% would rather go to school than on vacation. "
+        "80% say their Guide is one of the most influential people in their life.\n\n"
+        "100+ life skills projects: All Third Graders solve the Rubik's cube. "
+        "Fifth Graders presented TED-style talks. Middle Schoolers placed 2nd in the world in Global AI Debates. "
+        "High Schoolers traveled to Ukraine on a humanitarian mission. "
+        "Students have created Broadway musicals, AI-powered mental health tools, and apps with millions of users."
+    )
+
+    # --- Slide 6: Market Opportunity ---
     slides.append(
         f"# Market Opportunity: {target}\n\n"
-        f"- School-age population: significant K-12 cohort\n"
-        f"- Education sector undergoing reform and modernisation\n"
-        f"- Growing demand for premium, innovation-driven education\n"
-        f"- Gap between aspirations and current system performance\n"
-        f"- Government appetite for public-private partnerships\n"
-        f"- Alpha's model addresses the core pain points"
+        f"Why {target}, Why Now:\n"
+        f"- Significant K-12 school-age population providing a large addressable base\n"
+        f"- Education sector actively undergoing reform and modernisation at the national level\n"
+        f"- Growing demand for premium, innovation-driven educational alternatives\n"
+        f"- Persistent gap between societal aspirations and current system performance\n"
+        f"- Government appetite for structured public-private partnership models\n"
+        f"- Alpha's model directly addresses the core pain points of the {target} system"
     )
 
-    # --- Slide 5: Financial Overview ---
-    if model.pnl_projection:
-        y1 = model.pnl_projection[0]
-        y5 = model.pnl_projection[-1]
-        fin_lines = [
-            f"- Year 1: {y1.students:,} students → ${y1.revenue:,.0f} revenue → ${y1.ebitda:,.0f} EBITDA",
-            f"- Year 5: {y5.students:,} students → ${y5.revenue:,.0f} revenue → ${y5.ebitda:,.0f} EBITDA",
-        ]
-        if model.returns_analysis.irr:
-            fin_lines.append(f"- IRR: {model.returns_analysis.irr}%")
-        if model.returns_analysis.moic:
-            fin_lines.append(f"- MOIC: {model.returns_analysis.moic}x")
-        fin_lines.append(f"- Management fee revenue (5yr): ${model.total_management_fee_revenue:,.0f}")
-        fin_lines.append(f"- Timeback license revenue (5yr): ${model.total_timeback_license_revenue:,.0f}")
-        slides.append("# 5-Year Financial Summary\n\n" + "\n".join(fin_lines))
-    else:
-        slides.append("# Financial Overview\n\n- Financial model pending")
-
-    # --- Slide 6: Deal Structure ---
+    # --- Slide 7: The Complete Platform ---
     slides.append(
-        f"# Proposed Deal Structure\n\n"
-        f"- Structure: Operator & Licensor model (Marriott model)\n"
-        f"- Ownership: 100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor\n"
-        f"- Prong 1 (Flagship): $40K-$100K tuition, 2-3 schools, 50% backstop\n"
-        f"- Prong 2 (National): $25K/student FIXED, 100K student-year minimum\n"
-        f"- Fixed development costs: $750M ($250M × 3) — non-negotiable\n"
-        f"- Management fee: {model.management_fee_pct * 100:.0f}% of combined revenue\n"
-        f"- Timeback license: {model.timeback_license_pct * 100:.0f}% of combined revenue\n"
-        f"- Cultural IP layer: local identity, language, and values fully integrated"
+        f"# Launching {target}'s Alpha on the full education stack\n\n"
+        "Alpha Education Stack:\n"
+        "- Parent Education System: Parents demand outcomes\n"
+        "- Reinvented School Day: 2 hrs of academics + life skills\n"
+        "- Timeback: AI platform for 10× faster mastery\n"
+        "- AlphaCore: The strongest K-12 life-skills curriculum\n"
+        "- Guide School: Talent academy for training Guides\n"
+        "- Incept eduLLM: Personalised content generation engine\n"
+        "- Alpha scale: 2,500 students today → 100k students across 100 campuses (3-year target)\n\n"
+        f"{target} Owned Stack:\n"
+        f"- Education Sovereignty: {target} owns the critical pieces\n"
+        "- Infrastructure: Built to scale across 100+ schools\n"
+        f"- Localised AI Apps for {target}\n"
+        "- Talent Academy: Recruit and train local Guides\n"
+        "- National eduLLM: Embedded local laws, values, and culture\n"
+        "- $25,000 per student annual budget — ~2× current public funding\n"
+        "- First schools open SY26-27"
     )
 
-    # --- Slide 7: School Portfolio ---
+    # --- Slide 8: School Type Portfolio ---
     if strategy.school_types:
         school_lines = [f"- {st.name}: {st.focus or ''} — {st.tuition or ''}" for st in strategy.school_types[:4]]
         slides.append("# School Type Portfolio\n\n" + "\n".join(school_lines))
     else:
-        slides.append("# School Type Portfolio\n\n- Premium, Mid-Market, and Specialised school types")
+        slides.append(
+            "# School Type Portfolio\n\n"
+            "Alpha Flagship School — $40K–$100K tuition:\n"
+            "Innovative and personalized education. Flagship schools serve as the premium anchor — "
+            "demonstrating the full 2hr Learning experience at the highest level of execution.\n\n"
+            "Alpha National School — $25K Fixed Budget:\n"
+            "Accessible, high-quality education with personalized learning experiences at a fixed per-student cost. "
+            "National schools are the engine of scale — targeting 100,000+ student-years."
+        )
 
-    # --- Slide 8: Rollout Plan ---
+    # --- Slide 9: Country-Owned Schools & Investment ---
+    inv_lines = [
+        f"# Alpha {target} Schools: {target} Owned, Alpha Operated\n\n",
+        f"- 100% {target} owned, 0% Alpha owned. Alpha operates on behalf of the Country/State.\n",
+        "- Per student funding/tuition: $25,000/year.\n",
+        "- Minimum 100,000 students per year commitment.\n",
+        "- Schools can be operated as either public or private schools.\n",
+        f"- {target} is responsible for sourcing real estate; schools pay rent.\n\n",
+        "Investment Required:\n",
+        "- Upfront Fixed: Alpha Core License ($250M), Country-Specific Incept EdLLM ($250M), "
+        "Country-Specific Programs & Life Skills ($250M), Country-Specific EdTech Apps ($250M)\n",
+        "- Prepaid: Timeback License Prepay ($500M), Operating Fee Prepay ($250M)\n",
+        "- Ongoing: Parent Education/Launch/Guides, Timeback License Fee (20% of funding), "
+        "Operating Fee (10% of funding)\n",
+        "- TOTAL UPFRONT: $1.75B",
+    ]
+    slides.append("".join(inv_lines))
+
+    # --- Slide 10: 5-Year Rollout Plan ---
     if strategy.phased_rollout:
         rollout_lines = []
         for ph in strategy.phased_rollout[:5]:
@@ -1629,57 +1673,11 @@ def _build_gamma_investor_input(
     else:
         slides.append("# 5-Year Rollout Plan\n\n- Phased rollout details in strategy report")
 
-    # --- Slide 9: Unit Economics ---
-    ue_lines = [
-        f"- {ue.school_type}: ${ue.per_student_revenue:,.0f}/student revenue, "
-        f"${ue.contribution_margin:,.0f} margin ({ue.margin_pct}%)"
-        for ue in model.unit_economics[:4]
-    ]
-    slides.append("# Unit Economics\n\n" + ("\n".join(ue_lines) if ue_lines else "- Unit economics in financial model"))
-
-    # --- Slide 10: Risk Mitigation ---
-    slides.append(
-        "# Risk Mitigation\n\n"
-        "- Regulatory risk: Proactive government engagement and compliance\n"
-        "- Execution risk: Phased rollout with decision gates\n"
-        "- Cultural risk: Local IP layer and cultural advisory board\n"
-        "- FX risk: Local currency revenue with USD hedging strategy\n"
-        "- Competitive risk: Proprietary AI and outcomes data as moat\n"
-        "- Political risk: Multi-stakeholder alignment strategy"
-    )
-
-    # --- Slide 11: Key Asks ---
-    asks = strategy.key_asks[:6] if strategy.key_asks else [
-        "Sovereign commitment to student volume targets",
-        "Regulatory fast-track for school licensing",
-        "Infrastructure/real estate support",
-        "Cultural IP development partnership",
-    ]
-    slides.append("# Key Asks & Next Steps\n\n" + "\n".join(f"- {a}" for a in asks))
-
-    # --- Slide 12: Appendix - P&L ---
-    if model.pnl_projection:
-        pnl_lines = [
-            "- Y{}: {:,} students | ${:,.0f} rev | ${:,.0f} EBITDA | ${:,.0f} FCF".format(
-                p.year, p.students, p.revenue, p.ebitda, p.free_cash_flow
-            )
-            for p in model.pnl_projection
-        ]
-        slides.append("# Appendix: Detailed P&L Projection\n\n" + "\n".join(pnl_lines))
-
-    # --- Slide 13: Appendix - Capital Deployment ---
-    if model.capital_deployment:
-        cap_lines = [
-            f"- Year {cd.year}: ${cd.total:,.0f} total ({f'${cd.ip_development:,.0f} IP' if cd.ip_development else ''}"
-            f" + ${cd.launch_capital:,.0f} launch + ${cd.real_estate:,.0f} RE)"
-            for cd in model.capital_deployment
-        ]
-        slides.append("# Appendix: Capital Deployment\n\n" + "\n".join(cap_lines))
-
-    # --- Slide 14: Thank You ---
+    # --- Slide 11: Thank You ---
     slides.append(
         "# Thank You\n\n"
-        "2hr Learning — Transforming Education Globally"
+        "2hr Learning — Transforming Education Globally\n\n"
+        "CONFIDENTIAL"
     )
 
     return "\n---\n".join(slides)
@@ -1707,7 +1705,7 @@ async def _build_investor_deck_gamma(
     try:
         result = await generate_and_wait(
             input_text,
-            num_cards=14,
+            num_cards=11,
             text_mode="condense",
             card_split="inputTextBreaks",
             text_amount="extensive",
