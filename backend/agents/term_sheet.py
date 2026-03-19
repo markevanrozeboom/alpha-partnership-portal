@@ -184,7 +184,7 @@ def generate_term_sheet_assumptions(
             unit="years", category="deal",
             description=(
                 "Alpha has exclusive rights to the "
-                "2hr Learning model in the territory"
+                "Alpha model in the territory"
             ),
         ),
 
@@ -547,7 +547,7 @@ class CountryVariables(BaseModel):
 
 COUNTRY_VARIABLES_PROMPT = """\
 You are preparing a strategic education partnership proposal between
-Alpha Holdings / 2hr Learning and {target}. This proposal will be
+Alpha Holdings, Inc. and {target}. This proposal will be
 presented to the head of state and senior government decision-makers.
 
 You need to generate country-specific content variables that will be
@@ -1751,12 +1751,16 @@ def _add_school_design_section(
 
     Table 3: Alpha Flagships — Key Metrics
     """
-    doc.add_heading("2. Alpha Flagship Schools", level=1)
+    doc.add_heading("2. Halo Alpha Schools", level=1)
 
     _add_body(
         doc,
-        "100% owned by Alpha. These are the Halo Brand \u2014 premium "
-        "flagship schools in the country\u2019s top metros.",
+        "Halo Alpha Schools are 100% owned by Alpha Holdings, Inc. and serve as the premium "
+        "\"halo brand\" \u2014 flagship schools that demonstrate the full Alpha experience at "
+        "the highest level of execution. They establish Alpha\u2019s reputation in each market, "
+        "set the benchmark for academic and life-skills outcomes, and create aspirational demand "
+        "that drives enrollment across the broader national school network. "
+        "Sized as 250-, 500-, or 1,000-student schools.",
     )
 
     flagship_opt = fin.get("flagship_optimization")
@@ -2292,7 +2296,7 @@ def _build_summary_markdown(
 
     lines = [
         f"# {cv.jv_program_name} \u2014 Combined Proposal",
-        f"## 2hr Learning (Alpha) \u00d7 {target}",
+        f"## Alpha Holdings, Inc. \u00d7 {target}",
         "",
         f"**Program Name:** {cv.jv_program_name}",
         f"**Cultural Program:** {cv.cultural_program_name}",

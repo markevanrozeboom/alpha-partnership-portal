@@ -83,7 +83,7 @@ export default function PortalRunPage() {
             Back to Portal
           </Link>
           <span className="text-xs text-gray-600">
-            2hr Learning Partnership Portal
+            Alpha Holdings, Inc. Partnership Portal
           </span>
         </div>
       </header>
@@ -345,7 +345,7 @@ export default function PortalRunPage() {
 
       {/* Footer */}
       <footer className="border-t border-white/5 py-4 px-4 text-center text-xs text-gray-600">
-        CONFIDENTIAL — 2hr Learning (Alpha) — Partnership Portal
+        CONFIDENTIAL — Alpha Holdings, Inc. — Partnership Portal
       </footer>
     </div>
   );

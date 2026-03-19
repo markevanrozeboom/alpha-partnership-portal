@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "2hr Learning — Partnership Portal",
+  title: "Alpha Holdings, Inc. — Partnership Portal",
   description: "Generate your customized term sheet and partnership proposal",
 };
 

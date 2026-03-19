@@ -164,7 +164,7 @@ income distribution → % above threshold → children per household.
 REPORT_PROMPT = HEAD_OF_STATE_PREAMBLE + """
 You are a trusted senior advisor preparing a confidential country briefing
 for **{target}** to support a potential education partnership with
-2hr Learning (Alpha).
+Alpha Holdings, Inc.
 
 ## Context Data
 {data_context}
@@ -213,7 +213,7 @@ RULES:
 
 US_STATE_REPORT_PROMPT = HEAD_OF_STATE_PREAMBLE + """
 You are a senior education policy advisor preparing a state briefing
-for **{target}** to support 2hr Learning (Alpha)'s US expansion strategy.
+for **{target}** to support Alpha Holdings, Inc.'s US expansion strategy.
 
 ## Context Data
 {data_context}
@@ -570,7 +570,7 @@ def _save_report_docx(target: str, markdown: str, title: str) -> str:
     heading = doc.add_heading(f"{title}: {target}", level=0)
     heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.add_paragraph(
-        "CONFIDENTIAL & PROPRIETARY — 2hr Learning (Alpha)"
+        "CONFIDENTIAL & PROPRIETARY — Alpha Holdings, Inc."
     ).alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.add_page_break()
 

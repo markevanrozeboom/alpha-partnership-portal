@@ -49,7 +49,7 @@ ABSOLUTE RULES:
 # ---------------------------------------------------------------------------
 
 EDUCATION_BRIEF_PROMPT = """You are a senior education advisor preparing a concise education
-landscape brief for **{target}** as part of a partnership proposal with 2hr Learning (Alpha).
+landscape brief for **{target}** as part of a partnership proposal with Alpha Holdings, Inc.
 
 """ + HEAD_OF_STATE_PREAMBLE + """
 
@@ -185,7 +185,7 @@ def _save_report_docx(target: str, markdown: str, title: str) -> str:
     doc.styles["Normal"].font.size = DocxPt(11)
     h = doc.add_heading(f"{title}: {target}", level=0)
     h.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    doc.add_paragraph("CONFIDENTIAL & PROPRIETARY — 2hr Learning (Alpha)").alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph("CONFIDENTIAL & PROPRIETARY — Alpha Holdings, Inc.").alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.add_page_break()
     for line in markdown.split("\n"):
         s = line.strip()

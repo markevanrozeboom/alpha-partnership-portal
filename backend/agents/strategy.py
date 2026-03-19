@@ -56,7 +56,7 @@ ABSOLUTE RULES:
 
 STRATEGY_REPORT_PROMPT = HEAD_OF_STATE_PREAMBLE + """
 You are a trusted senior advisor preparing a strategy brief for **{target}**
-to support an education partnership with 2hr Learning (Alpha).
+to support an education partnership with Alpha Holdings, Inc.
 
 Conform this pitch to the country. The model is fixed. Your job is to change
 the words to feel right for the country.
@@ -116,7 +116,7 @@ RULES:
 
 US_STATE_STRATEGY_PROMPT = HEAD_OF_STATE_PREAMBLE + """
 You are a senior education policy strategist preparing a strategy brief
-for **{target}** to support 2hr Learning (Alpha)'s US expansion.
+for **{target}** to support Alpha Holdings, Inc.'s US expansion.
 
 ## Context
 {country_context}
@@ -334,7 +334,7 @@ def _save_report_docx(target: str, markdown: str, title: str) -> str:
     doc.styles["Normal"].font.size = DocxPt(11)
     h = doc.add_heading(f"{title}: {target}", level=0)
     h.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    doc.add_paragraph("CONFIDENTIAL & PROPRIETARY — 2hr Learning (Alpha)").alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph("CONFIDENTIAL & PROPRIETARY — Alpha Holdings, Inc.").alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.add_page_break()
     for line in markdown.split("\n"):
         s = line.strip()

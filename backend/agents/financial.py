@@ -48,6 +48,9 @@ _K12_RATIO = 0.15          # fraction of metro pop that are K-12 age
 _PCT_ABOVE_200K = 0.035    # fraction of K-12 children in families >$200K
 _PCT_ABOVE_500K = 0.008    # fraction of K-12 children in families >$500K
 
+# Flagship school sizes considered in the revenue grid search
+ALLOWED_CAPACITIES = (250, 500, 1000)
+
 
 def _apply_income_floors(
     metros: list[MetroFlagshipInput],
@@ -166,8 +169,6 @@ def optimize_flagships(
     tuition_max: int = 100_000,
     tuition_step: int = 5_000,
     capacity_min: int = 250,
-    capacity_max: int = 1_000,
-    capacity_step: int = 50,
     penetration_rate: float = 0.20,
 ) -> FlagshipOptimizationResult:
     """Revenue-maximizing grid search per financial_rules_v1.md.
@@ -310,7 +311,7 @@ def optimize_flagships(
             eligible = _interpolate_eligible_children(metro, min_agi)
             demand = int(eligible * penetration_rate)
 
-            for capacity in range(capacity_min, capacity_max + 1, capacity_step):
+            for capacity in ALLOWED_CAPACITIES:
                 if demand < capacity:
                     continue
 

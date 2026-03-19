@@ -36,7 +36,7 @@ class ResearchMode(str, Enum):
 
 # System prompt shared across all modes
 _SYSTEM_PROMPT = (
-    "You are a research assistant for 2hr Learning (Alpha), an education "
+    "You are a research assistant for Alpha Holdings, Inc., an education "
     "technology company that deploys a complete education operating system "
     "(Timeback, AlphaCore, Guide School, Incept eduLLM). "
     "Provide detailed, data-rich answers with specific numbers, dates, "

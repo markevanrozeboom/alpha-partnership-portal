@@ -14,7 +14,7 @@ const openai = new OpenAI();
 
 // ─── SYSTEM PROMPT: Country Research ─────────────────────────────────────────
 
-const RESEARCH_PROMPT = `You are a research assistant for Alpha Education / 2hr Learning.
+const RESEARCH_PROMPT = `You are a research assistant for Alpha Holdings, Inc.
 Your job is to produce a country context profile for a sales engagement.
 
 CRITICAL: These materials may be presented to heads of state, sovereign rulers, and senior government officials.
@@ -50,7 +50,7 @@ Be specific with numbers. Return ONLY the JSON object, no markdown fences.`;
 
 const FIXED_ECONOMICS = {
   upfront: [
-    { item: "AlphaCore License", amount: "$250M", recipient: "Alpha Holdings" },
+    { item: "AlphaCore License", amount: "$250M", recipient: "Alpha Holdings, Inc." },
     { item: "EdTech App R&D", amount: "$250M", recipient: "Local expense" },
     { item: "Local Life-Skills R&D", amount: "$250M", recipient: "Local expense" },
     { item: "Management Fee Prepay", amount: "$250M", recipient: "Prepaid OpEx for 100k student-years" },
@@ -60,8 +60,8 @@ const FIXED_ECONOMICS = {
   ongoing: [
     { item: "Parent Edu / Launch / Guides", amount: "$25-50M / yr", recipient: "Local expense" },
     { item: "Additional School Funding", amount: "$1B / yr*", recipient: "Local expense" },
-    { item: "Management Fee", amount: "10% budget", recipient: "OpEx to Alpha Holdings" },
-    { item: "TimeBack License Fee", amount: "20% budget", recipient: "OpEx to Alpha Holdings" },
+    { item: "Management Fee", amount: "10% budget", recipient: "OpEx to Alpha Holdings, Inc." },
+    { item: "TimeBack License Fee", amount: "20% budget", recipient: "OpEx to Alpha Holdings, Inc." },
   ],
 
   costStructure: [
@@ -310,7 +310,7 @@ function generateTermSheetHtml(ctx: CountryContext): string {
       <div class="subtitle">${ctx.formalName} National Education Transformation Program</div>
     </div>
     <div class="header-right">
-      <div class="brand">ALPHA</div>
+      <div class="brand">ALPHA HOLDINGS, INC.</div>
       <div>Confidential & Proprietary</div>
       <div>${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long" })}</div>
     </div>
@@ -337,6 +337,10 @@ function generateTermSheetHtml(ctx: CountryContext): string {
       <span class="label">Up-Front Investment</span>
       <span class="value">$1.5B</span>
     </div>
+  </div>
+
+  <div class="callout" style="margin-bottom: 20px;">
+    <p><em>We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.</em></p>
   </div>
 
   <div class="section-label">Commercial Structure</div>
@@ -370,7 +374,7 @@ function generateTermSheetHtml(ctx: CountryContext): string {
   <!-- Page 8 Cost Structure -->
   <div class="section-box page-break">
     <div class="section-label">${ctx.localizedProgramName || ctx.country} Cost Structure</div>
-    <div class="section-title">Budget like other $25k Alpha Holdings Schools</div>
+    <div class="section-title">Per-Student Cost Structure at $25K Budget</div>
     <table>
       <thead>
         <tr>
@@ -388,7 +392,7 @@ function generateTermSheetHtml(ctx: CountryContext): string {
   </div>
 
   <div class="footer">
-    <span>© ${new Date().getFullYear()} Alpha Holdings. Confidential & Proprietary.</span>
+    <span>© ${new Date().getFullYear()} Alpha Holdings, Inc. Confidential & Proprietary.</span>
     <span>${ctx.localizedProgramName || ctx.country} Term Sheet — ${ctx.formalName}</span>
   </div>
 </div>
@@ -628,9 +632,9 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   <div class="flag">${ctx.flagEmoji}</div>
   <h1>${programName}<br><span>The World's First AI-Native<br>National Education System</span></h1>
   <div class="tagline">${ctx.formalName}</div>
-  <div class="meta">Confidential &amp; Proprietary · ${dateStr} · Alpha Education</div>
+  <div class="meta">Confidential &amp; Proprietary · ${dateStr} · Alpha Holdings, Inc.</div>
   <div class="slide-footer" style="color: rgba(255,255,255,0.3);">
-    <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA</span>
+    <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA HOLDINGS, INC.</span>
     <span class="slide-num">1</span>
   </div>
 </div>
@@ -645,7 +649,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:40px; margin-top:32px; align-items:start;">
     <div style="text-align:center; padding-top:16px;">
       <div style="font-size:48px; margin-bottom:12px;">${ctx.flagEmoji}</div>
-      <div style="font-size:28px; font-weight:800; color:#1a56db; letter-spacing:0.02em;">ALPHA</div>
+      <div style="font-size:28px; font-weight:800; color:#1a56db; letter-spacing:0.02em;">ALPHA HOLDINGS, INC.</div>
       <div style="font-size:13px; font-weight:600; color:#4a5568; margin-top:8px;">The "Stanford of K-12 Education"</div>
     </div>
     <div>
@@ -673,7 +677,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA</span>
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">2</span>
   </div>
@@ -743,7 +747,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA</span>
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">3</span>
   </div>
@@ -779,7 +783,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA</span>
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">4</span>
   </div>
@@ -789,7 +793,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
      SLIDE 5 — THE 2HR LEARNING MODEL
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
-  <div class="label">The 2hr Learning Model</div>
+  <div class="label">The Alpha Model</div>
   <h2>AI-powered education that <span>compresses and elevates</span></h2>
 
   <ul class="bullet-list" style="margin-bottom: 20px;">
@@ -817,7 +821,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA</span>
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">5</span>
   </div>
@@ -947,7 +951,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA</span>
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">6</span>
   </div>
@@ -999,7 +1003,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA</span>
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">7</span>
   </div>
@@ -1061,7 +1065,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA</span>
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">8</span>
   </div>
@@ -1081,7 +1085,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="partner-detail">Modelled after the Marriott hotel management model. ${ctx.country} owns 100% of the local entity; Alpha is the exclusive operator and licensor.</div>
     </div>
     <div class="partner-card">
-      <div class="partner-label">Flagship Schools</div>
+      <div class="partner-label">Halo Alpha Schools</div>
       <div class="partner-value">${model.flagship.totalSchoolCount} School${model.flagship.totalSchoolCount !== 1 ? 's' : ''} · ${(() => { const t = Array.from(new Set(model.flagship.schools.map(s => s.tuitionPerYear))); return t.length === 1 ? fmtUsd(t[0]) : `${fmtUsd(Math.min(...t))} – ${fmtUsd(Math.max(...t))}`; })()}/yr</div>
       <div class="partner-detail">${model.flagship.schools.map(s => `${s.metro} (${s.count} @ ${fmtUsd(s.tuitionPerYear)})`).join(', ')}. ${model.flagship.scholarshipNote ? model.flagship.scholarshipNote : `${fmtNum(model.flagship.capacityPerSchool)} students per school.`}</div>
     </div>
@@ -1093,7 +1097,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div style="margin-top: 24px;">
-    <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:12px;">What Alpha Retains (IP)</div>
+    <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:12px;">What Alpha Holdings, Inc. Retains (IP)</div>
     <ul class="bullet-list">
       <li><strong>Timeback®</strong> — AI learning platform (licensed to local entity)</li>
       <li><strong>AlphaCore™</strong> — Life-skills curriculum (licensed)</li>
@@ -1107,7 +1111,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA</span>
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">9</span>
   </div>
@@ -1118,7 +1122,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">Country-Owned Schools</div>
-  <h2>Alpha ${ctx.country} Schools: <span>${ctx.country} Owned, Alpha Operated</span></h2>
+  <h2>${programName} Schools: <span>${ctx.country} Owned, Alpha Operated</span></h2>
 
   <div style="display:grid; grid-template-columns:1fr 1.6fr; gap:28px; margin-top:16px;">
 
@@ -1162,7 +1166,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
         </thead>
         <tbody>
           <tr class="section-header"><td colspan="4">Upfront Development Costs (FIXED — do not scale by country)</td></tr>
-          ${model.upfront.fixedItems.map(r => `<tr><td>${r.item}</td><td class="amt" style="text-align:right;">${fmtCompact(r.amountUsd)}</td><td></td><td class="notes">Paid upfront${r.recipient === 'Alpha Holdings' ? ' to Alpha Holdings' : ''}</td></tr>`).join("\n          ")}
+          ${model.upfront.fixedItems.map(r => `<tr><td>${r.item}</td><td class="amt" style="text-align:right;">${fmtCompact(r.amountUsd)}</td><td></td><td class="notes">Paid upfront${r.recipient === 'Alpha Holdings, Inc.' ? ' to Alpha Holdings, Inc.' : ''}</td></tr>`).join("\n          ")}
           <tr class="section-header"><td colspan="4">Prepaid Fees (scale by student commitment)</td></tr>
           ${model.upfront.variableItems.map(r => `<tr><td>${r.item}</td><td class="amt" style="text-align:right;">${fmtCompact(r.amountUsd)}</td><td></td><td class="notes">${r.note || r.recipient}</td></tr>`).join("\n          ")}
           <tr class="section-header"><td colspan="4">Ongoing Annual Costs (scale above ${fmtNum(model.counterparty.minStudentsPerYear)} students)</td></tr>
@@ -1180,7 +1184,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA</span>
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">10</span>
   </div>
@@ -1192,11 +1196,11 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 <div class="slide slide-cover" style="display:flex; align-items:center; justify-content:center; text-align:center;">
   <div>
     <div style="font-size:24px; font-weight:600; color:#1a56db; margin-bottom:16px; font-style:italic;">Thank You</div>
-    <h1 style="font-size:48px; font-weight:800; color:#0a1628; line-height:1.2; margin:0 0 32px;">2hr Learning —<br>Transforming Education<br>Globally</h1>
+    <h1 style="font-size:48px; font-weight:800; color:#0a1628; line-height:1.2; margin:0 0 32px;">Alpha Holdings, Inc.<br>Transforming Education<br>Globally</h1>
     <div style="display:inline-block; border:2px solid #1a56db; border-radius:4px; padding:8px 24px; font-size:13px; font-weight:600; color:#1a56db; letter-spacing:0.08em;">CONFIDENTIAL</div>
   </div>
   <div class="slide-footer" style="color: rgba(255,255,255,0.3);">
-    <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA</span>
+    <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA HOLDINGS, INC.</span>
     <span class="slide-num">11</span>
   </div>
 </div>

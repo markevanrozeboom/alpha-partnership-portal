@@ -58,7 +58,7 @@ export default function Home() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00d4aa] opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00d4aa]" />
               </span>
-              2hr Learning Partnership Portal
+              Alpha Holdings, Inc. Partnership Portal
             </div>
 
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">
@@ -206,7 +206,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-white/5 py-4 px-4 text-center text-xs text-gray-600">
-        CONFIDENTIAL — 2hr Learning (Alpha) — Partnership Portal v2.0
+        CONFIDENTIAL — Alpha Holdings, Inc. — Partnership Portal v2.0
       </footer>
     </div>
   );

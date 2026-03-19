@@ -177,7 +177,7 @@ class AlphaPDF(FPDF):
         self.ln(12)
         self.set_font("Helvetica", "", 10)
         self.set_text_color(150, 150, 150)
-        self.multi_cell(0, 8, "Prepared by 2hr Learning - Alpha Division", align="C")
+        self.multi_cell(0, 8, "Prepared by Alpha Holdings, Inc.", align="C")
 
 
 def _is_separator_row(row, num_cols: int) -> bool:
@@ -354,7 +354,7 @@ def convert_docx_to_pdf(docx_path: str) -> str:
     pdf.add_cover_page(
         title=cover_title,
         subtitle=cover_subtitle,
-        target=f"2hr Learning (Alpha) x {target_name}",
+        target=f"Alpha Holdings, Inc. × {target_name}",
     )
 
     # Content pages — iterate body elements in document order so
@@ -496,7 +496,7 @@ class LandscapeDeckPDF(FPDF):
         self.set_font("Helvetica", "I", 7)
         self.set_text_color(*MID_GRAY)
         super().cell(0, 8, (
-            f"CONFIDENTIAL  |  2hr Learning (Alpha)  |  "
+            f"CONFIDENTIAL  |  Alpha Holdings, Inc.  |  "
             f"{self.target_name}  |  Page {self.page_no()}"
         ), align="C")
 
@@ -549,7 +549,7 @@ class LandscapeDeckPDF(FPDF):
         self.set_font("Helvetica", "", 9)
         self.set_text_color(130, 130, 130)
         self.multi_cell(0, 6, datetime.now().strftime("%B %Y"), align="C")
-        self.multi_cell(0, 6, "Prepared by 2hr Learning - Alpha Division", align="C")
+        self.multi_cell(0, 6, "Prepared by Alpha Holdings, Inc.", align="C")
 
     def add_content_slide(self, title: str, bullets: list[str],
                           slide_num: int = 0, total_slides: int = 0):
@@ -701,7 +701,7 @@ def convert_pptx_to_pdf(pptx_path: str) -> str:
 
     # Cover slide
     pdf.add_cover_slide(
-        title=f"2hr Learning x {target_name}",
+        title=f"Alpha Holdings, Inc. × {target_name}",
         subtitle="Strategic Partnership Proposal",
         target=f"Prepared for {target_name}",
     )

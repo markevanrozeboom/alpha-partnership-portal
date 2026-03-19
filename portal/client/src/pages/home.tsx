@@ -39,7 +39,7 @@ export default function HomePage() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
             </div>
             <span className="text-sm font-medium text-primary tracking-wide">
-              Alpha Education
+              Alpha Holdings, Inc.
             </span>
           </div>
 
@@ -119,7 +119,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t py-4 px-6 text-center">
         <p className="text-xs text-muted-foreground mb-2">
-          CONFIDENTIAL — Alpha Education — National Partnership Portal
+          CONFIDENTIAL — Alpha Holdings, Inc. — National Partnership Portal
         </p>
         <PerplexityAttribution />
       </footer>

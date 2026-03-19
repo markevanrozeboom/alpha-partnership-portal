@@ -417,7 +417,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
         tableHeader: true,
         children: [
           headerCell("Parameter", 30),
-          headerCell("Flagship (Prong 1)", 35),
+          headerCell("Halo Alpha (Prong 1)", 35),
           headerCell("National (Prong 2)", 35),
         ],
       }),
@@ -477,7 +477,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
                 children: [
                   new TextRun({ text: `${ctx.flagEmoji} ${programName} — Term Sheet`, bold: true, size: 36, font: "Calibri", color: "0A1628" }),
                   new TextRun({ text: "\t" }),
-                  new TextRun({ text: "ALPHA", bold: true, size: 22, font: "Calibri", color: "1A56DB" }),
+                  new TextRun({ text: "ALPHA HOLDINGS, INC.", bold: true, size: 22, font: "Calibri", color: "1A56DB" }),
                 ],
                 tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
                 spacing: { after: 40 },
@@ -500,7 +500,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
             children: [
               new Paragraph({
                 children: [
-                  new TextRun({ text: `© ${now.getFullYear()} Alpha Holdings. Confidential & Proprietary.`, size: 14, font: "Calibri", color: "A0AEC0" }),
+                  new TextRun({ text: `© ${now.getFullYear()} Alpha Holdings, Inc. Confidential & Proprietary.`, size: 14, font: "Calibri", color: "A0AEC0" }),
                   new TextRun({ text: "\t" }),
                   new TextRun({ text: `${programName} Term Sheet — ${ctx.formalName}`, size: 14, font: "Calibri", color: "A0AEC0" }),
                 ],
@@ -537,7 +537,24 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
           metricsTable,
           new Paragraph({ spacing: { before: 200, after: 0 }, children: [] }),
 
-          // ── PRONG 1: FLAGSHIP ALPHAS ──
+          // ── PROPOSED STRUCTURE ──
+          new Paragraph({
+            shading: { type: ShadingType.SOLID, color: "F0F4FF", fill: "F0F4FF" },
+            border: { left: { style: BorderStyle.SINGLE, size: 8, color: "1A56DB" } },
+            spacing: { before: 0, after: 200 },
+            indent: { left: 100 },
+            children: [
+              new TextRun({
+                text: "We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.",
+                size: 18,
+                font: "Calibri",
+                color: "2D3748",
+                italics: true,
+              }),
+            ],
+          }),
+
+          // ── PRONG 1: HALO ALPHA SCHOOLS ──
           new Paragraph({
             spacing: { before: 0, after: 40 },
             children: [
@@ -547,7 +564,19 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
           }),
           new Paragraph({
             spacing: { before: 80, after: 80 },
-            children: [new TextRun({ text: "Flagship Alpha Schools", bold: true, size: 28, font: "Calibri", color: "0A1628" })],
+            children: [new TextRun({ text: "Halo Alpha Schools", bold: true, size: 28, font: "Calibri", color: "0A1628" })],
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 80 },
+            children: [
+              new TextRun({
+                text: "Halo Alpha Schools are 100% owned by Alpha Holdings, Inc. and serve as the premium \"halo brand\" — flagship schools that demonstrate the full Alpha experience at the highest level of execution. " +
+                  "They establish Alpha's reputation in each market, set the benchmark for academic and life-skills outcomes, and create aspirational demand that drives enrollment across the broader national school network.",
+                size: 18,
+                font: "Calibri",
+                color: "4A5568",
+              }),
+            ],
           }),
           new Paragraph({
             spacing: { before: 0, after: 120 },
@@ -562,7 +591,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
                   const capStr = new Set(capacities).size === 1
                     ? `${fmtNum(capacities[0])} students per school.`
                     : `${fmtNum(Math.min(...capacities))} – ${fmtNum(Math.max(...capacities))} students per school.`;
-                  return `100% owned by Alpha. Premium "halo brand" schools in ${ctx.country}'s top metropolitan areas. ` +
+                  return `Sized as 250-, 500-, or 1,000-student schools in ${ctx.country}'s top metropolitan areas. ` +
                     `${tuitionStr} ${capStr} 25% operating margin. 50% capacity backstop required for 5 years.`;
                 })(),
                 size: 18,
@@ -601,7 +630,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
           }),
           new Paragraph({
             spacing: { before: 80, after: 80 },
-            children: [new TextRun({ text: "Counterparty-Owned Schools Operated by Alpha", bold: true, size: 28, font: "Calibri", color: "0A1628" })],
+            children: [new TextRun({ text: `${ctx.country}-Owned Schools Operated by Alpha`, bold: true, size: 28, font: "Calibri", color: "0A1628" })],
           }),
           new Paragraph({
             spacing: { before: 0, after: 120 },

@@ -27,7 +27,7 @@ unified_model:
       This follows the Ed71/Next71 UAE structure.
 
   # ---------------------------------------------------------------------------
-  # Prong 1: Alpha Flagship Schools
+  # Prong 1: Halo Alpha Schools
   # ---------------------------------------------------------------------------
   prong_1_flagship:
     description: >

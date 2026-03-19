@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "2hr Learning — Partnership Portal",
-  description: "Generate customized term sheets and proposal decks for 2hr Learning market expansion",
+  title: "Alpha Holdings, Inc. — Partnership Portal",
+  description: "Generate customized term sheets and proposal decks for Alpha Holdings, Inc. market expansion",
 };
 
 export default function RootLayout({

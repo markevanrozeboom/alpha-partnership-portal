@@ -138,7 +138,7 @@ export default function ResultPage() {
             New Country
           </Button>
           <span className="text-xs text-muted-foreground font-medium tracking-wide">
-            Alpha Education — National Partnership Portal
+            Alpha Holdings, Inc. — National Partnership Portal
           </span>
         </div>
       </header>
@@ -302,7 +302,7 @@ export default function ResultPage() {
       {/* Footer */}
       <footer className="border-t py-4 px-6 text-center">
         <p className="text-xs text-muted-foreground mb-2">
-          CONFIDENTIAL — Alpha Education — National Partnership Portal
+          CONFIDENTIAL — Alpha Holdings, Inc. — National Partnership Portal
         </p>
         <PerplexityAttribution />
       </footer>

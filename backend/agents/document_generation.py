@@ -70,7 +70,7 @@ IM_SECTION_PROMPTS = {
     "executive_summary": HEAD_OF_STATE_PREAMBLE +
     """You are a Managing Director at Goldman Sachs' Investment Banking Division.
 Write the EXECUTIVE SUMMARY section of an investment memorandum for a strategic education
-partnership between 2hr Learning (Alpha) and {target}.
+partnership between Alpha Holdings, Inc. and {target}.
 
 IMPORTANT DEAL MODEL:
 - Operator & Licensor structure (Marriott hotel model) — NOT a joint venture
@@ -91,7 +91,7 @@ Context:
 Write 1,500-2,000 words covering:
 - Transaction overview and key investment highlights (5-7 bullet points at the top)
 - The opportunity: why this market, why now
-- Brief description of 2hr Learning / Alpha model
+- Brief description of the Alpha model
 - Proposed Operator & Licensor structure (Marriott model) with 100/0 equity
 - Two-prong model: Flagship schools + National schools
 - Key financial highlights (revenue, EBITDA, IRR, MOIC)
@@ -143,13 +143,13 @@ Write 2,000-2,500 words covering:
 3. REFORM LANDSCAPE — Active government reforms, budget allocations, timeline, key stakeholders
 4. PRIVATE EDUCATION MARKET — Market size (TAM/SAM/SOM), growth rate, segmentation,
    pricing tiers, demand-supply gap
-5. THE ALPHA OPPORTUNITY — Specific gaps that the 2hr Learning model fills, competitive
+5. THE ALPHA OPPORTUNITY — Specific gaps that the Alpha model fills, competitive
    advantages vs incumbents, unique value propositions for this market
 
 Include a market sizing table. Use consulting-quality analysis with specific data.""",
     "alpha_model": HEAD_OF_STATE_PREAMBLE +
-    """You are the Chief Strategy Officer of 2hr Learning.
-Write the THE 2HR LEARNING MODEL section of an investment memorandum.
+    """You are the Chief Strategy Officer of Alpha Holdings, Inc.
+Write the THE ALPHA MODEL section of an investment memorandum.
 
 Context:
 {context}
@@ -172,7 +172,7 @@ Be specific about outcomes data and the UAE reference deal.""",
     "deal_structure": HEAD_OF_STATE_PREAMBLE +
     """You are a Partner at a top-tier M&A advisory firm.
 Write the PROPOSED DEAL STRUCTURE & PARTNERSHIP MODEL section of an investment memorandum
-for the 2hr Learning × {target} partnership.
+for the Alpha Holdings, Inc. × {target} partnership.
 
 IMPORTANT: This uses the Operator & Licensor model (Marriott hotel model) — NOT a JV.
 - Counterparty owns 100% of the local entity, Alpha owns 0% equity
@@ -209,7 +209,7 @@ Include a fee structure summary table. Be specific about numbers.
 NOTE: Financial figures are FIXED — do not derive them from country research data.""",
     "financial_analysis": HEAD_OF_STATE_PREAMBLE +
     """You are a Managing Director at Morgan Stanley's Financial Sponsors Group.
-Write the FINANCIAL ANALYSIS section of an investment memorandum for the 2hr Learning × {target}
+Write the FINANCIAL ANALYSIS section of an investment memorandum for the Alpha Holdings, Inc. × {target}
 partnership.
 
 IMPORTANT: Financial parameters are FIXED — do not derive from country GDP or PPP data.
@@ -248,7 +248,7 @@ financial analysis language.""",
     "implementation_roadmap": HEAD_OF_STATE_PREAMBLE +
     """You are a Senior Partner at Bain & Company's Private Equity Group.
 Write the IMPLEMENTATION ROADMAP & EXECUTION PLAN section of an investment memorandum for
-the 2hr Learning × {target} partnership.
+the Alpha Holdings, Inc. × {target} partnership.
 
 Context:
 {context}
@@ -272,7 +272,7 @@ Include a milestone timeline table.""",
     "risk_factors": HEAD_OF_STATE_PREAMBLE +
     """You are the Chief Risk Officer of a major investment bank.
 Write the RISK FACTORS & MITIGATION section of an investment memorandum for the
-2hr Learning × {target} partnership.
+Alpha Holdings, Inc. × {target} partnership.
 
 Context:
 {context}
@@ -298,7 +298,7 @@ Write 1,500-2,000 words covering:
 Rate each risk (High/Medium/Low probability and impact). Include a risk matrix table.""",
     "appendices": HEAD_OF_STATE_PREAMBLE +
     """You are a VP at Goldman Sachs preparing the APPENDICES section of an
-investment memorandum for the 2hr Learning × {target} partnership.
+investment memorandum for the Alpha Holdings, Inc. × {target} partnership.
 
 Context:
 {context}
@@ -636,7 +636,7 @@ async def _build_investment_memorandum(
         ("executive_summary", "I. EXECUTIVE SUMMARY"),
         ("market_overview", "II. MARKET OVERVIEW & MACRO ANALYSIS"),
         ("education_deep_dive", "III. EDUCATION SECTOR DEEP DIVE"),
-        ("alpha_model", "IV. THE 2HR LEARNING MODEL"),
+        ("alpha_model", "IV. THE ALPHA MODEL"),
         ("deal_structure", "V. PROPOSED DEAL STRUCTURE & PARTNERSHIP MODEL"),
         ("financial_analysis", "VI. FINANCIAL ANALYSIS"),
         ("implementation_roadmap", "VII. IMPLEMENTATION ROADMAP & EXECUTION PLAN"),
@@ -713,7 +713,7 @@ async def _build_investment_memorandum(
 
     cover_title = doc.add_paragraph()
     cover_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = cover_title.add_run(f"2hr Learning × {target}")
+    run = cover_title.add_run(f"Alpha Holdings, Inc. × {target}")
     run.font.size = DocxPt(36)
     run.font.color.rgb = DocxRGB(0x1a, 0x1a, 0x2e)
     run.bold = True
@@ -753,7 +753,7 @@ async def _build_investment_memorandum(
 
     cover_prepared = doc.add_paragraph()
     cover_prepared.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = cover_prepared.add_run("Prepared by 2hr Learning — Alpha Division")
+    run = cover_prepared.add_run("Prepared by Alpha Holdings, Inc.")
     run.font.size = DocxPt(11)
     run.font.color.rgb = DocxRGB(0x99, 0x99, 0x99)
 
@@ -762,7 +762,7 @@ async def _build_investment_memorandum(
     # --- Disclaimer Page ---
     doc.add_heading("IMPORTANT NOTICE", level=2)
     disclaimer_text = (
-        "This Investment Memorandum (the \"Memorandum\") has been prepared by 2hr Learning "
+        "This Investment Memorandum (the \"Memorandum\") has been prepared by Alpha Holdings, Inc. "
         "(\"Alpha\" or the \"Company\") solely for the purpose of providing information to "
         "prospective partners and investors in connection with a potential strategic partnership. "
         "This Memorandum is confidential and is being furnished to you solely for your information. "
@@ -970,7 +970,7 @@ covering:
 1. Title slide with tagline
 2. Vision — 'Educated in [Country]' as a Global Credential, Alpha as the Stanford of K-12 Education
 3. The Key to Success — reinvented school day, core truths, Traditional vs Alpha Model comparison
-4. The 2hr Learning Model — Timeback, AlphaCore, Guide School, Incept eduLLM
+4. The Alpha Model — Timeback, AlphaCore, Guide School, Incept eduLLM
 5. Our Results — Bloom's 2-Sigma, growth metrics, SAT/AP scores, 97% love school, life skills projects
 6. Market Opportunity — why this country, why now, key market drivers
 7. The Complete Platform — Alpha education stack vs country-owned stack, deployment overview
@@ -1062,7 +1062,7 @@ def _build_pptx(
             PptxInches(0.8), PptxInches(7.0), PptxInches(8.0), PptxInches(0.4),
         )
         p = txBox.text_frame.paragraphs[0]
-        p.text = "CONFIDENTIAL  |  2hr Learning (Alpha)"
+        p.text = "CONFIDENTIAL  |  Alpha Holdings, Inc."
         p.font.size = PptxPt(8)
         p.font.color.rgb = MID_GRAY
         p.alignment = PP_ALIGN.LEFT
@@ -1201,7 +1201,7 @@ def _build_pptx(
     slide_num += 1
     s = _add_slide()
     _add_accent_bar(s, top=0.0, height=0.06)
-    _add_title(s, f"2hr Learning x {target}", top=2.2)
+    _add_title(s, f"Alpha Holdings, Inc. × {target}", top=2.2)
     _add_body(s, ["Strategic Partnership Proposal"], top=3.3)
     # CONFIDENTIAL badge
     txBox = s.shapes.add_textbox(
@@ -1258,7 +1258,7 @@ def _build_pptx(
     slide_num += 1
     s = _add_slide()
     _add_accent_bar(s)
-    _add_title(s, "The 2hr Learning Model")
+    _add_title(s, "The Alpha Model")
     _add_accent_line(s, 0.8, 1.15, 4.0)
     _add_subtitle(s, "AI-powered education that compresses and elevates", top=1.3)
     _add_slide_number(s, slide_num, total_slides)
@@ -1503,7 +1503,7 @@ def _build_pptx(
     _add_accent_bar(s, top=0.0, height=0.06)
     _add_title(s, "Thank You", top=2.5)
     _add_body(s, [
-        "2hr Learning - Transforming Education Globally",
+        "Alpha Holdings, Inc. — Transforming Education Globally",
         "",
         "Contact: partnerships@2hrlearning.com",
     ], top=3.5)
@@ -1533,7 +1533,7 @@ def _build_gamma_investor_input(
 
     # --- Slide 1: Title ---
     slides.append(
-        f"# 2hr Learning × {target}\n\n"
+        f"# Alpha Holdings, Inc. × {target}\n\n"
         f"Strategic Partnership Proposal\n\n"
         f"CONFIDENTIAL"
     )
@@ -1563,10 +1563,10 @@ def _build_gamma_investor_input(
         "teamwork, communication, resilience, and other non-academic capabilities"
     )
 
-    # --- Slide 4: The 2hr Learning Model ---
+    # --- Slide 4: The Alpha Model ---
     slides.append(
-        "# The 2hr Learning Model\n\n"
-        "2hr Learning reimagines the school day by compressing core academics into just two hours through AI, "
+        "# The Alpha Model\n\n"
+        "Alpha reimagines the school day by compressing core academics into just two hours through AI, "
         "freeing the remaining time for STEM, sports, arts, entrepreneurship, and life skills. "
         "Three core commitments underpin every school: Love school | Learn 2× faster | Future-ready skills.\n\n"
         "Timeback: Proprietary AI engine that compresses core academic instruction into 2 hours per day "
@@ -1636,17 +1636,17 @@ def _build_gamma_investor_input(
     else:
         slides.append(
             "# School Type Portfolio\n\n"
-            "Alpha Flagship School — $40K–$100K tuition:\n"
+            "Halo Alpha School — $40K–$100K tuition:\n"
             "Innovative and personalized education. Flagship schools serve as the premium anchor — "
-            "demonstrating the full 2hr Learning experience at the highest level of execution.\n\n"
-            "Alpha National School — $25K Fixed Budget:\n"
+            "demonstrating the full Alpha experience at the highest level of execution.\n\n"
+            "National School — $25K Fixed Budget:\n"
             "Accessible, high-quality education with personalized learning experiences at a fixed per-student cost. "
             "National schools are the engine of scale — targeting 100,000+ student-years."
         )
 
     # --- Slide 9: Country-Owned Schools & Investment ---
     slides.append(
-        f"# Alpha {target} Schools: "
+        f"# {target} Schools: "
         f"{target} Owned, Alpha Operated\n\n"
         "**Partnership Structure:**\n"
         f"- 100% {target} owned, 0% Alpha owned. "
@@ -1688,7 +1688,7 @@ def _build_gamma_investor_input(
             )
         slides.append(
             "# 5-Year Rollout Plan\n\n"
-            f"Alpha {target} scales systematically — "
+            f"{target} scales systematically — "
             "building operational excellence before expanding, "
             "ensuring every cohort of students receives the "
             "full Alpha experience from day one.\n\n"
@@ -1705,7 +1705,7 @@ def _build_gamma_investor_input(
     # --- Slide 11: Thank You ---
     slides.append(
         "# Thank You\n\n"
-        "2hr Learning — Transforming Education Globally\n\n"
+        "Alpha Holdings, Inc. — Transforming Education Globally\n\n"
         "CONFIDENTIAL"
     )
 

@@ -2,8 +2,8 @@
  * Financial Engine — implements the rules from financial_rules_v1.md
  *
  * Two-prong model:
- *   Prong 1: Flagship Alphas (100% Alpha-owned, revenue-optimized)
- *   Prong 2: Counterparty Schools (100% country-owned, $25K fixed budget)
+ *   Prong 1: Halo Alpha Schools (100% Alpha Holdings, Inc.-owned, revenue-optimized)
+ *   Prong 2: National Schools (100% country/state-owned, $25K fixed budget)
  */
 
 import type {
@@ -21,9 +21,9 @@ import type {
 // ─── Constants from financial_rules_v1 ───────────────────────────────────────
 
 const FLAGSHIP = {
+  ALLOWED_CAPACITIES: [250, 500, 1000] as const,
   MIN_CAPACITY: 250,
   MAX_CAPACITY: 1000,
-  CAPACITY_STEP: 50,
   MIN_TUITION: 40_000,
   MAX_TUITION: 100_000,
   TUITION_STEP: 5_000,
@@ -166,7 +166,7 @@ function optimizeFlagships(data: FinancialResearchData): FlagshipModel {
       const eligible = interpolateWealthyChildren(metro, agiThreshold);
       const market = eligible * FLAGSHIP.PENETRATION_RATE;
 
-      for (let capacity = FLAGSHIP.MIN_CAPACITY; capacity <= FLAGSHIP.MAX_CAPACITY; capacity += FLAGSHIP.CAPACITY_STEP) {
+      for (const capacity of FLAGSHIP.ALLOWED_CAPACITIES) {
         const schools = Math.min(maxSchools, Math.floor(market / capacity));
         if (schools < 1) continue;
 
@@ -274,7 +274,7 @@ export function computeFinancialModel(
 
   // ── Upfront Investment ──
   const fixedItems = [
-    { item: "Alpha Core License", amountUsd: UPFRONT_FIXED.ALPHACORE_LICENSE, recipient: "Alpha Holdings" },
+    { item: "Alpha Core License", amountUsd: UPFRONT_FIXED.ALPHACORE_LICENSE, recipient: "Alpha Holdings, Inc." },
     { item: `${countryName}-Specific Incept EdLLM`, amountUsd: UPFRONT_FIXED.INCEPT_EDLLM, recipient: "Local expense" },
     { item: `${countryName}-Specific Programs & Life Skills`, amountUsd: UPFRONT_FIXED.PROGRAMS_LIFESKILLS, recipient: "Local expense" },
     { item: `${countryName}-Specific EdTech Apps`, amountUsd: UPFRONT_FIXED.EDTECH_APPS, recipient: "Local expense" },
@@ -287,13 +287,13 @@ export function computeFinancialModel(
     {
       item: "Timeback License Prepay",
       amountUsd: timebackPrepay,
-      recipient: "Alpha Holdings",
+      recipient: "Alpha Holdings, Inc.",
       note: `${fmtNum(COUNTERPARTY.MIN_STUDENTS)} students × ${fmtUsd(FEES.TIMEBACK_PER_STUDENT)}`,
     },
     {
       item: "Operating Fee Prepay",
       amountUsd: operatingFeePrepay,
-      recipient: "Alpha Holdings",
+      recipient: "Alpha Holdings, Inc.",
       note: `${fmtNum(COUNTERPARTY.MIN_STUDENTS)} students × ${fmtUsd(FEES.OPERATING_FEE_PER_STUDENT)}`,
     },
   ];
@@ -325,12 +325,12 @@ export function computeFinancialModel(
       {
         item: "Timeback License Fee",
         amount: `20% of funding/tuition, min ${fmtUsd(FEES.TIMEBACK_PER_STUDENT)} per student`,
-        recipient: "Alpha Holdings (ongoing)",
+        recipient: "Alpha Holdings, Inc. (ongoing)",
       },
       {
         item: "Operating Fee",
         amount: `10% of funding/tuition, min ${fmtUsd(FEES.OPERATING_FEE_PER_STUDENT)} per student`,
-        recipient: "Alpha Holdings (ongoing)",
+        recipient: "Alpha Holdings, Inc. (ongoing)",
       },
     ],
   };
