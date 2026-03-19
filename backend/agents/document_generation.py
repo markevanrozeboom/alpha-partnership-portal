@@ -1645,22 +1645,33 @@ def _build_gamma_investor_input(
         )
 
     # --- Slide 9: Country-Owned Schools & Investment ---
-    inv_lines = [
-        f"# Alpha {target} Schools: {target} Owned, Alpha Operated\n\n",
-        f"- 100% {target} owned, 0% Alpha owned. Alpha operates on behalf of the Country/State.\n",
-        "- Per student funding/tuition: $25,000/year.\n",
-        "- Minimum 100,000 students per year commitment.\n",
-        "- Schools can be operated as either public or private schools.\n",
-        f"- {target} is responsible for sourcing real estate; schools pay rent.\n\n",
-        "Investment Required:\n",
-        "- Upfront Fixed: Alpha Core License ($250M), Country-Specific Incept EdLLM ($250M), "
-        "Country-Specific Programs & Life Skills ($250M), Country-Specific EdTech Apps ($250M)\n",
-        "- Prepaid: Timeback License Prepay ($500M), Operating Fee Prepay ($250M)\n",
-        "- Ongoing: Parent Education/Launch/Guides, Timeback License Fee (20% of funding), "
-        "Operating Fee (10% of funding)\n",
-        "- TOTAL UPFRONT: $1.75B",
-    ]
-    slides.append("".join(inv_lines))
+    slides.append(
+        f"# Alpha {target} Schools: "
+        f"{target} Owned, Alpha Operated\n\n"
+        "**Partnership Structure:**\n"
+        f"- 100% {target} owned, 0% Alpha owned. "
+        "Alpha operates on behalf of the Country/State.\n"
+        "- Per student funding/tuition: **$25,000/year**\n"
+        "- Minimum **100,000 students per year** commitment\n"
+        "- Schools operated as either public or private\n"
+        f"- {target} sources real estate; schools pay rent\n\n"
+        "**Investment Required:**\n\n"
+        "| Category | Item | Amount |\n"
+        "| --- | --- | --- |\n"
+        "| Upfront Fixed | Alpha Core License | $250M |\n"
+        "| Upfront Fixed | Country-Specific Incept EdLLM "
+        "| $250M |\n"
+        "| Upfront Fixed | Country-Specific Programs "
+        "& Life Skills | $250M |\n"
+        "| Upfront Fixed | Country-Specific EdTech Apps "
+        "| $250M |\n"
+        "| Prepaid | Timeback License Prepay | $500M |\n"
+        "| Prepaid | Operating Fee Prepay | $250M |\n"
+        "| **TOTAL UPFRONT** | | **$1.75B** |\n\n"
+        "**Ongoing Annual:** Parent Education / Launch / "
+        "Guides · Timeback License Fee (20% of funding) · "
+        "Operating Fee (10% of funding)"
+    )
 
     # --- Slide 10: 5-Year Rollout Plan ---
     if strategy.phased_rollout:
