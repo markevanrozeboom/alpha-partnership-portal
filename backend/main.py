@@ -566,4 +566,63 @@ async def get_state_spotlight_data(state: str):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "2.1.0"}
+    return {"status": "ok", "version": "2.2.0"}
+
+
+@app.get("/api/debug/flagship-test")
+async def flagship_test():
+    """Diagnostic endpoint: run flagship optimization with synthetic France data."""
+    from models.schemas import MetroFlagshipInput, FlagshipMarketData
+    from agents.financial import optimize_flagships
+
+    test_data = FlagshipMarketData(
+        metros=[
+            MetroFlagshipInput(
+                metro_name="Paris", is_capital=True,
+                metro_population=12_000_000, k12_children=1_800_000,
+                children_in_families_income_above_200k=63_000,
+                children_in_families_income_above_500k=14_400,
+                most_expensive_nonboarding_tuition=58_000,
+                most_expensive_nonboarding_school="International School of Paris",
+            ),
+            MetroFlagshipInput(
+                metro_name="Lyon", is_capital=False,
+                metro_population=2_300_000, k12_children=345_000,
+                children_in_families_income_above_200k=10_000,
+                children_in_families_income_above_500k=2_000,
+                most_expensive_nonboarding_tuition=22_000,
+                most_expensive_nonboarding_school="Cité Scolaire Internationale de Lyon",
+            ),
+            MetroFlagshipInput(
+                metro_name="Marseille", is_capital=False,
+                metro_population=1_800_000, k12_children=270_000,
+                children_in_families_income_above_200k=7_500,
+                children_in_families_income_above_500k=1_500,
+                most_expensive_nonboarding_tuition=18_000,
+                most_expensive_nonboarding_school="École Internationale de Marseille",
+            ),
+        ],
+        country_most_expensive_nonboarding_tuition=58_000,
+        country_most_expensive_nonboarding_school="International School of Paris",
+    )
+
+    result = optimize_flagships(test_data)
+    return {
+        "version": "2.2.0",
+        "metros": [
+            {
+                "name": m.metro_name,
+                "schools": m.schools,
+                "capacity": m.capacity_per_school,
+                "tuition": m.tuition,
+                "revenue": m.annual_revenue,
+                "eligible": m.eligible_children,
+                "demand": m.demand_at_penetration,
+            }
+            for m in result.metros
+        ],
+        "total_schools": result.total_schools,
+        "total_students": result.total_students,
+        "total_revenue": result.total_annual_revenue,
+        "scholarship_needed": result.scholarship_needed,
+    }
