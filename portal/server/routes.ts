@@ -38,7 +38,7 @@ Return valid JSON matching this exact structure:
   "nationalEdVision": "1-2 sentence summary of the country's stated education reform goals",
   "culturalNarrative": "2-3 compelling sentences about why THIS country is uniquely positioned for AI-powered education transformation. Reference specific cultural values, national ambitions, or recent initiatives. This should feel like a senior advisor explaining the opportunity to their leadership.",
   "keyStrengths": ["Strength 1 for partnership", "Strength 2", "Strength 3"],
-  "localizedProgramName": "A SHORT brand name for the education program (2-4 words max, like 'Ed71' for UAE or 'Vision2030 Learning' for Saudi). Must be concise enough for a slide title. Reference something culturally meaningful. NEVER include explanations or descriptions — just the brand name itself.",
+  "localizedProgramName": "A SHORT brand name for the education program (2-4 words max, like 'Ed71' for UAE or 'Savoir France' for France). Must be concise enough for a slide title. Reference something culturally meaningful. NEVER include explanations or descriptions — just the brand name itself. MUST NOT contain the word 'Alpha' — these are country-owned schools and cannot carry the Alpha brand.",
   "localLifeSkillsFocus": "What life skills matter most in this culture (e.g. entrepreneurship, civic leadership, environmental stewardship). 1-2 sentences.",
   "languageApps": "What localized AI apps would be needed (languages, religious education, cultural studies, ESL). Brief list.",
   "addressableStudentPopulation": "Estimated number of school-age children (5-18) in households with annual income > $250,000 USD (or PPP equivalent). This is the realistic addressable market for a $25,000/student program. Use known data: HNWI counts, wealth reports (Knight Frank, Henley & Partners, Credit Suisse), income distribution data, and international/premium private school enrollment as proxies. For wealthy nations (GDP per capita > $40k), this could be millions. For developing nations, it may be tens of thousands. Give a specific number like '15,000-25,000 students' or '2.1 million students'. Be realistic, not aspirational.",
@@ -340,10 +340,6 @@ function generateTermSheetHtml(ctx: CountryContext): string {
     </div>
   </div>
 
-  <div class="callout" style="margin-bottom: 20px;">
-    <p><em>We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.</em></p>
-  </div>
-
   <div class="section-label">Commercial Structure</div>
   <div class="two-col">
     <div>
@@ -372,9 +368,12 @@ function generateTermSheetHtml(ctx: CountryContext): string {
     </div>
   </div>
 
-  <!-- Page 8 Cost Structure -->
+  <!-- Page 8 Cost Structure — Country-Owned Schools -->
   <div class="section-box page-break">
     <div class="section-label">${ctx.localizedProgramName || ctx.country} Cost Structure</div>
+    <div class="callout" style="margin-bottom: 16px;">
+      <p><em>We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.</em></p>
+    </div>
     <div class="section-title">Per-Student Cost Structure at $25K Budget</div>
     <table>
       <thead>
@@ -1124,6 +1123,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 <div class="slide slide-content">
   <div class="label">Country-Owned Schools</div>
   <h2>${programName} Schools: <span>${ctx.country} Owned, Alpha Operated</span></h2>
+  <p style="font-size:12px; font-style:italic; color:#4a5568; margin:8px 0 0 0;">We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.</p>
 
   <div style="display:grid; grid-template-columns:1fr 1.6fr; gap:28px; margin-top:16px;">
 
@@ -1262,6 +1262,12 @@ async function generateDocuments(target: string): Promise<GenerationResult> {
 
   const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   const ctx: CountryContext = JSON.parse(cleaned);
+
+  // Guardrail: country-owned school program name must not contain "Alpha"
+  if (ctx.localizedProgramName && /\balpha\b/i.test(ctx.localizedProgramName)) {
+    ctx.localizedProgramName = ctx.localizedProgramName.replace(/\s*\bAlpha\b\s*/gi, " ").trim() || `${ctx.country} Education`;
+    console.warn(`Stripped 'Alpha' from localizedProgramName -> ${ctx.localizedProgramName}`);
+  }
 
   // Step 2: Build financial research data from context and compute the model
   const financialData = buildFinancialResearchData(ctx);

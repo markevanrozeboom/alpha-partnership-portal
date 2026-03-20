@@ -123,6 +123,7 @@ function totalCell(text: string, widthPct: number): TableCell {
 
 function sectionHeader(text: string, colSpan: number): TableRow {
   return new TableRow({
+    cantSplit: true,
     children: [
       new TableCell({
         columnSpan: colSpan,
@@ -161,6 +162,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
     layout: TableLayoutType.FIXED,
     rows: [
       new TableRow({
+        cantSplit: true,
         children: [
           new TableCell({
             width: { size: 25, type: WidthType.PERCENTAGE },
@@ -266,6 +268,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
     rows: [
       new TableRow({
         tableHeader: true,
+        cantSplit: true,
         children: [
           headerCell("Metro Area", 30),
           headerCell("Schools", 15),
@@ -277,6 +280,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
       ...model.flagship.schools.map(
         (s) =>
           new TableRow({
+            cantSplit: true,
             children: [
               dataCell(`${s.metro}${s.isCapital ? " (Capital)" : ""}`, 30),
               dataCell(String(s.count), 15, { bold: true }),
@@ -289,6 +293,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
           }),
       ),
       new TableRow({
+        cantSplit: true,
         children: [
           totalCell("Total", 30),
           totalCell(String(model.flagship.totalSchoolCount), 15),
@@ -307,6 +312,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
     rows: [
       new TableRow({
         tableHeader: true,
+        cantSplit: true,
         children: [
           headerCell("Cost Item (Per Student)", 40),
           headerCell("Amount", 20, { highlight: true }),
@@ -316,6 +322,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
       ...model.counterparty.costBreakdown.map(
         (c) =>
           new TableRow({
+            cantSplit: true,
             children: [
               dataCell(c.item, 40),
               dataCell(fmtUsd(c.amount), 20, { bold: true, highlight: true }),
@@ -324,6 +331,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
           }),
       ),
       new TableRow({
+        cantSplit: true,
         children: [
           totalCell("Total Per Student", 40),
           totalCell(fmtUsd(model.counterparty.perStudentBudget), 20),
@@ -340,6 +348,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
     rows: [
       new TableRow({
         tableHeader: true,
+        cantSplit: true,
         children: [
           headerCell("Item", 35),
           headerCell("Amount", 20),
@@ -351,6 +360,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
       ...model.upfront.fixedItems.map(
         (r) =>
           new TableRow({
+            cantSplit: true,
             children: [
               dataCell(r.item, 35),
               dataCell(fmtCompact(r.amountUsd), 20, { bold: true }),
@@ -363,6 +373,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
       ...model.upfront.variableItems.map(
         (r) =>
           new TableRow({
+            cantSplit: true,
             children: [
               dataCell(r.item, 35),
               dataCell(fmtCompact(r.amountUsd), 20, { bold: true }),
@@ -372,6 +383,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
           }),
       ),
       new TableRow({
+        cantSplit: true,
         children: [
           totalCell("Total Upfront", 35),
           totalCell(fmtCompact(model.upfront.totalUsd), 20),
@@ -389,6 +401,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
     rows: [
       new TableRow({
         tableHeader: true,
+        cantSplit: true,
         children: [
           headerCell("Item", 35),
           headerCell("Amount", 35),
@@ -398,6 +411,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
       ...model.ongoing.items.map(
         (r) =>
           new TableRow({
+            cantSplit: true,
             children: [
               dataCell(r.item, 35),
               dataCell(r.amount, 35, { bold: true }),
@@ -415,6 +429,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
     rows: [
       new TableRow({
         tableHeader: true,
+        cantSplit: true,
         children: [
           headerCell("Parameter", 30),
           headerCell("Halo Alpha (Prong 1)", 35),
@@ -434,6 +449,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
       ].map(
         ([param, prong1, prong2]) =>
           new TableRow({
+            cantSplit: true,
             children: [
               dataCell(param, 30, { bold: true }),
               dataCell(prong1, 35),
@@ -537,23 +553,6 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
           metricsTable,
           new Paragraph({ spacing: { before: 200, after: 0 }, children: [] }),
 
-          // ── PROPOSED STRUCTURE ──
-          new Paragraph({
-            shading: { type: ShadingType.SOLID, color: "F0F4FF", fill: "F0F4FF" },
-            border: { left: { style: BorderStyle.SINGLE, size: 8, color: "1A56DB" } },
-            spacing: { before: 0, after: 200 },
-            indent: { left: 100 },
-            children: [
-              new TextRun({
-                text: "We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.",
-                size: 18,
-                font: "Calibri",
-                color: "2D3748",
-                italics: true,
-              }),
-            ],
-          }),
-
           // ── PRONG 1: HALO ALPHA SCHOOLS ──
           new Paragraph({
             spacing: { before: 0, after: 40 },
@@ -633,7 +632,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
             children: [new TextRun({ text: `${ctx.country}-Owned Schools Operated by Alpha`, bold: true, size: 28, font: "Calibri", color: "0A1628" })],
           }),
           new Paragraph({
-            spacing: { before: 0, after: 120 },
+            spacing: { before: 0, after: 80 },
             children: [
               new TextRun({
                 text: `100% owned by ${ctx.country}. 0% owned by Alpha. Alpha operates schools on behalf of the country/state. ` +
@@ -642,6 +641,21 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
                 size: 18,
                 font: "Calibri",
                 color: "4A5568",
+              }),
+            ],
+          }),
+          new Paragraph({
+            shading: { type: ShadingType.SOLID, color: "F0F4FF", fill: "F0F4FF" },
+            border: { left: { style: BorderStyle.SINGLE, size: 8, color: "1A56DB" } },
+            spacing: { before: 0, after: 120 },
+            indent: { left: 100 },
+            children: [
+              new TextRun({
+                text: "We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.",
+                size: 18,
+                font: "Calibri",
+                color: "2D3748",
+                italics: true,
               }),
             ],
           }),

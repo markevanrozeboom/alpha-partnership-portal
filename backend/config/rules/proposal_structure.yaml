@@ -32,7 +32,7 @@ proposal_sections:
 
   - section_number: 4
     title: "Two-Prong School Model"
-    description: "Prong 1 (Flagship Alpha Schools: $40K-$100K tuition, AGI top 20%, capital cities) + Prong 2 (National/Public Schools: $25K fixed budget, 100K student-year min)."
+    description: "Prong 1 (Halo Alpha Schools: $40K-$100K tuition, AGI top 20%, capital cities) + Prong 2 (National/Public Schools: $25K fixed budget, 100K student-year min)."
     required_data_fields:
       - "flagship_schools"
       - "national_schools"

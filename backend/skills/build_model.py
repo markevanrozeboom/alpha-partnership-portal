@@ -2007,7 +2007,7 @@ def main():
     parser.add_argument("--templates", help="Comma-separated template IDs (or 'auto')")
     parser.add_argument("--auto", action="store_true", help="Auto-select templates from tier")
     parser.add_argument("--output-dir", default="outputs", help="Output directory for spec JSON files")
-    parser.add_argument("--premium-schools", action="store_true", help="Include Alpha Premium Schools add-on (Tier 1)")
+    parser.add_argument("--premium-schools", action="store_true", help="Include Halo Alpha Schools add-on (Prong 1)")
 
     args = parser.parse_args()
 

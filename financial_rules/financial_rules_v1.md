@@ -14,8 +14,6 @@ Tuition and Halo Alpha School capacity should be sized to maximize revenue.
 
 The country/state will need to provide a contractual backstop: it must guarantee 50% of capacity backstop for 5 years.
 
-We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.
-
 # 
 
 # 
@@ -25,6 +23,8 @@ We are proposing to implement through a national network of privately-operated, 
 # **Counterparty Owned Schools Operated by Alpha**
 
 100% owned by Country/State. 0% owned by Alpha, but Alpha operates the school on behalf of the Country/State. These schools cannot have "Alpha" in their name.
+
+We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.
 
 The schools can be operated as either a public or private school. 
 

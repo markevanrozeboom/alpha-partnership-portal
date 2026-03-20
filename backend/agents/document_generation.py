@@ -25,6 +25,7 @@ from docx import Document as DocxDocument
 from docx.shared import Pt as DocxPt, RGBColor as DocxRGB, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.oxml.ns import qn as docx_qn
 
 from pptx import Presentation as PptxPresentation
 from pptx.util import Inches as PptxInches, Pt as PptxPt
@@ -865,6 +866,11 @@ def _render_markdown_to_docx(doc: DocxDocument, md: str) -> None:
                     table.style = "Light Grid Accent 1"
                     table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
+                    for row in table.rows:
+                        tr = row._tr
+                        tr_pr = tr.get_or_add_trPr()
+                        tr_pr.append(tr_pr.makeelement(docx_qn("w:cantSplit"), {}))
+
                     for ri, row_data in enumerate(rows):
                         for ci, cell_text in enumerate(row_data):
                             if ci < ncols:
@@ -1648,6 +1654,9 @@ def _build_gamma_investor_input(
     slides.append(
         f"# {target} Schools: "
         f"{target} Owned, Alpha Operated\n\n"
+        "*We are proposing to implement through a national network "
+        "of privately-operated, government-funded schools, but are "
+        "equally open to other structures.*\n\n"
         "**Partnership Structure:**\n"
         f"- 100% {target} owned, 0% Alpha owned. "
         "Alpha operates on behalf of the Country/State.\n"

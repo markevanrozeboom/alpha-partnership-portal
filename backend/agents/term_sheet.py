@@ -332,7 +332,7 @@ def generate_term_sheet_assumptions(
         ),
         FinancialAssumption(
             key="ts_num_flagship_schools",
-            label="Flagship Alpha Schools",
+            label="Halo Alpha Schools",
             value=(
                 financial_model.flagship_optimization.total_schools
                 if (financial_model.flagship_optimization
@@ -456,9 +456,11 @@ class CountryVariables(BaseModel):
         description=(
             "Partnership program name (equivalent of 'Ed71' for UAE). "
             "Short, memorable, 2-4 words max. MUST use only plain "
-            "ASCII characters (no accents, no diacritics). Example: "
-            "'Ed71', 'Education 2030', 'Alpha France' -- NOT "
-            "'Education 2030'."
+            "ASCII characters (no accents, no diacritics). "
+            "MUST NOT contain the word 'Alpha' — these are country-owned "
+            "schools and cannot carry the Alpha brand. Good examples: "
+            "'Ed71', 'Savoir France', 'Vision2030 Learning'. "
+            "Bad examples: 'Alpha France', 'Alpha Education'."
         ),
     )
     cultural_program_name: str = Field(
@@ -558,6 +560,10 @@ Every value must be culturally appropriate, factually accurate, and
 diplomatically calibrated for a head-of-state audience. The program
 names should sound local, prestigious, and aspirational.
 
+IMPORTANT: The jv_program_name MUST NOT contain the word "Alpha".
+These are country-owned schools and cannot carry the Alpha brand.
+Use a culturally resonant name instead (e.g. "Ed71", "Savoir France").
+
 Country Context:
 - Population: {population}
 - K-12 Students: {k12_students}
@@ -588,10 +594,20 @@ def _strip_accents(text: str) -> str:
 
 
 def _sanitize_country_variables(cv: CountryVariables) -> CountryVariables:
-    """Ensure all program/brand names are ASCII-safe for PDF."""
+    """Ensure all program/brand names are ASCII-safe for PDF and
+    country-owned school names never contain 'Alpha'."""
     cv.jv_program_name = _strip_accents(cv.jv_program_name)
     cv.cultural_program_name = _strip_accents(cv.cultural_program_name)
     cv.credential_phrase = _strip_accents(cv.credential_phrase)
+
+    import re
+    if re.search(r"\balpha\b", cv.jv_program_name, re.IGNORECASE):
+        cleaned = re.sub(r"\s*\bAlpha\b\s*", " ", cv.jv_program_name).strip()
+        cv.jv_program_name = cleaned if cleaned else f"{cv.country_adjective} Education"
+        logger.warning(
+            "Stripped 'Alpha' from jv_program_name -> %s",
+            cv.jv_program_name,
+        )
     return cv
 
 
@@ -709,7 +725,7 @@ async def _generate_country_variables(
         adj = target.split()[-1] if " " in target else target
         return CountryVariables(
             country_adjective=adj,
-            jv_program_name=f"Alpha {target}",
+            jv_program_name=f"{target} Education",
             cultural_program_name=f"{target}Core",
             credential_phrase=f"Educated in {target}",
             first_launch_city="the capital",
@@ -1417,13 +1433,20 @@ def _add_school_network_section(
     _add_body(
         doc,
         f"{cv.jv_program_name} is a {target}-owned national "
-        "education platform (structure TBD), with Alpha Holdings "
+        "education platform, with Alpha Holdings, Inc. "
         "as the exclusive operating partner under a long-term "
         "management and IP license agreement. "
         f"{cv.jv_program_name} licenses the global technology "
         "stack (Timeback, AlphaCore, Guide School, eduLLM) and "
         f"adapts it with the {cv.country_adjective} cultural "
         "layer.",
+    )
+
+    _add_body(
+        doc,
+        "We are proposing to implement through a national network "
+        "of privately-operated, government-funded schools, but are "
+        "equally open to other structures.",
     )
 
     _add_body(
@@ -2027,7 +2050,7 @@ def _add_flagship_summary_table(
     doc: DocxDocument, cv: CountryVariables,
     fin: dict, model: FinancialModel,
 ) -> None:
-    """Add the Alpha Flagship summary table (Table 3).
+    """Add the Halo Alpha Schools summary table (Table 3).
 
     Uses the optimization result when available — shows real metro names,
     data-driven school counts, capacity, and tuition from the grid search.
@@ -2041,7 +2064,7 @@ def _add_flagship_summary_table(
     if flagship_tuition == 0 or flagship_schools == 0:
         _add_body(
             doc,
-            "Flagship Alpha school details to be determined based on "
+            "Halo Alpha School details to be determined based on "
             "metro-level AGI analysis.",
         )
         return
@@ -2146,6 +2169,12 @@ def _add_styled_table(
     table = doc.add_table(rows=num_rows, cols=num_cols)
     table.style = "Table Grid"
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+    # Prevent rows from breaking across pages
+    for row in table.rows:
+        tr = row._tr
+        tr_pr = tr.get_or_add_trPr()
+        tr_pr.append(tr_pr.makeelement(qn("w:cantSplit"), {}))
 
     # --- Header row ---
     for ci, header_text in enumerate(headers):
