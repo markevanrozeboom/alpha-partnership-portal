@@ -24,6 +24,7 @@ from agents.financial import generate_assumptions, build_model
 from agents.document_generation import generate_documents
 from agents.term_sheet import generate_term_sheet, generate_term_sheet_assumptions
 from agents.state_deck import generate_state_deck
+from agents.language_qa import run_language_qa
 from services.pdf_generator import convert_docx_to_pdf, convert_pptx_to_pdf
 
 logger = logging.getLogger(__name__)
@@ -109,6 +110,10 @@ async def run_express_pipeline(run_id: str) -> None:
             target, country_profile
         )
 
+        # Language QA on reports
+        country_report_md, _ = run_language_qa(country_report_md)
+        education_report_md, _ = run_language_qa(education_report_md)
+
         # ---------------------------------------------------------------
         # Step 2: Strategy
         # ---------------------------------------------------------------
@@ -116,6 +121,7 @@ async def run_express_pipeline(run_id: str) -> None:
         strategy_obj, strategy_report_md, _ = await run_strategy(
             target, country_profile, education_analysis
         )
+        strategy_report_md, _ = run_language_qa(strategy_report_md)
 
         # ---------------------------------------------------------------
         # Step 3: Financial Model

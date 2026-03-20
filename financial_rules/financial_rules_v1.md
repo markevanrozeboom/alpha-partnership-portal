@@ -10,7 +10,7 @@ Top metros \= limited to 3 largest metros in a given country, provided each metr
 
 Tuition should be more expensive than the most expensive non-boarding school in the Country or State. 
 
-Tuition and Halo Alpha School capacity should be sized to maximise revenue. 
+Tuition and Halo Alpha School capacity should be sized to maximize revenue. 
 
 The country/state will need to provide a contractual backstop: it must guarantee 50% of capacity backstop for 5 years.
 
@@ -39,7 +39,7 @@ Per student funding/tuition should be $25,000/year. This funds the following cos
 - Miscellaneous Expenses: $1,500  
 - Timeback: $5,000 (20% of funding/tuition)  
 - Operating Fee: $2,500 (10% of funding/tuition)  
-- Operating Margin/Amortisation of IP costs: $2,500
+- Operating Margin/Amortization of IP costs: $2,500
 
 The following investment is required by the Country/State (this is indicative of 100,000 students, upfront costs do not change, but ongoing costs would scale above 100,000 students):
 

@@ -39,6 +39,7 @@ from agents.term_sheet import (
     get_financial_model_adjustments,
 )
 from agents.state_deck import generate_state_deck
+from agents.language_qa import run_language_qa
 from services.gamma import download_export
 
 logger = logging.getLogger(__name__)
@@ -119,6 +120,12 @@ async def _run_country_research(state: dict) -> None:
     )
 
     state["country_profile"] = profile.model_dump()
+
+    # --- Language QA on country report ---
+    report_md, qa_report = run_language_qa(report_md)
+    if qa_report["total_issues"] > 0:
+        _log(state, f"Language QA (country report): {qa_report['total_issues']} issue(s) auto-fixed")
+
     state["country_report"] = report_md
     state["country_report_docx_path"] = docx_path
 
@@ -136,6 +143,12 @@ async def _run_country_research(state: dict) -> None:
     )
 
     state["education_analysis"] = analysis.model_dump()
+
+    # --- Language QA on education report ---
+    edu_report_md, edu_qa = run_language_qa(edu_report_md)
+    if edu_qa["total_issues"] > 0:
+        _log(state, f"Language QA (education report): {edu_qa['total_issues']} issue(s) auto-fixed")
+
     state["education_report"] = edu_report_md
     state["education_report_docx_path"] = edu_docx_path
 
@@ -198,6 +211,12 @@ async def _run_strategy(state: dict) -> None:
     )
 
     state["strategy"] = strategy_obj.model_dump()
+
+    # --- Language QA on strategy report ---
+    report_md, strat_qa = run_language_qa(report_md)
+    if strat_qa["total_issues"] > 0:
+        _log(state, f"Language QA (strategy report): {strat_qa['total_issues']} issue(s) auto-fixed")
+
     state["strategy_report"] = report_md
     state["strategy_report_docx_path"] = docx_path
     state["status"] = PipelineStatus.REVIEW_STRATEGY.value

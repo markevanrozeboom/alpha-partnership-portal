@@ -214,7 +214,7 @@ class ReformLandscape(BaseModel):
 
 class TwoHrLearningFit(BaseModel):
     unique_value_propositions: list[str] = Field(default_factory=list)
-    localisation_requirements: list[str] = Field(default_factory=list)
+    localization_requirements: list[str] = Field(default_factory=list)
     model_recommendation: Optional[EntryMode] = None
     rationale: Optional[str] = None
 

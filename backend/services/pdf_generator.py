@@ -20,7 +20,7 @@ from fpdf import FPDF
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Colour palette (matching brand)
+# Color palette (matching brand)
 # ---------------------------------------------------------------------------
 DARK = (26, 26, 46)          # #1a1a2e
 ACCENT = (0, 109, 119)       # #006D77
@@ -35,7 +35,7 @@ def _clean_text(text: str) -> str:
     """Clean text for PDF rendering — handle encoding issues.
 
     The built-in Helvetica font in fpdf2 only supports latin-1 characters.
-    This function aggressively normalises all Unicode so no unsupported
+    This function aggressively normalizes all Unicode so no unsupported
     character ever reaches the PDF renderer.
     """
     if not text:
@@ -205,7 +205,7 @@ def _calc_col_widths(table, num_cols: int, page_w: float) -> list[float]:
     for i in range(num_cols):
         if widths[i] < 20:
             widths[i] = 20
-    # Re-normalise to page width
+    # Re-normalize to page width
     total_w = sum(widths)
     if total_w != page_w:
         scale = page_w / total_w

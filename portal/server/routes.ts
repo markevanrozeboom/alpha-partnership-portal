@@ -5,6 +5,7 @@ import OpenAI from "openai";
 import { storage } from "./storage";
 import { buildTermSheetDocx } from "./docx-builder";
 import { computeFinancialModel, fmtCompact, fmtUsd, fmtNum } from "./financial-engine";
+import { runLanguageQA } from "./language-qa";
 import type { CountryContext, GenerationResult, FinancialResearchData, FinancialModel } from "@shared/schema";
 
 const client = new Anthropic({
@@ -815,7 +816,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <h4 style="color: #1a56db;">Alpha School Day</h4>
       <div class="day-item"><strong>2 hours</strong> AI-powered academic mastery</div>
       <div class="day-item"><strong>4 hours</strong> life skills, STEM, sports, arts</div>
-      <div class="day-item">Personalised AI tutor for every student</div>
+      <div class="day-item">Personalized AI tutor for every student</div>
       <div class="day-item">Results: 2–5× faster learning, 97% love school</div>
     </div>
   </div>
@@ -975,7 +976,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="stack-item"><strong>Timeback®:</strong> AI platform for 10× faster mastery</div>
       <div class="stack-item"><strong>AlphaCore™:</strong> The strongest K-12 life-skills curriculum</div>
       <div class="stack-item"><strong>Guide School:</strong> Talent academy for training Guides</div>
-      <div class="stack-item"><strong>Incept eduLLM:</strong> Personalised content generation engine</div>
+      <div class="stack-item"><strong>Incept eduLLM:</strong> Personalized content generation engine</div>
       <div class="scale-row">
         <div class="scale-box"><div class="period">This Year</div><div class="figure">2,500 students · 22 campuses</div></div>
         <div class="scale-arrow">→</div>
@@ -990,7 +991,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       </div>
       <div class="stack-item"><strong>Education Sovereignty:</strong> ${ctx.country} owns 100% of the local entity</div>
       <div class="stack-item"><strong>Infrastructure:</strong> Built to scale across 100+ schools</div>
-      <div class="stack-item"><strong>Localised AI Apps:</strong> ${ctx.languageApps}</div>
+      <div class="stack-item"><strong>Localized AI Apps:</strong> ${ctx.languageApps}</div>
       <div class="stack-item"><strong>Local Life-Skills:</strong> ${ctx.localLifeSkillsFocus}</div>
       <div class="stack-item"><strong>Talent Academy:</strong> Recruit and train ${programName} Guides</div>
       <div class="stack-item"><strong>National eduLLM:</strong> Embedded local laws, values, and culture</div>
@@ -1027,7 +1028,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="stack-item"><strong>Timeback®:</strong> AI platform for 10× faster mastery</div>
       <div class="stack-item"><strong>AlphaCore™:</strong> The strongest K-12 life-skills curriculum</div>
       <div class="stack-item"><strong>Guide School:</strong> Talent academy for training Guides</div>
-      <div class="stack-item"><strong>Incept eduLLM:</strong> Personalised content generation engine</div>
+      <div class="stack-item"><strong>Incept eduLLM:</strong> Personalized content generation engine</div>
       <div class="scale-row">
         <div class="scale-box"><div class="period">This Year</div><div class="figure">2,500 students · 22 campuses</div></div>
         <div class="scale-arrow">→</div>
@@ -1042,7 +1043,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       </div>
       <div class="stack-item"><strong>Education Sovereignty:</strong> ${ctx.country} owns the critical pieces</div>
       <div class="stack-item"><strong>Infrastructure:</strong> Built to scale across 100+ schools</div>
-      <div class="stack-item"><strong>Localised AI Apps:</strong> ${ctx.languageApps}</div>
+      <div class="stack-item"><strong>Localized AI Apps:</strong> ${ctx.languageApps}</div>
       <div class="stack-item"><strong>Local Life-Skills:</strong> ${ctx.localLifeSkillsFocus}</div>
       <div class="stack-item"><strong>Talent Academy:</strong> Recruit and train ${programName} Guides</div>
       <div class="stack-item"><strong>National eduLLM:</strong> Embedded local laws, values, and culture</div>
@@ -1102,7 +1103,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <li><strong>Timeback®</strong> — AI learning platform (licensed to local entity)</li>
       <li><strong>AlphaCore™</strong> — Life-skills curriculum (licensed)</li>
       <li><strong>Guide School</strong> — Teacher training IP (licensed)</li>
-      <li><strong>Incept eduLLM</strong> — Personalised content engine (licensed)</li>
+      <li><strong>Incept eduLLM</strong> — Personalized content engine (licensed)</li>
     </ul>
   </div>
 
@@ -1267,10 +1268,19 @@ async function generateDocuments(target: string): Promise<GenerationResult> {
   const financialModel = computeFinancialModel(financialData, ctx.country);
 
   // Step 3: Generate both HTML documents using the fixed economics + country context
-  const termSheetHtml = generateTermSheetHtml(ctx);
-  const pitchDeckHtml = generatePitchDeckHtml(ctx, financialModel);
+  let termSheetHtml = generateTermSheetHtml(ctx);
+  let pitchDeckHtml = generatePitchDeckHtml(ctx, financialModel);
 
-  // Step 4: Generate DOCX and base64-encode it for client-side download
+  // Step 4: Language QA — enforce US English spelling and USD currency
+  const tsQA = runLanguageQA(termSheetHtml);
+  termSheetHtml = tsQA.text;
+  const pdQA = runLanguageQA(pitchDeckHtml);
+  pitchDeckHtml = pdQA.text;
+  if (tsQA.report.totalIssues + pdQA.report.totalIssues > 0) {
+    console.log(`Language QA: ${tsQA.report.totalIssues} term sheet fix(es), ${pdQA.report.totalIssues} deck fix(es)`);
+  }
+
+  // Step 5: Generate DOCX and base64-encode it for client-side download
   const docxBuffer = await buildTermSheetDocx(ctx, financialModel);
   const termSheetDocxBase64 = docxBuffer.toString("base64");
 

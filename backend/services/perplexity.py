@@ -195,7 +195,7 @@ async def research_education(country: str) -> dict:
         f"assessment methods, grading system\n"
         f"- Available international curricula (IB, Cambridge, AP): number of schools, students\n"
         f"- School calendar, school hours, typical school day structure\n"
-        f"- Governance: centralised vs decentralised, ministry structure\n\n"
+        f"- Governance: centralized vs decentralized, ministry structure\n\n"
         f"**LEARNING OUTCOMES:**\n"
         f"- PISA scores with trend (improving/declining), rankings, comparison to economic peers\n"
         f"- TIMSS results if available\n"

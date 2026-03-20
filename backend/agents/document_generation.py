@@ -1006,7 +1006,7 @@ def _build_pptx(
     prs.slide_width = PptxInches(13.333)
     prs.slide_height = PptxInches(7.5)
 
-    # Branding colours
+    # Branding colors
     DARK_BG = PptxRGB(0x0A, 0x0F, 0x1A)
     ACCENT = PptxRGB(0x00, 0x6D, 0x77)
     ACCENT2 = PptxRGB(0x00, 0xD4, 0xAA)
@@ -1024,7 +1024,7 @@ def _build_pptx(
         return slide
 
     def _add_accent_bar(slide, top: float = 0.0, height: float = 0.04):
-        """Add an accent-coloured bar across the top of the slide."""
+        """Add an accent-colored bar across the top of the slide."""
         shape = slide.shapes.add_shape(
             1,  # MSO_SHAPE.RECTANGLE
             PptxInches(0), PptxInches(top),
@@ -1373,7 +1373,7 @@ def _build_pptx(
         ]
         _add_table(s, school_headers, school_rows, top=1.6, row_height=0.5)
     else:
-        _add_body(s, ["• Premium, Mid-Market, and Specialised school types"])
+        _add_body(s, ["• Premium, Mid-Market, and Specialized school types"])
 
     # ── Slide 9: Rollout Plan ──────────────────────────────────────────
     slide_num += 1
@@ -1618,12 +1618,12 @@ def _build_gamma_investor_input(
         "| **Reinvented School Day:** 2 hrs academics + life skills | "
         "**Infrastructure:** Built to scale across 100+ schools |\n"
         "| **Timeback:** AI platform for 10× faster mastery | "
-        f"**Localised AI Apps:** Built for {target} |\n"
+        f"**Localized AI Apps:** Built for {target} |\n"
         "| **AlphaCore:** Strongest K-12 life-skills curriculum | "
         "**Talent Academy:** Recruit and train local Guides |\n"
         "| **Guide School:** Talent academy for training Guides | "
         "**National eduLLM:** Embedded local laws, values, culture |\n"
-        "| **Incept eduLLM:** Personalised content generation | "
+        "| **Incept eduLLM:** Personalized content generation | "
         "**$25K/student** annual budget (~2× current public funding) |\n"
         "| **Scale:** 2,500 students → 100K across 100 campuses | "
         f"**First schools open SY26-27** in {target} |"

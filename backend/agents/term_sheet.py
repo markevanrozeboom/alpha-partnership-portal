@@ -1276,7 +1276,7 @@ def _add_transformation_section(
             "resilience, and other non-academic capabilities that "
             "matter in adult life. Alpha students love school, with "
             "a +93 NPS, and are accelerating academically by 2x in "
-            "standardised tests.",
+            "standardized tests.",
         ),
         (
             "Guides: ",
@@ -1294,7 +1294,7 @@ def _add_transformation_section(
             "Incept Labs, is the only LLM that has been "
             "specifically trained with Alpha\u2019s learning "
             "science, and is able to create an unending stream of "
-            "personalised content for every student using Timeback.",
+            "personalized content for every student using Timeback.",
         ),
         (
             "Marketing: ",
@@ -1391,15 +1391,15 @@ def _add_cultural_program_section(
         doc,
         "The base eduLLM from Incept Labs provides the "
         "learning-science engine and the ability to generate an "
-        "unending stream of personalised content for every student "
-        f"using Timeback. The {target}-specialised eduLLM ensures "
+        "unending stream of personalized content for every student "
+        f"using Timeback. The {target}-specialized eduLLM ensures "
         "all content is culturally and linguistically appropriate.",
     )
 
     _add_body(
         doc,
         f"With {cv.cultural_program_name}, {target} apps, and the "
-        f"{target}-specialised eduLLM layered on top, {target} "
+        f"{target}-specialized eduLLM layered on top, {target} "
         "gains true educational sovereignty over what students "
         "learn and what information is put into their heads.",
     )
@@ -1835,7 +1835,7 @@ def _add_cost_comparison_table(
     alpha_misc = 1_500
     alpha_timeback = 5_000       # 20% of $25K
     alpha_operating_fee = 2_500  # 10% of $25K
-    alpha_margin_ip = 2_500      # Operating Margin / Amortisation of IP
+    alpha_margin_ip = 2_500      # Operating Margin / Amortization of IP
     alpha_total = (
         alpha_guides + alpha_programs + alpha_other_hc
         + alpha_facility + alpha_misc + alpha_timeback
