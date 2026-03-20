@@ -342,9 +342,13 @@ def convert_docx_to_pdf(docx_path: str) -> str:
         cover_title = "DOCUMENT"
         cover_subtitle = ""
 
-    # Extract target name from filename
-    target_name = os.path.basename(docx_path).split("_")[0:3]
-    target_name = " ".join(target_name).replace("_", " ").title()
+    # Extract target name from filename (strip extension first)
+    stem = os.path.splitext(os.path.basename(docx_path))[0]
+    target_name = " ".join(stem.split("_")).title()
+    for suffix in ("Term Sheet", "Investment Memorandum", "Proposal", "Combined Proposal"):
+        if target_name.endswith(suffix):
+            target_name = target_name[: -len(suffix)].strip()
+            break
 
     # Create PDF
     pdf = AlphaPDF(title=cover_title, subtitle=target_name)
@@ -692,8 +696,9 @@ def convert_pptx_to_pdf(pptx_path: str) -> str:
     prs = Presentation(pptx_path)
     pdf_path = pptx_path.rsplit(".", 1)[0] + ".pdf"
 
-    # Extract target name
-    parts = os.path.basename(pptx_path).split("_")[0:2]
+    # Extract target name (strip extension first)
+    stem = os.path.splitext(os.path.basename(pptx_path))[0]
+    parts = stem.split("_")[0:2]
     target_name = " ".join(parts).replace("_", " ").title()
 
     total_slides = len(prs.slides)
