@@ -980,7 +980,7 @@ covering:
 5. Our Results — Bloom's 2-Sigma, growth metrics, SAT/AP scores, 97% love school, life skills projects
 6. Market Opportunity — why this country, why now, key market drivers
 7. The Complete Platform — Alpha education stack vs country-owned stack, deployment overview
-8. School Type Portfolio — Flagship and National school descriptions
+8. School Type Portfolio — Halo Alpha School (flagship) and National school descriptions. National/country-owned schools MUST NOT have 'Alpha' in their name.
 9. Country-Owned Schools & Investment — ownership structure, per-student budget, investment table
 10. 5-Year Rollout Plan — phased approach with student targets
 11. Thank You / closing
@@ -1372,11 +1372,15 @@ def _build_pptx(
     _add_footer(s)
 
     if strategy.school_types and len(strategy.school_types) > 0:
+        import re as _re
         school_headers = ["School Type", "Focus", "Tuition"]
-        school_rows = [
-            [st.name or "", st.focus or "", st.tuition or ""]
-            for st in strategy.school_types[:6]
-        ]
+        school_rows = []
+        for st in strategy.school_types[:6]:
+            name = st.name or ""
+            is_flagship = any(kw in name.lower() for kw in ("flagship", "halo"))
+            if not is_flagship and _re.search(r"\bAlpha\b", name):
+                name = _re.sub(r"\s*\bAlpha\b\s*", " ", name).strip()
+            school_rows.append([name, st.focus or "", st.tuition or ""])
         _add_table(s, school_headers, school_rows, top=1.6, row_height=0.5)
     else:
         _add_body(s, ["• Premium, Mid-Market, and Specialized school types"])
@@ -1637,7 +1641,15 @@ def _build_gamma_investor_input(
 
     # --- Slide 8: School Type Portfolio ---
     if strategy.school_types:
-        school_lines = [f"- {st.name}: {st.focus or ''} — {st.tuition or ''}" for st in strategy.school_types[:4]]
+        import re as _re
+        school_lines = []
+        for st in strategy.school_types[:4]:
+            name = st.name or ""
+            # Prong 2 (non-flagship) school names must not contain "Alpha"
+            is_flagship = any(kw in name.lower() for kw in ("flagship", "halo"))
+            if not is_flagship and _re.search(r"\bAlpha\b", name):
+                name = _re.sub(r"\s*\bAlpha\b\s*", " ", name).strip()
+            school_lines.append(f"- {name}: {st.focus or ''} — {st.tuition or ''}")
         slides.append("# School Type Portfolio\n\n" + "\n".join(school_lines))
     else:
         slides.append(
@@ -1753,7 +1765,10 @@ async def _build_investor_deck_gamma(
                 "Use a professional, data-driven tone. Keep slides clean with clear hierarchy. "
                 "Use the markdown headings (# Title) as card titles. "
                 "Preserve all financial figures, percentages, and data points exactly as provided. "
-                "Do NOT generate charts, graphs, or bar charts. Use tables and text layouts only."
+                "Do NOT generate charts, graphs, or bar charts. Use tables and text layouts only. "
+                "Add relevant icons and images to slides where appropriate to make them visually engaging. "
+                "IMPORTANT: Country/state-owned schools (Prong 2 / National) MUST NOT have 'Alpha' in their name. "
+                "Only Halo Alpha Schools (Prong 1 / Flagship, which are 100% Alpha-owned) may use the Alpha brand."
             ),
             export_as=export_as,
         )

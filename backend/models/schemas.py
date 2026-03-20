@@ -243,7 +243,14 @@ class Brand(BaseModel):
 
 
 class SchoolTypeDeployment(BaseModel):
-    name: str = ""
+    name: str = Field(
+        default="",
+        description=(
+            "School type name. Only Halo Alpha Schools (Prong 1, 100% Alpha-owned) "
+            "may use 'Alpha' in their name. Country/state-owned schools (Prong 2) "
+            "MUST NOT include 'Alpha' in their name."
+        ),
+    )
     focus: Optional[str] = None
     target_market: Optional[str] = None
     size: Optional[str] = None
