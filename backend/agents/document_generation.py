@@ -866,10 +866,17 @@ def _render_markdown_to_docx(doc: DocxDocument, md: str) -> None:
                     table.style = "Light Grid Accent 1"
                     table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-                    for row in table.rows:
+                    total_rows = len(table.rows)
+                    for row_idx, row in enumerate(table.rows):
                         tr = row._tr
                         tr_pr = tr.get_or_add_trPr()
                         tr_pr.append(tr_pr.makeelement(docx_qn("w:cantSplit"), {}))
+                        is_last_row = row_idx == total_rows - 1
+                        for cell in row.cells:
+                            for p in cell.paragraphs:
+                                p.paragraph_format.keep_together = True
+                                if not is_last_row:
+                                    p.paragraph_format.keep_with_next = True
 
                     for ri, row_data in enumerate(rows):
                         for ci, cell_text in enumerate(row_data):
@@ -1545,7 +1552,9 @@ def _build_gamma_investor_input(
     slides.append(
         f"# Alpha Holdings, Inc. × {target}\n\n"
         f"Strategic Partnership Proposal\n\n"
-        f"CONFIDENTIAL"
+        f"CONFIDENTIAL\n\n"
+        f"[Use an iconic image of {target} — a famous landmark, skyline, or cultural symbol "
+        f"that immediately identifies this as a {target}-specific proposal]"
     )
 
     # --- Slide 2: Vision ---
@@ -1766,7 +1775,10 @@ async def _build_investor_deck_gamma(
                 "Use the markdown headings (# Title) as card titles. "
                 "Preserve all financial figures, percentages, and data points exactly as provided. "
                 "Do NOT generate charts, graphs, or bar charts. Use tables and text layouts only. "
-                "On selected slides (not every slide), include high-quality images of modern schools, "
+                f"TITLE SLIDE: The first slide MUST feature a prominent, iconic image specific to {target} "
+                f"(e.g. a famous landmark, skyline, or cultural symbol of {target}) — NOT a generic school image. "
+                f"This immediately signals the proposal is tailored to {target}. "
+                "OTHER SLIDES: On selected slides (not every slide), include high-quality images of modern schools, "
                 "happy children learning, and innovative classroom environments. These should be aspirational "
                 "and aligned with a premium education brand. Use icons where helpful for visual hierarchy. "
                 "IMPORTANT: Country/state-owned schools (National) MUST NOT have 'Alpha' in their name. "

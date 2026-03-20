@@ -29,7 +29,7 @@ const BORDER_LIGHT = { style: BorderStyle.SINGLE, size: 1, color: "E2E8F0" };
 const BORDER_MEDIUM = { style: BorderStyle.SINGLE, size: 2, color: "0A1628" };
 const BORDER_NONE = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
 
-function headerCell(text: string, widthPct: number, opts?: { highlight?: boolean }): TableCell {
+function headerCell(text: string, widthPct: number, opts?: { highlight?: boolean; lastRow?: boolean }): TableCell {
   return new TableCell({
     width: { size: widthPct, type: WidthType.PERCENTAGE },
     shading: opts?.highlight
@@ -45,6 +45,8 @@ function headerCell(text: string, widthPct: number, opts?: { highlight?: boolean
     children: [
       new Paragraph({
         spacing: { before: 60, after: 60 },
+        keepNext: !opts?.lastRow,
+        keepLines: true,
         children: [
           new TextRun({
             text: text.toUpperCase(),
@@ -62,7 +64,7 @@ function headerCell(text: string, widthPct: number, opts?: { highlight?: boolean
 function dataCell(
   text: string,
   widthPct: number,
-  opts?: { bold?: boolean; highlight?: boolean; small?: boolean; color?: string },
+  opts?: { bold?: boolean; highlight?: boolean; small?: boolean; color?: string; lastRow?: boolean },
 ): TableCell {
   return new TableCell({
     width: { size: widthPct, type: WidthType.PERCENTAGE },
@@ -79,6 +81,8 @@ function dataCell(
     children: [
       new Paragraph({
         spacing: { before: 50, after: 50 },
+        keepNext: !opts?.lastRow,
+        keepLines: true,
         children: [
           new TextRun({
             text,
@@ -93,7 +97,7 @@ function dataCell(
   });
 }
 
-function totalCell(text: string, widthPct: number): TableCell {
+function totalCell(text: string, widthPct: number, opts?: { lastRow?: boolean }): TableCell {
   return new TableCell({
     width: { size: widthPct, type: WidthType.PERCENTAGE },
     shading: { type: ShadingType.SOLID, color: "F7FAFC", fill: "F7FAFC" },
@@ -107,6 +111,8 @@ function totalCell(text: string, widthPct: number): TableCell {
     children: [
       new Paragraph({
         spacing: { before: 60, after: 60 },
+        keepNext: !opts?.lastRow,
+        keepLines: true,
         children: [
           new TextRun({
             text,
@@ -132,6 +138,8 @@ function sectionHeader(text: string, colSpan: number): TableRow {
         children: [
           new Paragraph({
             spacing: { before: 100, after: 40 },
+            keepNext: true,
+            keepLines: true,
             children: [
               new TextRun({
                 text,
@@ -295,11 +303,11 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
       new TableRow({
         cantSplit: true,
         children: [
-          totalCell("Total", 30),
-          totalCell(String(model.flagship.totalSchoolCount), 15),
-          totalCell(fmtNum(model.flagship.totalStudents) + " total", 20),
-          totalCell("", 15),
-          totalCell(fmtCompact(model.flagship.totalAnnualRevenue), 20),
+          totalCell("Total", 30, { lastRow: true }),
+          totalCell(String(model.flagship.totalSchoolCount), 15, { lastRow: true }),
+          totalCell(fmtNum(model.flagship.totalStudents) + " total", 20, { lastRow: true }),
+          totalCell("", 15, { lastRow: true }),
+          totalCell(fmtCompact(model.flagship.totalAnnualRevenue), 20, { lastRow: true }),
         ],
       }),
     ],
@@ -333,9 +341,9 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
       new TableRow({
         cantSplit: true,
         children: [
-          totalCell("Total Per Student", 40),
-          totalCell(fmtUsd(model.counterparty.perStudentBudget), 20),
-          totalCell("", 40),
+          totalCell("Total Per Student", 40, { lastRow: true }),
+          totalCell(fmtUsd(model.counterparty.perStudentBudget), 20, { lastRow: true }),
+          totalCell("", 40, { lastRow: true }),
         ],
       }),
     ],
@@ -385,10 +393,10 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
       new TableRow({
         cantSplit: true,
         children: [
-          totalCell("Total Upfront", 35),
-          totalCell(fmtCompact(model.upfront.totalUsd), 20),
-          totalCell("", 25),
-          totalCell("", 20),
+          totalCell("Total Upfront", 35, { lastRow: true }),
+          totalCell(fmtCompact(model.upfront.totalUsd), 20, { lastRow: true }),
+          totalCell("", 25, { lastRow: true }),
+          totalCell("", 20, { lastRow: true }),
         ],
       }),
     ],
@@ -409,13 +417,13 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
         ],
       }),
       ...model.ongoing.items.map(
-        (r) =>
+        (r, idx) =>
           new TableRow({
             cantSplit: true,
             children: [
-              dataCell(r.item, 35),
-              dataCell(r.amount, 35, { bold: true }),
-              dataCell(r.recipient, 30),
+              dataCell(r.item, 35, { lastRow: idx === model.ongoing.items.length - 1 }),
+              dataCell(r.amount, 35, { bold: true, lastRow: idx === model.ongoing.items.length - 1 }),
+              dataCell(r.recipient, 30, { lastRow: idx === model.ongoing.items.length - 1 }),
             ],
           }),
       ),
@@ -436,27 +444,30 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
           headerCell("National", 35),
         ],
       }),
-      ...[
-        ["Ownership", "100% Alpha", `100% ${ctx.country} / 0% Alpha`],
-        ["Operated By", "Alpha", `Alpha (on behalf of ${ctx.country})`],
-        ["Students", fmtNum(model.flagship.totalStudents), `${fmtNum(model.counterparty.minStudentsPerYear)} minimum`],
-        ["Tuition / Funding", `${fmtUsd(model.flagship.tuitionPerYear)} / year`, `${fmtUsd(model.counterparty.perStudentBudget)} / year (fixed)`],
-        ["Operating Margin", "25%", "Per cost structure"],
-        ["Operating Fee", "N/A (Alpha-owned)", `10% of funding (min ${fmtUsd(2500)}/student)`],
-        ["Timeback License", "N/A (Alpha-owned)", `20% of funding (min ${fmtUsd(5000)}/student)`],
-        ["Backstop", "50% capacity, 5 years", "N/A"],
-        ["Real Estate", "Sourced by counterparty", "Sourced by counterparty"],
-      ].map(
-        ([param, prong1, prong2]) =>
-          new TableRow({
-            cantSplit: true,
-            children: [
-              dataCell(param, 30, { bold: true }),
-              dataCell(prong1, 35),
-              dataCell(prong2, 35),
-            ],
-          }),
-      ),
+      ...(() => {
+        const rows = [
+          ["Ownership", "100% Alpha", `100% ${ctx.country} / 0% Alpha`],
+          ["Operated By", "Alpha", `Alpha (on behalf of ${ctx.country})`],
+          ["Students", fmtNum(model.flagship.totalStudents), `${fmtNum(model.counterparty.minStudentsPerYear)} minimum`],
+          ["Tuition / Funding", `${fmtUsd(model.flagship.tuitionPerYear)} / year`, `${fmtUsd(model.counterparty.perStudentBudget)} / year (fixed)`],
+          ["Operating Margin", "25%", "Per cost structure"],
+          ["Operating Fee", "N/A (Alpha-owned)", `10% of funding (min ${fmtUsd(2500)}/student)`],
+          ["Timeback License", "N/A (Alpha-owned)", `20% of funding (min ${fmtUsd(5000)}/student)`],
+          ["Backstop", "50% capacity, 5 years", "N/A"],
+          ["Real Estate", "Sourced by counterparty", "Sourced by counterparty"],
+        ];
+        return rows.map(
+          ([param, prong1, prong2], idx) =>
+            new TableRow({
+              cantSplit: true,
+              children: [
+                dataCell(param, 30, { bold: true, lastRow: idx === rows.length - 1 }),
+                dataCell(prong1, 35, { lastRow: idx === rows.length - 1 }),
+                dataCell(prong2, 35, { lastRow: idx === rows.length - 1 }),
+              ],
+            }),
+        );
+      })(),
     ],
   });
 

@@ -394,7 +394,7 @@ def generate_term_sheet_assumptions(
         FinancialAssumption(
             key="ts_launch_capital",
             label="Launch / Marketing Capital ($M)",
-            value=max(5, round(y5_revenue * 0.05 / 1_000_000)),
+            value=50,
             min_val=1, max_val=500, step=5,
             unit="$M", category="commitments",
             description=(
@@ -2170,11 +2170,18 @@ def _add_styled_table(
     table.style = "Table Grid"
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-    # Prevent rows from breaking across pages
-    for row in table.rows:
+    # Prevent rows from breaking across pages and keep table together
+    total_rows = len(table.rows)
+    for row_idx, row in enumerate(table.rows):
         tr = row._tr
         tr_pr = tr.get_or_add_trPr()
         tr_pr.append(tr_pr.makeelement(qn("w:cantSplit"), {}))
+        is_last_row = row_idx == total_rows - 1
+        for cell in row.cells:
+            for p in cell.paragraphs:
+                p.paragraph_format.keep_together = True
+                if not is_last_row:
+                    p.paragraph_format.keep_with_next = True
 
     # --- Header row ---
     for ci, header_text in enumerate(headers):
