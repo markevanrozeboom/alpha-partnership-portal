@@ -1053,7 +1053,7 @@ def _extract_financial_values(
                 "students": p.students,
             })
 
-    # --- National student commitment (Prong 2 only, excludes flagship) ---
+    # --- National student commitment (excludes flagship) ---
     national_students = int(
         model.national_students
         if model.national_students
@@ -1941,7 +1941,7 @@ def _add_investment_table(
     mgmt_pct = fin["mgmt_pct"]
     tb_pct = fin["timeback_pct"]
     per_student = fin["per_student"]
-    national_students = fin["national_students"]  # Prong 2 commitment (100K)
+    national_students = fin["national_students"]  # National commitment (100K)
     parent_ed = fin.get("parent_education_annual", 50)
     scholarship_gap = fin.get("funding_gap_per_student", 0)
 

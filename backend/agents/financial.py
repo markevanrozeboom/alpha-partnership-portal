@@ -1,6 +1,6 @@
 """Financial Modelling Agent — investment-bank-quality financial model with interactive assumptions.
 
-Post-workshop (March 16, 2026): Unified two-prong model for all sovereign nations.
+Post-workshop (March 16, 2026): Unified dual-school model for all sovereign nations.
 No tiers. No PPP scaling. Fixed upfront fees. One model.
 
 Phase 1: Generates configurable assumptions (sliders) from the strategy/country data.
@@ -409,7 +409,7 @@ def generate_assumptions(
 ) -> FinancialAssumptions:
     """Generate a set of configurable financial assumptions based on the strategy.
 
-    Sovereign nations use the two-prong model (Flagship + National).
+    Sovereign nations use the dual-school model (Flagship + National).
     US states use the existing ESA/school-type model.
     No tiers. No PPP scaling.
     """
@@ -427,10 +427,10 @@ def _generate_sovereign_assumptions(
     country_profile: CountryProfile,
     strategy: Strategy,
 ) -> FinancialAssumptions:
-    """Generate two-prong model assumptions for sovereign nations.
+    """Generate dual-school model assumptions for sovereign nations.
 
-    Prong 1 (Flagship): 100% Alpha-owned. Tuition $40K-$100K, top metros, 25% margin.
-    Prong 2 (National): 100% Country-owned, Alpha operates. FIXED $25K/student, 100K min.
+    Flagship: 100% Alpha-owned. Tuition $40K-$100K, top metros, 25% margin.
+    National: 100% Country-owned, Alpha operates. FIXED $25K/student, 100K min.
 
     Upfront fees per financial_rules_v1.md:
       4 × $250M fixed development = $1B
@@ -444,7 +444,7 @@ def _generate_sovereign_assumptions(
     dev_costs = get_fixed_development_costs()
     fee_floors = get_fee_floors()
 
-    # --- Prong 1: Flagship (revenue-maximizing grid search) ---
+    # --- Flagship (revenue-maximizing grid search) ---
     flagship_opt = optimize_flagships(
         market_data=country_profile.flagship_market_data,
         tuition_min=tuition_min,
@@ -471,7 +471,7 @@ def _generate_sovereign_assumptions(
         default_flagship_schools = 3
         default_flagship_students_per_school = 500
 
-    # --- Prong 2: National ---
+    # --- National ---
     # 100K student-year minimum commitment
     default_national_students = min_student_year
 
@@ -506,7 +506,7 @@ def _generate_sovereign_assumptions(
     )
 
     assumptions = [
-        # --- Prong 1: Flagship ---
+        # --- Flagship ---
         FinancialAssumption(
             key="flagship_tuition", label="Flagship Tuition (per student/year)",
             value=default_flagship_tuition,
@@ -536,7 +536,7 @@ def _generate_sovereign_assumptions(
             description="50% backstop guaranteed by country/state for 5 years",
         ),
 
-        # --- Prong 2: National (Counterparty-Owned, Alpha-Operated) ---
+        # --- National (Counterparty-Owned, Alpha-Operated) ---
         FinancialAssumption(
             key="national_per_student_budget",
             label="National Per-Student Budget",
@@ -559,7 +559,7 @@ def _generate_sovereign_assumptions(
             key="national_ramp_years", label="Years to Full National Deployment",
             value=3, min_val=2, max_val=5, step=1,
             unit="years", category="scale",
-            description="Phased rollout timeline for national prong",
+            description="Phased rollout timeline for national school type",
         ),
         FinancialAssumption(
             key="avg_students_per_school", label="Avg Students per School (National)",
@@ -907,7 +907,7 @@ def build_model(
     """Deterministic financial model calculation from assumptions."""
     a = {item.key: item.value for item in assumptions.assumptions}
 
-    # Detect sovereign two-prong model vs US state model
+    # Detect sovereign dual-school model vs US state model
     if "flagship_tuition" in a:
         return _build_sovereign_model(a, assumptions.flagship_optimization)
 
@@ -918,10 +918,10 @@ def _build_sovereign_model(
     a: dict,
     flagship_opt: FlagshipOptimizationResult | None = None,
 ) -> FinancialModel:
-    """Build the two-prong sovereign nation model.
+    """Build the dual-school sovereign nation model.
 
-    Prong 1: Flagship schools × students × tuition × fill rate
-    Prong 2: National students × $25K
+    Flagship schools × students × tuition × fill rate
+    National students × $25K
     Alpha revenue: 10% mgmt + 20% timeback on combined revenue
     """
     # --- Extract assumptions ---
@@ -954,11 +954,11 @@ def _build_sovereign_model(
     upfront_timeback = a.get("upfront_timeback_fee", 500) * 1_000_000  # Timeback prepaid
     upfront_ip = a.get("upfront_ip_fee", 1_750) * 1_000_000
 
-    # --- Prong 1: Flagship capacity (constant across years) ---
+    # --- Flagship capacity (constant across years) ---
     flagship_capacity = flagship_schools * flagship_per_school
     flagship_students = int(flagship_capacity * flagship_fill_pct)
 
-    # --- Prong 2: National ramp ---
+    # --- National ramp ---
     def national_students_for_year(yr: int) -> int:
         if yr <= national_ramp_years:
             frac = yr / national_ramp_years
@@ -1018,14 +1018,14 @@ def _build_sovereign_model(
     # --- Unit Economics ---
     unit_econ = [
         UnitEconomics(
-            school_type="Flagship (Prong 1)",
+            school_type="Flagship",
             per_student_revenue=flagship_tuition,
             per_student_cost=round(flagship_tuition * cogs_pct),
             contribution_margin=round(flagship_tuition * (1 - cogs_pct)),
             margin_pct=round((1 - cogs_pct) * 100, 1),
         ),
         UnitEconomics(
-            school_type="National (Prong 2)",
+            school_type="National",
             per_student_revenue=national_budget,
             per_student_cost=round(national_budget * cogs_pct),
             contribution_margin=round(national_budget * (1 - cogs_pct)),

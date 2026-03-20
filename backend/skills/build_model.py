@@ -118,7 +118,7 @@ def compute_scaling(data: dict, tier: int = 1) -> dict:
     student_target_5yr = max(100_000, int(school_age_pop * 0.01))
     student_target_5yr = overrides.get("student_target_5yr", student_target_5yr)
 
-    # FIXED per-student budget for national schools (Prong 2)
+    # FIXED per-student budget for national schools (National)
     per_student_budget = 25_000  # Non-negotiable
 
     # FIXED development costs — $250M each, does NOT scale by country
@@ -2007,7 +2007,7 @@ def main():
     parser.add_argument("--templates", help="Comma-separated template IDs (or 'auto')")
     parser.add_argument("--auto", action="store_true", help="Auto-select templates from tier")
     parser.add_argument("--output-dir", default="outputs", help="Output directory for spec JSON files")
-    parser.add_argument("--premium-schools", action="store_true", help="Include Halo Alpha Schools add-on (Prong 1)")
+    parser.add_argument("--premium-schools", action="store_true", help="Include Halo Alpha Schools add-on (Flagship)")
 
     args = parser.parse_args()
 

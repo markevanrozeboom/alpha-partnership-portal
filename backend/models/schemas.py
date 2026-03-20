@@ -246,8 +246,8 @@ class SchoolTypeDeployment(BaseModel):
     name: str = Field(
         default="",
         description=(
-            "School type name. Only Halo Alpha Schools (Prong 1, 100% Alpha-owned) "
-            "may use 'Alpha' in their name. Country/state-owned schools (Prong 2) "
+            "School type name. Only Halo Alpha Schools (Flagship, 100% Alpha-owned) "
+            "may use 'Alpha' in their name. Country/state-owned schools (National) "
             "MUST NOT include 'Alpha' in their name."
         ),
     )
@@ -405,12 +405,12 @@ class FinancialModel(BaseModel):
     upfront_timeback_fee: float = 0    # Timeback prepaid
     total_management_fee_revenue: float = 0
     total_timeback_license_revenue: float = 0
-    # Two-prong model — Flagship (Prong 1)
+    # Dual-school model — Flagship
     flagship_tuition: float = 0
     flagship_students: int = 0
     flagship_revenue: float = 0
     flagship_optimization: Optional[FlagshipOptimizationResult] = None
-    # Two-prong model — National (Prong 2)
+    # Dual-school model — National
     national_per_student_budget: float = 25_000
     national_students: int = 0
     national_revenue: float = 0

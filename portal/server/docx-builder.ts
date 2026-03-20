@@ -432,8 +432,8 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
         cantSplit: true,
         children: [
           headerCell("Parameter", 30),
-          headerCell("Halo Alpha (Prong 1)", 35),
-          headerCell("National (Prong 2)", 35),
+          headerCell("Halo Alpha (Flagship)", 35),
+          headerCell("National", 35),
         ],
       }),
       ...[
@@ -553,11 +553,11 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
           metricsTable,
           new Paragraph({ spacing: { before: 200, after: 0 }, children: [] }),
 
-          // ── PRONG 1: HALO ALPHA SCHOOLS ──
+          // ── Flagship: Halo Alpha schools ──
           new Paragraph({
             spacing: { before: 0, after: 40 },
             children: [
-              new TextRun({ text: "PRONG 1", bold: true, size: 16, font: "Calibri", color: "FFFFFF" }),
+              new TextRun({ text: "FLAGSHIP", bold: true, size: 16, font: "Calibri", color: "FFFFFF" }),
             ],
             shading: { type: ShadingType.SOLID, color: "1A56DB", fill: "1A56DB" },
           }),
@@ -619,11 +619,11 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
 
           new Paragraph({ spacing: { before: 120, after: 0 }, children: [] }),
 
-          // ── PRONG 2: COUNTERPARTY SCHOOLS ──
+          // ── National: Counterparty schools ──
           new Paragraph({
             spacing: { before: 0, after: 40 },
             children: [
-              new TextRun({ text: "PRONG 2", bold: true, size: 16, font: "Calibri", color: "FFFFFF" }),
+              new TextRun({ text: "NATIONAL", bold: true, size: 16, font: "Calibri", color: "FFFFFF" }),
             ],
             shading: { type: ShadingType.SOLID, color: "0A1628", fill: "0A1628" },
           }),

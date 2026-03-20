@@ -85,7 +85,7 @@ not to derive financial numbers.
 Why this country, why now. Alignment with national vision and leadership priorities.
 What makes this moment right for a transformative education partnership.
 
-## Two-Prong Positioning
+## Dual-School Positioning
 How flagship schools (2-3 premium campuses, $40K-$100K tuition) and national schools
 ($25K budget, 100K+ students) fit this specific market. How flagship success in the
 capital proves the model and unlocks national scale.
@@ -212,14 +212,14 @@ async def run_strategy(
             HEAD_OF_STATE_PREAMBLE +
             "Extract a structured Strategy for a sovereign education partnership.\n\n"
             "FIXED DEAL PARAMETERS:\n"
-            "- Prong 1 (Flagship): $40K-$100K tuition, 2-3 schools, capital cities\n"
-            f"- Prong 2 (National): $25K fixed budget, {min_y5_students:,} student-year minimum\n"
+            "- Flagship: $40K-$100K tuition, 2-3 schools, capital cities\n"
+            f"- National: $25K fixed budget, {min_y5_students:,} student-year minimum\n"
             "- Equity: 100/0 — Counterparty 100%, Alpha 0% (Operator & Licensor)\n"
             "- Management fee: 10%, Timeback: 20% (non-negotiable)\n"
             "- Fixed development: $750M ($250M × 3, non-negotiable)\n\n"
             "SCHOOL TYPE NAMING:\n"
-            "- Prong 1 flagship schools should be called 'Halo Alpha School' (these are 100% Alpha-owned)\n"
-            "- Prong 2 national/country-owned schools MUST NOT have 'Alpha' in their name. "
+            "- Flagship schools should be called 'Halo Alpha School' (these are 100% Alpha-owned)\n"
+            "- National/country-owned schools MUST NOT have 'Alpha' in their name. "
             "Use a culturally resonant name like 'National Program', 'National School', or similar. "
             "It is OK to say they are 'operated by Alpha'.\n\n"
             "Set partnership_structure to operator_licensor.\n"

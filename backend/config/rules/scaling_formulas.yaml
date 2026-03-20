@@ -32,8 +32,8 @@ formulas:
   student_target:
     national_min_student_years: 100000   # Andy: "100,000 students"
     description: >
-      Minimum 100K student-year commitment for national/public schools (Prong 2).
-      Flagship schools (Prong 1) are separate and additive.
+      Minimum 100K student-year commitment for national/public schools.
+      Flagship schools are separate and additive.
 
   # ---------------------------------------------------------------------------
   # Per-Student Budget — FIXED at $25K for national schools

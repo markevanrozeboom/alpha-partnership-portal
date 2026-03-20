@@ -23,7 +23,7 @@ export interface CountryContext {
   addressableMethodology: string; // brief explanation of how estimate was derived
 }
 
-// ─── Financial Model Types (Two-Prong Model) ─────────────────────────────────
+// ─── Financial Model Types (Dual-School Model) ─────────────────────────────────
 
 /** Metro-level financial data for flagship optimization */
 export interface MetroFinancialData {
@@ -53,7 +53,7 @@ export interface FlagshipSchoolAllocation {
   capacityPerSchool: number;
 }
 
-/** Prong 1: Flagship Alphas model result */
+/** Flagship: Halo Alpha schools model result */
 export interface FlagshipModel {
   schools: FlagshipSchoolAllocation[];
   tuitionPerYear: number;
@@ -65,7 +65,7 @@ export interface FlagshipModel {
   scholarshipNote: string | null;
 }
 
-/** Prong 2: Counterparty (country-owned) schools model */
+/** National: Counterparty (country-owned) schools model */
 export interface CounterpartyModel {
   minStudentsPerYear: number;
   perStudentBudget: number;

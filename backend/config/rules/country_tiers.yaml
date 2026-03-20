@@ -14,7 +14,7 @@ unified_model:
   description: >
     Single universal deal model for all countries.
     Counterparty owns 100% of the local entity; Alpha operates as
-    exclusive operator & licensor (0% equity). Two-prong structure:
+    exclusive operator & licensor (0% equity). Dual-school structure:
     Flagship schools + National/Public schools.
 
   equity_structure:
@@ -27,7 +27,7 @@ unified_model:
       This follows the Ed71/Next71 UAE structure.
 
   # ---------------------------------------------------------------------------
-  # Prong 1: Halo Alpha Schools
+  # Flagship: Halo Alpha Schools
   # ---------------------------------------------------------------------------
   prong_1_flagship:
     description: >
@@ -43,7 +43,7 @@ unified_model:
     backstop_duration_years: 5
 
   # ---------------------------------------------------------------------------
-  # Prong 2: National / Public Schools (Ed71 model)
+  # National / Public Schools (Ed71 model)
   # ---------------------------------------------------------------------------
   prong_2_national:
     description: >

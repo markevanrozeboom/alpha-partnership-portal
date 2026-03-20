@@ -1,7 +1,7 @@
 """Document Generation Agent — produces executive-quality investor deck and
 investment memorandum (proposal document).
 
-Post-workshop (March 16, 2026): Unified two-prong model for all sovereign nations.
+Post-workshop (March 16, 2026): Unified dual-school model for all sovereign nations.
 No tiers. No PPP scaling. Operator & Licensor (Marriott model). 100/0 equity.
 Output is a single combined document: investment memorandum with embedded deal terms.
 
@@ -77,9 +77,9 @@ IMPORTANT DEAL MODEL:
 - Operator & Licensor structure (Marriott hotel model) — NOT a joint venture
 - Counterparty owns 100% of the local entity, Alpha owns 0% equity
 - Alpha is the exclusive operator & licensor
-- Two-prong school model:
-  Prong 1 (Flagship): $40K-$100K tuition, capital city + biggest cities, 2-3 schools, 50% backstop
-  Prong 2 (National): FIXED $25K per-student budget, 100K student-year minimum commitment
+- Dual-school model:
+  Flagship: $40K-$100K tuition, capital city + biggest cities, 2-3 schools, 50% backstop
+  National: FIXED $25K per-student budget, 100K student-year minimum commitment
 - Fixed upfront development: $250M AlphaCore + $250M App R&D + $250M LifeSkills = $750M total (non-negotiable)
 - Management fee: 10% of combined revenue (non-negotiable)
 - Timeback license: 20% of combined revenue (non-negotiable)
@@ -94,7 +94,7 @@ Write 1,500-2,000 words covering:
 - The opportunity: why this market, why now
 - Brief description of the Alpha model
 - Proposed Operator & Licensor structure (Marriott model) with 100/0 equity
-- Two-prong model: Flagship schools + National schools
+- Dual-school model: Flagship schools + National schools
 - Key financial highlights (revenue, EBITDA, IRR, MOIC)
 - Risk/reward assessment summary
 - Recommended next steps
@@ -178,9 +178,9 @@ for the Alpha Holdings, Inc. × {target} partnership.
 IMPORTANT: This uses the Operator & Licensor model (Marriott hotel model) — NOT a JV.
 - Counterparty owns 100% of the local entity, Alpha owns 0% equity
 - Alpha is the exclusive operator & licensor
-- Two-prong school model:
-  Prong 1 (Flagship): $40K-$100K tuition, 2-3 schools in capital + biggest cities, 50% backstop
-  Prong 2 (National): FIXED $25K per-student budget, 100K student-year minimum commitment
+- Dual-school model:
+  Flagship: $40K-$100K tuition, 2-3 schools in capital + biggest cities, 50% backstop
+  National: FIXED $25K per-student budget, 100K student-year minimum commitment
 - Fixed upfront development costs: $250M each (AlphaCore, App R&D, LifeSkills) = $750M total (non-negotiable)
 - Management fee: 10% of combined revenue (non-negotiable)
 - Timeback license: 20% of combined revenue (non-negotiable)
@@ -195,8 +195,8 @@ Strategy Data:
 Write 1,500-2,000 words covering:
 1. PARTNERSHIP STRUCTURE — Operator & Licensor (Marriott model), rationale for 100/0 ownership,
    governance framework, board composition. NOT a JV — counterparty owns 100%, Alpha operates.
-2. TWO-PRONG SCHOOL MODEL — Prong 1 (Flagship) as proof-of-concept/brand anchor,
-   Prong 2 (National) for scale. How the two prongs interact strategically.
+2. DUAL-SCHOOL MODEL — Flagship as proof-of-concept/brand anchor,
+   National for scale. How the two school types interact strategically.
 3. IP LICENSING & FEE STRUCTURE — FIXED $750M upfront development costs ($250M × 3),
    ongoing management fees (10%), Timeback license fees (20%), prepaid fee structure
 4. CAPITAL STRUCTURE — Total capital requirement, deployment phasing, counterparty funds
@@ -214,8 +214,8 @@ Write the FINANCIAL ANALYSIS section of an investment memorandum for the Alpha H
 partnership.
 
 IMPORTANT: Financial parameters are FIXED — do not derive from country GDP or PPP data.
-- Prong 1 (Flagship): $40K-$100K tuition (set by AGI of top 20% families)
-- Prong 2 (National): FIXED $25K per-student budget (non-negotiable)
+- Flagship: $40K-$100K tuition (set by AGI of top 20% families)
+- National: FIXED $25K per-student budget (non-negotiable)
 - Fixed development costs: $250M each × 3 = $750M total (non-negotiable)
 - Management fee: 10%, Timeback: 20% (both non-negotiable)
 - Research data is "color commentary" for narrative context only
@@ -227,12 +227,12 @@ Financial Data:
 {financial_data}
 
 Write 2,500-3,000 words covering:
-1. KEY ASSUMPTIONS — Enrollment ramp (Prong 1 flagship + Prong 2 national), pricing
+1. KEY ASSUMPTIONS — Enrollment ramp (Flagship + National), pricing
    (FIXED $25K national, $40K-$100K flagship), cost structure, capital expenditure,
    working capital. No PPP/GDP scaling — all financial figures are fixed.
 2. 5-YEAR P&L PROJECTION — Year-by-year walkthrough of students, schools, revenue, COGS,
    gross margin, OPEX, EBITDA, net income, FCF. Include commentary on drivers and inflection points.
-   Show Prong 1 and Prong 2 revenue separately where relevant.
+   Show Flagship and National revenue separately where relevant.
 3. UNIT ECONOMICS — Per-student revenue, cost, and margin by school type
    (Flagship vs National). Compare to industry benchmarks.
 4. REVENUE STREAMS — Management fees (10% of combined revenue), Timeback license (20%),
@@ -968,7 +968,7 @@ Reference file: Ed71_ The World's First AI-Native National Education System.pptx
 
 Deal model:
 - Operator & Licensor — NOT a JV. Counterparty owns 100%, Alpha operates.
-- Two-prong: Flagship ($40K-$100K) + National ($25K FIXED, 100K student-year min)
+- Dual-school: Flagship ($40K-$100K) + National ($25K FIXED, 100K student-year min)
 - Fixed development: $750M total ($250M × 3). Management fee 10%, Timeback 20%.
 
 Produce a detailed slide-by-slide outline for an {slide_count}-slide presentation deck
@@ -1255,7 +1255,7 @@ def _build_pptx(
     exec_lines = [
         f"• Transform K-12 education in {target} through AI-powered learning",
         "• Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
-        "• Two-prong: Flagship schools ($40K-$100K) + National schools ($25K fixed)",
+        "• Dual-school: Flagship schools ($40K-$100K) + National schools ($25K fixed)",
         "• Proven model: UAE deal ($1.5B, 200K students) as reference",
     ]
     _add_body(s, exec_lines, top=3.2)
@@ -1336,8 +1336,8 @@ def _build_pptx(
     _add_kpi_boxes(s, returns_kpis, top=1.5)
     _add_body(s, [
         f"• Fixed development costs: ${model.upfront_ip_fee:,.0f} ($250M × 3)",
-        f"• Management fee: {model.management_fee_pct * 100:.0f}% of combined Prong 1+2 revenue",
-        f"• Timeback license: {model.timeback_license_pct * 100:.0f}% of combined Prong 1+2 revenue",
+        f"• Management fee: {model.management_fee_pct * 100:.0f}% of combined Flagship + National revenue",
+        f"• Timeback license: {model.timeback_license_pct * 100:.0f}% of combined Flagship + National revenue",
     ], top=3.5)
 
     # ── Slide 7: Deal Structure ────────────────────────────────────────
@@ -1353,8 +1353,8 @@ def _build_pptx(
     deal_rows = [
         ["Structure", "Operator & Licensor (Marriott model)"],
         ["Ownership", "100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor"],
-        ["Flagship (Prong 1)", "$40K-$100K tuition, 2-3 schools, 50% backstop"],
-        ["National (Prong 2)", "$25K/student FIXED, 100K student-year min"],
+        ["Flagship", "$40K-$100K tuition, 2-3 schools, 50% backstop"],
+        ["National", "$25K/student FIXED, 100K student-year min"],
         ["Development Costs", "$750M FIXED ($250M × 3)"],
         ["Management Fee", f"{model.management_fee_pct * 100:.0f}% of combined revenue"],
         ["Timeback License", f"{model.timeback_license_pct * 100:.0f}% of combined revenue"],
@@ -1645,7 +1645,7 @@ def _build_gamma_investor_input(
         school_lines = []
         for st in strategy.school_types[:4]:
             name = st.name or ""
-            # Prong 2 (non-flagship) school names must not contain "Alpha"
+            # National (non-flagship) school names must not contain "Alpha"
             is_flagship = any(kw in name.lower() for kw in ("flagship", "halo"))
             if not is_flagship and _re.search(r"\bAlpha\b", name):
                 name = _re.sub(r"\s*\bAlpha\b\s*", " ", name).strip()
@@ -1766,9 +1766,11 @@ async def _build_investor_deck_gamma(
                 "Use the markdown headings (# Title) as card titles. "
                 "Preserve all financial figures, percentages, and data points exactly as provided. "
                 "Do NOT generate charts, graphs, or bar charts. Use tables and text layouts only. "
-                "Add relevant icons and images to slides where appropriate to make them visually engaging. "
-                "IMPORTANT: Country/state-owned schools (Prong 2 / National) MUST NOT have 'Alpha' in their name. "
-                "Only Halo Alpha Schools (Prong 1 / Flagship, which are 100% Alpha-owned) may use the Alpha brand."
+                "On selected slides (not every slide), include high-quality images of modern schools, "
+                "happy children learning, and innovative classroom environments. These should be aspirational "
+                "and aligned with a premium education brand. Use icons where helpful for visual hierarchy. "
+                "IMPORTANT: Country/state-owned schools (National) MUST NOT have 'Alpha' in their name. "
+                "Only Halo Alpha Schools (Flagship, which are 100% Alpha-owned) may use the Alpha brand."
             ),
             export_as=export_as,
         )

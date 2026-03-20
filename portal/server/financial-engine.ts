@@ -1,9 +1,9 @@
 /**
  * Financial Engine — implements the rules from financial_rules_v1.md
  *
- * Two-prong model:
- *   Prong 1: Halo Alpha Schools (100% Alpha Holdings, Inc.-owned, revenue-optimized)
- *   Prong 2: National Schools (100% country/state-owned, $25K fixed budget)
+ * Dual-school model:
+ *   Flagship: Halo Alpha Schools (100% Alpha Holdings, Inc.-owned, revenue-optimized)
+ *   National: National Schools (100% country/state-owned, $25K fixed budget)
  */
 
 import type {
@@ -262,10 +262,10 @@ export function computeFinancialModel(
   data: FinancialResearchData,
   countryName: string,
 ): FinancialModel {
-  // ── Prong 1: Flagship Alphas ──
+  // ── Flagship: Halo Alpha Schools ──
   const flagship = optimizeFlagships(data);
 
-  // ── Prong 2: Counterparty Schools ──
+  // ── National: Counterparty Schools ──
   const counterparty: CounterpartyModel = {
     minStudentsPerYear: COUNTERPARTY.MIN_STUDENTS,
     perStudentBudget: COUNTERPARTY.PER_STUDENT_BUDGET,

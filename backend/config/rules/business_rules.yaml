@@ -94,7 +94,7 @@ universal_rules:
       total: 750000000                     # $750M total — does NOT vary
 
   # ---------------------------------------------------------------------------
-  # Two-Prong School Model
+  # Dual-School Model
   # ---------------------------------------------------------------------------
   prong_1_flagship:
     description: >
@@ -124,8 +124,8 @@ universal_rules:
   school_types:
     minimum: 2
     types:
-      - "Halo Alpha School (Prong 1)"
-      - "National/Public School (Prong 2)"
+      - "Halo Alpha School (Flagship)"
+      - "National/Public School"
     description: "Every proposal offers both Flagship and National school types."
 
   # ---------------------------------------------------------------------------
