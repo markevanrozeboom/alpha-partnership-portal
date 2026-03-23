@@ -1567,10 +1567,12 @@ def _build_gamma_investor_input(
     slides: list[str] = []
 
     # --- Slide 1: Title ---
+    year = datetime.now().year
     slides.append(
         f"# Alpha Holdings, Inc. × {target}\n\n"
         f"Strategic Partnership Proposal\n\n"
-        f"CONFIDENTIAL\n\n"
+        f"Confidential — Prepared exclusively for the Government of {target}\n\n"
+        f"CONFIDENTIAL | {year}\n\n"
         f"[Use an iconic image of {target} — a famous landmark, skyline, or cultural symbol "
         f"that immediately identifies this as a {target}-specific proposal]"
     )
