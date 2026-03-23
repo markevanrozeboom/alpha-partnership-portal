@@ -104,9 +104,9 @@ def generate_term_sheet_assumptions(
     if financial_model.pnl_projection:
         y5_students = financial_model.pnl_projection[-1].students
 
-    y5_revenue = 0
+    _y5_revenue = 0  # noqa: F841
     if financial_model.pnl_projection:
-        y5_revenue = financial_model.pnl_projection[-1].revenue
+        _y5_revenue = financial_model.pnl_projection[-1].revenue  # noqa: F841
 
     per_student = fa.get(
         "per_student_budget",
