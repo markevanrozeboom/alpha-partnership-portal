@@ -893,6 +893,7 @@ def _build_proposal_docx(
     _add_transformation_section(doc, target, cv, fin)
     _add_cultural_program_section(doc, target, cv, fin)
     _add_school_network_section(doc, target, cv, fin, strategy)
+    _add_halo_alpha_strategic_role_section(doc, target, cv)
     _add_future_opportunities_section(doc, target, cv)
     _add_sequencing_section(doc, target, cv, fin, strategy)
     _add_funding_section(doc, target, cv, fin)
@@ -1542,6 +1543,71 @@ def _add_school_network_section(
             )
 
 
+def _add_halo_alpha_strategic_role_section(
+    doc: DocxDocument, target: str, cv: CountryVariables,
+) -> None:
+    """Build the Strategic Role of Halo Alpha Schools section.
+
+    Explains why flagship Alpha schools are essential to the
+    country/state expansion proposal — placed in the main body
+    (Part 1) between the school network and future opportunities.
+    """
+    doc.add_heading(
+        "Strategic Role of Halo Alpha Schools", level=1,
+    )
+
+    _add_body(
+        doc,
+        "Halo Alpha Schools are 100% owned by Alpha Holdings, "
+        "Inc. and serve as the premium \u201chalo brand\u201d "
+        "\u2014 flagship schools that demonstrate the full Alpha "
+        "experience at the highest level of execution.",
+    )
+
+    _add_body(
+        doc,
+        f"The Halo Alpha Schools are considered essential to the "
+        f"{target} expansion proposal because they act as the apex "
+        "brand that anchors the entire education system and generates "
+        "a necessary \u201chalo effect\u201d for the rest of the "
+        "portfolio.",
+    )
+
+    _add_list_item_bold_prefix(
+        doc,
+        "Marketing and Validation Engine: ",
+        "These schools serve as a marketing and validation engine. "
+        "By establishing an unassailable benchmark for excellence, "
+        "they legitimize the brand\u2019s entire presence in "
+        f"{target}.",
+    )
+
+    _add_list_item_bold_prefix(
+        doc,
+        "Justification for Premium Positioning: ",
+        "The flagship schools create a brand halo that justifies "
+        "premium pricing across the entire portfolio, including the "
+        f"Alpha-branded schools and {cv.jv_program_name} "
+        "country-owned/Alpha-operated schools.",
+    )
+
+    _add_list_item_bold_prefix(
+        doc,
+        "Strategic Anchor for National Transformation: ",
+        "The flagship presence is essential to the entire "
+        "proposal\u2019s success because it anchors the system and "
+        "provides the proof of concept required for a national-scale "
+        "education transformation.",
+    )
+
+    _add_body(
+        doc,
+        "In summary, the Halo Alpha Schools are the high-profile "
+        "\u201cgold standard\u201d institutions meant to drive demand "
+        "and trust for the broader, larger-scale expansion.",
+    )
+
+
 def _add_future_opportunities_section(
     doc: DocxDocument, target: str, cv: CountryVariables,
 ) -> None:
@@ -1812,55 +1878,6 @@ def _add_school_design_section(
         "that drives enrollment across the broader national school network. "
         "Sized as 250-, 500-, or 1,000-student schools.",
     )
-
-    doc.add_heading(
-        "Strategic Role of Halo Alpha Schools", level=2,
-    )
-
-    _add_body(
-        doc,
-        f"The Halo Alpha Schools are considered essential to the "
-        f"{target} expansion proposal because they act as the apex "
-        "brand that anchors the entire education system and generates "
-        "a necessary \u201chalo effect\u201d for the rest of the "
-        "portfolio.",
-    )
-
-    _add_list_item_bold_prefix(
-        doc,
-        "Marketing and Validation Engine: ",
-        "These schools serve as a marketing and validation engine. "
-        "By establishing an unassailable benchmark for excellence, "
-        "they legitimize the brand\u2019s entire presence in "
-        f"{target}.",
-    )
-
-    _add_list_item_bold_prefix(
-        doc,
-        "Justification for Premium Positioning: ",
-        "The flagship schools create a brand halo that justifies "
-        "premium pricing across the entire portfolio, including the "
-        f"Alpha-branded schools and {cv.jv_program_name} "
-        "country-owned/Alpha-operated schools.",
-    )
-
-    _add_list_item_bold_prefix(
-        doc,
-        "Strategic Anchor for National Transformation: ",
-        "The flagship presence is essential to the entire "
-        "proposal\u2019s success because it anchors the system and "
-        "provides the proof of concept required for a national-scale "
-        "education transformation.",
-    )
-
-    _add_body(
-        doc,
-        "In summary, the Halo Alpha Schools are the high-profile "
-        "\u201cgold standard\u201d institutions meant to drive demand "
-        "and trust for the broader, larger-scale expansion.",
-    )
-
-    doc.add_heading("Key Metrics", level=2)
 
     flagship_opt = fin.get("flagship_optimization")
 
