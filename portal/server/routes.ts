@@ -673,7 +673,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 
   <div style="background:#f0f4ff; border-radius:8px; padding:16px 24px; margin-top:28px;">
     <p style="font-size:14px; color:#0a1628; line-height:1.6; margin:0;">
-      <strong>Our mission:</strong> ${programName} is the AI-native public education system for all of ${ctx.country}
+      <strong>Our mission:</strong> <strong>${programName}</strong> is a ${ctx.country}-owned national education platform, with Alpha as exclusive operating partner. Together we will design <strong>${ctx.localizedLifeSkillsName || ctx.country + 'Core'}</strong>, the ${ctx.country} life-skills engine — ${ctx.country}'s equivalent to AlphaCore.
     </p>
   </div>
 
@@ -963,7 +963,9 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">The Complete Platform</div>
-  <h2>Launching ${programName} on Alpha's <span>full education stack</span></h2>
+  <h2>Launching <span>${programName}</span> on Alpha's full education stack</h2>
+
+  <p style="font-size:13px; color:#2d3748; line-height:1.6; margin:0 0 20px 0;"><strong>${programName}</strong> licenses Alpha's complete infrastructure and adapts it with <strong>${ctx.localizedLifeSkillsName || ctx.country + 'Core'}</strong>, the ${ctx.country}-specific life-skills program — ${ctx.country}'s equivalent to AlphaCore.</p>
 
   <div class="two-pane">
     <div class="pane">
@@ -1091,9 +1093,9 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="partner-detail">${model.flagship.schools.map(s => `${s.metro} (${s.count} @ ${fmtUsd(s.tuitionPerYear)})`).join(', ')}. ${model.flagship.scholarshipNote ? model.flagship.scholarshipNote : `${fmtNum(model.flagship.capacityPerSchool)} students per school.`}</div>
     </div>
     <div class="partner-card">
-      <div class="partner-label">National Schools</div>
+      <div class="partner-label">${programName} Schools</div>
       <div class="partner-value">${fmtNum(model.counterparty.minStudentsPerYear)} Student-Year Min</div>
-      <div class="partner-detail">Fixed $${model.counterparty.perStudentBudget.toLocaleString("en-US")} per-student annual budget. ${ctx.country} funds 100% of local entity operations.</div>
+      <div class="partner-detail">Fixed $${model.counterparty.perStudentBudget.toLocaleString("en-US")} per-student annual budget. Powered by <strong>${ctx.localizedLifeSkillsName || ctx.country + 'Core'}</strong> life-skills program. ${ctx.country} funds 100% of local entity operations.</div>
     </div>
   </div>
 
@@ -1173,6 +1175,10 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
         <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
           <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
           <span style="font-size:13px; color:#2d3748; line-height:1.5;">Minimum <strong>${fmtNum(model.counterparty.minStudentsPerYear)}</strong> students per year commitment.</span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
+          <span style="font-size:13px; color:#2d3748; line-height:1.5;">Every ${programName} school runs on Alpha's Timeback with <strong>${ctx.localizedLifeSkillsName || ctx.country + 'Core'}</strong>.</span>
         </li>
         <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
           <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
