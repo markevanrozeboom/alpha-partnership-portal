@@ -38,7 +38,8 @@ Return valid JSON matching this exact structure:
   "nationalEdVision": "1-2 sentence summary of the country's stated education reform goals",
   "culturalNarrative": "2-3 compelling sentences about why THIS country is uniquely positioned for AI-powered education transformation. Reference specific cultural values, national ambitions, or recent initiatives. This should feel like a senior advisor explaining the opportunity to their leadership.",
   "keyStrengths": ["Strength 1 for partnership", "Strength 2", "Strength 3"],
-  "localizedProgramName": "A SHORT brand name for the education program (2-4 words max, like 'Ed71' for UAE or 'Savoir France' for France). Must be concise enough for a slide title. Reference something culturally meaningful. NEVER include explanations or descriptions — just the brand name itself. MUST NOT contain the word 'Alpha' — these are country-owned schools and cannot carry the Alpha brand.",
+  "localizedProgramName": "A SHORT brand name for the country-owned, Alpha-operated SCHOOL NETWORK (2-4 words max, like 'Ed71' for UAE or 'Savoir France' for France). Must be concise enough for a slide title. Reference something culturally meaningful. NEVER include explanations or descriptions — just the brand name itself. MUST NOT contain the word 'Alpha' — these are country-owned schools and cannot carry the Alpha brand. MUST be a COMPLETELY DIFFERENT name from localizedLifeSkillsName.",
+  "localizedLifeSkillsName": "A SHORT brand name for the country-specific LIFE-SKILLS CURRICULUM program (1-2 words, like 'AsasCore' for UAE or 'VivreCore' for France). This is the country's equivalent to AlphaCore — the life-skills engine. MUST be a COMPLETELY DIFFERENT name from localizedProgramName — these are two distinct products: the school network vs. the life-skills curriculum. Do NOT reuse or derive from the school network name.",
   "localLifeSkillsFocus": "What life skills matter most in this culture (e.g. entrepreneurship, civic leadership, environmental stewardship). 1-2 sentences.",
   "languageApps": "What localized AI apps would be needed (languages, religious education, cultural studies, ESL). Brief list.",
   "addressableStudentPopulation": "Estimated number of school-age children (5-18) in households with annual income > $250,000 USD (or PPP equivalent). This is the realistic addressable market for a $25,000/student program. Use known data: HNWI counts, wealth reports (Knight Frank, Henley & Partners, Credit Suisse), income distribution data, and international/premium private school enrollment as proxies. For wealthy nations (GDP per capita > $40k), this could be millions. For developing nations, it may be tens of thousands. Give a specific number like '15,000-25,000 students' or '2.1 million students'. Be realistic, not aspirational.",
@@ -86,7 +87,7 @@ const FIXED_ECONOMICS = {
 
 function generateTermSheetHtml(ctx: CountryContext): string {
   const upfrontRows = FIXED_ECONOMICS.upfront
-    .map(r => `<tr><td>${r.item.replace("EdTech App R&D", `${ctx.country} EdTech App R&D`).replace("Local Life-Skills R&D", `${ctx.localizedProgramName || ctx.country} Life-Skills R&D`)}</td><td class="amt">${r.amount}</td><td>${r.recipient}</td></tr>`)
+    .map(r => `<tr><td>${r.item.replace("EdTech App R&D", `${ctx.country} EdTech App R&D`).replace("Local Life-Skills R&D", `${ctx.localizedLifeSkillsName || ctx.country} Life-Skills R&D`)}</td><td class="amt">${r.amount}</td><td>${r.recipient}</td></tr>`)
     .join("\n");
 
   const ongoingRows = FIXED_ECONOMICS.ongoing
@@ -991,7 +992,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="stack-item"><strong>Education Sovereignty:</strong> ${ctx.country} owns 100% of the local entity</div>
       <div class="stack-item"><strong>Infrastructure:</strong> Built to scale across 100+ schools</div>
       <div class="stack-item"><strong>Localized AI Apps:</strong> ${ctx.languageApps}</div>
-      <div class="stack-item"><strong>Local Life-Skills:</strong> ${ctx.localLifeSkillsFocus}</div>
+      <div class="stack-item"><strong>${ctx.localizedLifeSkillsName || 'Local Life-Skills'}:</strong> ${ctx.localLifeSkillsFocus}</div>
       <div class="stack-item"><strong>Talent Academy:</strong> Recruit and train ${programName} Guides</div>
       <div class="stack-item"><strong>National eduLLM:</strong> Embedded local laws, values, and culture</div>
       <div class="scale-row">
@@ -1043,7 +1044,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="stack-item"><strong>Education Sovereignty:</strong> ${ctx.country} owns the critical pieces</div>
       <div class="stack-item"><strong>Infrastructure:</strong> Built to scale across 100+ schools</div>
       <div class="stack-item"><strong>Localized AI Apps:</strong> ${ctx.languageApps}</div>
-      <div class="stack-item"><strong>Local Life-Skills:</strong> ${ctx.localLifeSkillsFocus}</div>
+      <div class="stack-item"><strong>${ctx.localizedLifeSkillsName || 'Local Life-Skills'}:</strong> ${ctx.localLifeSkillsFocus}</div>
       <div class="stack-item"><strong>Talent Academy:</strong> Recruit and train ${programName} Guides</div>
       <div class="stack-item"><strong>National eduLLM:</strong> Embedded local laws, values, and culture</div>
       <div class="scale-row">
@@ -1096,17 +1097,48 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
     </div>
   </div>
 
-  <div style="margin-top: 24px;">
-    <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:12px;">What Alpha Holdings, Inc. Retains (IP)</div>
-    <ul class="bullet-list">
-      <li><strong>Timeback®</strong> — AI learning platform (licensed to local entity)</li>
-      <li><strong>AlphaCore™</strong> — Life-skills curriculum (licensed)</li>
-      <li><strong>Guide School</strong> — Teacher training IP (licensed)</li>
-      <li><strong>Incept eduLLM</strong> — Personalized content engine (licensed)</li>
-    </ul>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:20px;">
+    <div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Why Halo Alpha Schools Are Essential</div>
+      <ul style="list-style:none; padding:0; margin:0;">
+        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Marketing &amp; Validation Engine:</strong> Establishes an unassailable benchmark for excellence that legitimizes the brand's entire presence in ${ctx.country}.</span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Premium Positioning:</strong> Creates a brand halo that justifies premium pricing across the entire portfolio, including ${programName} national schools.</span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:8px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Strategic Anchor:</strong> Provides the proof of concept required for national-scale education transformation — the "gold standard" that drives demand and trust.</span>
+        </li>
+      </ul>
+    </div>
+    <div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">What Alpha Holdings, Inc. Retains (IP)</div>
+      <ul style="list-style:none; padding:0; margin:0;">
+        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Timeback®</strong> — AI learning platform (licensed)</span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>AlphaCore™</strong> — Life-skills curriculum (licensed)</span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Guide School</strong> — Teacher training IP (licensed)</span>
+        </li>
+        <li style="display:flex; align-items:flex-start; gap:8px;">
+          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
+          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Incept eduLLM</strong> — Content engine (licensed)</span>
+        </li>
+      </ul>
+    </div>
   </div>
 
-  <div class="callout-box" style="margin-top: 16px;">
+  <div class="callout-box" style="margin-top: 14px;">
     <p><strong>Education Sovereignty:</strong> ${ctx.country} owns 100% of the national identity, cultural values, local curriculum, and all locally developed content. Alpha provides the engine; ${ctx.country} owns the car.</p>
   </div>
 
@@ -1267,6 +1299,18 @@ async function generateDocuments(target: string): Promise<GenerationResult> {
   if (ctx.localizedProgramName && /\balpha\b/i.test(ctx.localizedProgramName)) {
     ctx.localizedProgramName = ctx.localizedProgramName.replace(/\s*\bAlpha\b\s*/gi, " ").trim() || `${ctx.country} Education`;
     console.warn(`Stripped 'Alpha' from localizedProgramName -> ${ctx.localizedProgramName}`);
+  }
+
+  // Guardrail: ensure localizedLifeSkillsName exists and differs from localizedProgramName
+  if (!ctx.localizedLifeSkillsName) {
+    ctx.localizedLifeSkillsName = `${ctx.country}Core`;
+    console.warn(`localizedLifeSkillsName missing, defaulting to ${ctx.localizedLifeSkillsName}`);
+  }
+  const schoolNorm = (ctx.localizedProgramName || "").toLowerCase().trim();
+  const lifeSkillsNorm = ctx.localizedLifeSkillsName.toLowerCase().trim();
+  if (schoolNorm === lifeSkillsNorm || schoolNorm.startsWith(lifeSkillsNorm) || lifeSkillsNorm.startsWith(schoolNorm)) {
+    ctx.localizedLifeSkillsName = `${ctx.country}Core`;
+    console.warn(`School network and life-skills names overlapped; reset localizedLifeSkillsName -> ${ctx.localizedLifeSkillsName}`);
   }
 
   // Step 2: Build financial research data from context and compute the model

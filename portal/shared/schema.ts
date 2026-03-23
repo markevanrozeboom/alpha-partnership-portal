@@ -16,7 +16,8 @@ export interface CountryContext {
   nationalEdVision: string;
   culturalNarrative: string; // 2-3 sentences about why this country + education transformation
   keyStrengths: string[]; // 3 bullet points about country's strengths for this partnership
-  localizedProgramName: string; // e.g. "Ed71" for UAE, suggested local brand name
+  localizedProgramName: string; // e.g. "Ed71" for UAE — brand name for the country-owned school network
+  localizedLifeSkillsName: string; // e.g. "AsasCore" for UAE — brand name for the life-skills curriculum (must differ from localizedProgramName)
   localLifeSkillsFocus: string; // what life skills matter most in this culture
   languageApps: string; // what localized AI apps would be needed
   addressableStudentPopulation: string; // estimated students in families with AGI > $250k

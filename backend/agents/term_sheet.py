@@ -454,12 +454,15 @@ class CountryVariables(BaseModel):
     )
     jv_program_name: str = Field(
         description=(
-            "Partnership program name (equivalent of 'Ed71' for UAE). "
+            "Name of the country-owned, Alpha-operated school network "
+            "(equivalent of 'Ed71' for UAE). "
             "Short, memorable, 2-4 words max. MUST use only plain "
             "ASCII characters (no accents, no diacritics). "
             "MUST NOT contain the word 'Alpha' — these are country-owned "
-            "schools and cannot carry the Alpha brand. Good examples: "
-            "'Ed71', 'Savoir France', 'Vision2030 Learning'. "
+            "schools and cannot carry the Alpha brand. "
+            "MUST be a DIFFERENT name from cultural_program_name. "
+            "Good examples: 'Ed71' (UAE), 'Savoir France' (France), "
+            "'Vision2030 Learning' (Saudi). "
             "Bad examples: 'Alpha France', 'Alpha Education'."
         ),
     )
@@ -468,8 +471,13 @@ class CountryVariables(BaseModel):
             "Country's life-skills curriculum program name "
             "(equivalent of 'AsasCore' for UAE). 1-2 words, "
             "culturally resonant. MUST use only plain ASCII "
-            "characters (no accents, no diacritics). Example: "
-            "'AsasCore', 'Savoir' -- NOT 'Education'."
+            "characters (no accents, no diacritics). "
+            "MUST be a COMPLETELY DIFFERENT name from jv_program_name — "
+            "these are two distinct products: the school network vs. "
+            "the life-skills curriculum. "
+            "Good examples: 'AsasCore' (UAE), 'VivreCore' (France), "
+            "'IqraSkills' (Saudi). "
+            "Bad examples: 'Savoir' if jv_program_name is 'Savoir France'."
         ),
     )
     credential_phrase: str = Field(
@@ -560,9 +568,17 @@ Every value must be culturally appropriate, factually accurate, and
 diplomatically calibrated for a head-of-state audience. The program
 names should sound local, prestigious, and aspirational.
 
-IMPORTANT: The jv_program_name MUST NOT contain the word "Alpha".
-These are country-owned schools and cannot carry the Alpha brand.
-Use a culturally resonant name instead (e.g. "Ed71", "Savoir France").
+IMPORTANT NAMING RULES:
+1. The jv_program_name MUST NOT contain the word "Alpha".
+   These are country-owned schools and cannot carry the Alpha brand.
+   Use a culturally resonant name instead (e.g. "Ed71", "Savoir France").
+2. The jv_program_name and cultural_program_name MUST be COMPLETELY DIFFERENT
+   names. They refer to two distinct things:
+   - jv_program_name = the country-owned, Alpha-operated SCHOOL NETWORK
+     (e.g. "Ed71" for UAE, "Savoir France" for France)
+   - cultural_program_name = the country-specific LIFE-SKILLS CURRICULUM
+     (e.g. "AsasCore" for UAE, "VivreCore" for France)
+   The names must not overlap or be derived from each other.
 
 Country Context:
 - Population: {population}
@@ -608,6 +624,17 @@ def _sanitize_country_variables(cv: CountryVariables) -> CountryVariables:
             "Stripped 'Alpha' from jv_program_name -> %s",
             cv.jv_program_name,
         )
+
+    jv_norm = cv.jv_program_name.lower().strip()
+    cult_norm = cv.cultural_program_name.lower().strip()
+    if jv_norm == cult_norm or jv_norm.startswith(cult_norm) or cult_norm.startswith(jv_norm):
+        cv.cultural_program_name = f"{cv.country_adjective}Core"
+        logger.warning(
+            "jv_program_name and cultural_program_name overlapped; "
+            "reset cultural_program_name -> %s",
+            cv.cultural_program_name,
+        )
+
     return cv
 
 
@@ -1785,6 +1812,55 @@ def _add_school_design_section(
         "that drives enrollment across the broader national school network. "
         "Sized as 250-, 500-, or 1,000-student schools.",
     )
+
+    doc.add_heading(
+        "Strategic Role of Halo Alpha Schools", level=2,
+    )
+
+    _add_body(
+        doc,
+        f"The Halo Alpha Schools are considered essential to the "
+        f"{target} expansion proposal because they act as the apex "
+        "brand that anchors the entire education system and generates "
+        "a necessary \u201chalo effect\u201d for the rest of the "
+        "portfolio.",
+    )
+
+    _add_list_item_bold_prefix(
+        doc,
+        "Marketing and Validation Engine: ",
+        "These schools serve as a marketing and validation engine. "
+        "By establishing an unassailable benchmark for excellence, "
+        "they legitimize the brand\u2019s entire presence in "
+        f"{target}.",
+    )
+
+    _add_list_item_bold_prefix(
+        doc,
+        "Justification for Premium Positioning: ",
+        "The flagship schools create a brand halo that justifies "
+        "premium pricing across the entire portfolio, including the "
+        f"Alpha-branded schools and {cv.jv_program_name} "
+        "country-owned/Alpha-operated schools.",
+    )
+
+    _add_list_item_bold_prefix(
+        doc,
+        "Strategic Anchor for National Transformation: ",
+        "The flagship presence is essential to the entire "
+        "proposal\u2019s success because it anchors the system and "
+        "provides the proof of concept required for a national-scale "
+        "education transformation.",
+    )
+
+    _add_body(
+        doc,
+        "In summary, the Halo Alpha Schools are the high-profile "
+        "\u201cgold standard\u201d institutions meant to drive demand "
+        "and trust for the broader, larger-scale expansion.",
+    )
+
+    doc.add_heading("Key Metrics", level=2)
 
     flagship_opt = fin.get("flagship_optimization")
 
