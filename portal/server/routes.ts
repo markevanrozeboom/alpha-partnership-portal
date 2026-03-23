@@ -68,9 +68,9 @@ const FIXED_ECONOMICS = {
 
   costStructure: [
     { item: "Tuition", alpha: "$50,000", national: "$25,000", notes: "Budget for $25,000 school" },
-    { item: "Guides", alpha: "$14,000", national: "$4,500", notes: "Alpha 11:1 ratio & higher comp; National 25:1 ratio & lower comp" },
+    { item: "Guides", alpha: "$14,000", national: "$4,500", notes: "Alpha 11:1 ratio & higher comp; Country-owned 25:1 ratio & lower comp" },
     { item: "Timeback / Software", alpha: "$10,000", national: "$5,000", notes: "20% of Budget" },
-    { item: "Programs and Life Skills", alpha: "$9,000", national: "$4,250", notes: "Alpha is 2x other National" },
+    { item: "Programs and Life Skills", alpha: "$9,000", national: "$4,250", notes: "Alpha is 2x country-owned" },
     { item: "Other HC", alpha: "$1,750", national: "$1,750", notes: "-" },
     { item: "Facility / CapEx", alpha: "$8,750", national: "$3,000", notes: "Includes depreciated capex to convert locations" },
     { item: "Misc Expense", alpha: "$1,500", national: "$1,500", notes: "-" },
@@ -381,7 +381,7 @@ function generateTermSheetHtml(ctx: CountryContext): string {
         <tr>
           <th>Item (per student P&L)</th>
           <th>Alpha @ $50k Tuition</th>
-          <th style="background: #1a56db; color: #fff;">National @ $25k Budget</th>
+          <th style="background: #1a56db; color: #fff;">${ctx.localizedProgramName || ctx.country} @ $25k Budget</th>
           <th>Notes</th>
         </tr>
       </thead>
@@ -1109,7 +1109,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
         </li>
         <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
           <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Premium Positioning:</strong> Creates a brand halo that justifies premium pricing across the entire portfolio, including ${programName} national schools.</span>
+          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Premium Positioning:</strong> Creates a brand halo that justifies premium pricing across the entire portfolio, including ${programName} schools.</span>
         </li>
         <li style="display:flex; align-items:flex-start; gap:8px;">
           <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>

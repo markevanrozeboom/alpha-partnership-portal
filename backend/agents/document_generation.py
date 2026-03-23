@@ -1016,6 +1016,12 @@ def _build_pptx(
     """
     from pptx.oxml.ns import qn
 
+    jv_name = (
+        strategy.brand.jv_name_suggestion
+        if strategy.brand.jv_name_suggestion
+        else f"{target} Education"
+    )
+
     prs = PptxPresentation()
     prs.slide_width = PptxInches(13.333)
     prs.slide_height = PptxInches(7.5)
@@ -1263,7 +1269,7 @@ def _build_pptx(
     exec_lines = [
         f"• Transform K-12 education in {target} through AI-powered learning",
         "• Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
-        "• Dual-school: Flagship schools ($40K-$100K) + National schools ($25K fixed)",
+        f"• Dual-school: Alpha Flagship ($40K-$100K) + {jv_name} schools ($25K fixed)",
         "• Proven model: UAE deal ($1.5B, 200K students) as reference",
     ]
     _add_body(s, exec_lines, top=3.2)
@@ -1344,8 +1350,8 @@ def _build_pptx(
     _add_kpi_boxes(s, returns_kpis, top=1.5)
     _add_body(s, [
         f"• Fixed development costs: ${model.upfront_ip_fee:,.0f} ($250M × 3)",
-        f"• Management fee: {model.management_fee_pct * 100:.0f}% of combined Flagship + National revenue",
-        f"• Timeback license: {model.timeback_license_pct * 100:.0f}% of combined Flagship + National revenue",
+        f"• Management fee: {model.management_fee_pct * 100:.0f}% of combined Flagship + {jv_name} revenue",
+        f"• Timeback license: {model.timeback_license_pct * 100:.0f}% of combined Flagship + {jv_name} revenue",
     ], top=3.5)
 
     # ── Slide 7: Deal Structure ────────────────────────────────────────
@@ -1362,7 +1368,7 @@ def _build_pptx(
         ["Structure", "Operator & Licensor (Marriott model)"],
         ["Ownership", "100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor"],
         ["Flagship", "$40K-$100K tuition, 2-3 schools, 50% backstop"],
-        ["National", "$25K/student FIXED, 100K student-year min"],
+        [jv_name, "$25K/student FIXED, 100K student-year min"],
         ["Development Costs", "$750M FIXED ($250M × 3)"],
         ["Management Fee", f"{model.management_fee_pct * 100:.0f}% of combined revenue"],
         ["Timeback License", f"{model.timeback_license_pct * 100:.0f}% of combined revenue"],
@@ -1547,6 +1553,11 @@ def _build_gamma_investor_input(
 
     11-slide structure aligned with the Ed71 reference deck.
     """
+    jv_name = (
+        strategy.brand.jv_name_suggestion
+        if strategy.brand.jv_name_suggestion
+        else f"{target} Education"
+    )
     slides: list[str] = []
 
     # --- Slide 1: Title ---
@@ -1667,14 +1678,16 @@ def _build_gamma_investor_input(
             "Alpha Flagship School — $40K–$100K tuition:\n"
             "Innovative and personalized education. Flagship schools serve as the premium anchor — "
             "demonstrating the full Alpha experience at the highest level of execution.\n\n"
-            "National School — $25K Fixed Budget:\n"
-            "Accessible, high-quality education with personalized learning experiences at a fixed per-student cost. "
-            "National schools are the engine of scale — targeting 100,000+ student-years."
+            f"{jv_name} Schools — $25K Fixed Budget:\n"
+            "Accessible, high-quality education with personalized learning "
+            "experiences at a fixed per-student cost. "
+            f"{jv_name} schools are the engine of scale — "
+            "targeting 100,000+ student-years."
         )
 
     # --- Slide 9: Country-Owned Schools & Investment ---
     slides.append(
-        f"# {target} Schools: "
+        f"# {jv_name} Schools: "
         f"{target} Owned, Alpha Operated\n\n"
         "*We are proposing to implement through a national network "
         "of privately-operated, government-funded schools, but are "

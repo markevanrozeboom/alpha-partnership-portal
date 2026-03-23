@@ -441,7 +441,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
         children: [
           headerCell("Parameter", 30),
           headerCell("Alpha Flagship (Flagship)", 35),
-          headerCell("National", 35),
+          headerCell(programName, 35),
         ],
       }),
       ...(() => {
@@ -581,7 +581,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
             children: [
               new TextRun({
                 text: "Alpha Flagship Schools are 100% owned by Alpha Holdings, Inc. and serve as the premium \"halo brand\" — flagship schools that demonstrate the full Alpha experience at the highest level of execution. " +
-                  "They establish Alpha's reputation in each market, set the benchmark for academic and life-skills outcomes, and create aspirational demand that drives enrollment across the broader national school network.",
+                  `They establish Alpha's reputation in each market, set the benchmark for academic and life-skills outcomes, and create aspirational demand that drives enrollment across the broader ${programName} school network.`,
                 size: 18,
                 font: "Calibri",
                 color: "4A5568",
@@ -630,17 +630,17 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
 
           new Paragraph({ spacing: { before: 120, after: 0 }, children: [] }),
 
-          // ── National: Counterparty schools ──
+          // ── Counterparty schools ──
           new Paragraph({
             spacing: { before: 0, after: 40 },
             children: [
-              new TextRun({ text: "NATIONAL", bold: true, size: 16, font: "Calibri", color: "FFFFFF" }),
+              new TextRun({ text: programName.toUpperCase(), bold: true, size: 16, font: "Calibri", color: "FFFFFF" }),
             ],
             shading: { type: ShadingType.SOLID, color: "0A1628", fill: "0A1628" },
           }),
           new Paragraph({
             spacing: { before: 80, after: 80 },
-            children: [new TextRun({ text: `${ctx.country}-Owned Schools Operated by Alpha`, bold: true, size: 28, font: "Calibri", color: "0A1628" })],
+            children: [new TextRun({ text: `${programName} Schools — ${ctx.country} Owned, Alpha Operated`, bold: true, size: 28, font: "Calibri", color: "0A1628" })],
           }),
           new Paragraph({
             spacing: { before: 0, after: 80 },
