@@ -333,6 +333,7 @@ async def generate_documents(
     audience: AudienceType = AudienceType.INVESTOR,
     revision_notes: str | None = None,
     export_as: str = "pptx",
+    jv_program_name: str | None = None,
 ) -> tuple[str | None, str | None, str, str, str | None, str]:
     """Generate presentation deck (via Gamma with local fallback), investment memorandum, and spreadsheet.
 
@@ -377,7 +378,8 @@ async def generate_documents(
     local_pptx_path = None
     try:
         local_pptx_path = _build_pptx(
-            target, strategy, financial_model, deck_outline, audience, output_dir,
+            target, strategy, financial_model, deck_outline,
+            audience, output_dir, jv_program_name=jv_program_name,
         )
         logger.info("Local PPTX generated: %s", local_pptx_path)
     except Exception as exc:
@@ -386,7 +388,7 @@ async def generate_documents(
     # --- Generate investor deck via Gamma (enhanced version) ---
     gamma_url, export_url, deck_input_text = await _build_investor_deck_gamma(
         target, strategy, financial_model, deck_outline, audience,
-        export_as=export_as,
+        export_as=export_as, jv_program_name=jv_program_name,
     )
 
     # If Gamma succeeded, log it; otherwise the local PPTX is our backup
@@ -1007,6 +1009,8 @@ def _build_pptx(
     outline: str,
     audience: AudienceType,
     output_dir: str,
+    *,
+    jv_program_name: str | None = None,
 ) -> str:
     """Build a local PPTX investor deck as a fallback when the Gamma API is
     unavailable.  Returns the absolute path to the generated ``.pptx`` file.
@@ -1017,9 +1021,9 @@ def _build_pptx(
     from pptx.oxml.ns import qn
 
     jv_name = (
-        strategy.brand.jv_name_suggestion
-        if strategy.brand.jv_name_suggestion
-        else f"{target} Education"
+        jv_program_name
+        or strategy.brand.jv_name_suggestion
+        or f"{target} Education"
     )
 
     prs = PptxPresentation()
@@ -1548,15 +1552,17 @@ def _build_gamma_investor_input(
     model: FinancialModel,
     outline: str,
     audience: AudienceType,
+    *,
+    jv_program_name: str | None = None,
 ) -> str:
     """Build Gamma inputText for the investor deck with slide separators.
 
     11-slide structure aligned with the Ed71 reference deck.
     """
     jv_name = (
-        strategy.brand.jv_name_suggestion
-        if strategy.brand.jv_name_suggestion
-        else f"{target} Education"
+        jv_program_name
+        or strategy.brand.jv_name_suggestion
+        or f"{target} Education"
     )
     slides: list[str] = []
 
@@ -1763,6 +1769,7 @@ async def _build_investor_deck_gamma(
     outline: str,
     audience: AudienceType,
     export_as: str = "pptx",
+    jv_program_name: str | None = None,
 ) -> tuple[str | None, str | None, str]:
     """Build the investor deck via Gamma API.
 
@@ -1773,7 +1780,10 @@ async def _build_investor_deck_gamma(
     Args:
         export_as: 'pptx' or 'pdf' — controls the format of the export URL.
     """
-    input_text = _build_gamma_investor_input(target, strategy, model, outline, audience)
+    input_text = _build_gamma_investor_input(
+        target, strategy, model, outline, audience,
+        jv_program_name=jv_program_name,
+    )
 
     try:
         result = await generate_and_wait(

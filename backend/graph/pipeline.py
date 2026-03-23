@@ -366,7 +366,7 @@ async def _run_documents(state: dict) -> None:
         if ts_data and isinstance(ts_data, dict) and ts_data.get("assumptions")
         else None
     )
-    _, term_sheet_path = await generate_term_sheet(
+    _, term_sheet_path, jv_program_name = await generate_term_sheet(
         target, country_profile, education_analysis,
         strategy_obj, model, assumptions,
         term_sheet_assumptions=ts_assumptions,
@@ -377,6 +377,7 @@ async def _run_documents(state: dict) -> None:
     gen_gamma_url, gen_export_url, docx_path, xlsx_path, local_pptx_fallback, _ = await generate_documents(
         target, country_profile, education_analysis, strategy_obj,
         model, assumptions, audience, revision_notes,
+        jv_program_name=jv_program_name,
     )
 
     # For US states, use the state deck Gamma URLs; for sovereign nations, use the investor deck ones

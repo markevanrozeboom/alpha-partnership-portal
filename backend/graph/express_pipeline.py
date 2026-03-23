@@ -143,7 +143,7 @@ async def run_express_pipeline(run_id: str) -> None:
         is_us_state = country_profile.target.type == TargetType.US_STATE
 
         # Term sheet
-        _, term_sheet_docx_path = await generate_term_sheet(
+        _, term_sheet_docx_path, jv_program_name = await generate_term_sheet(
             target, country_profile, education_analysis,
             strategy_obj, financial_model, assumptions,
             term_sheet_assumptions=ts_assumptions,
@@ -171,6 +171,7 @@ async def run_express_pipeline(run_id: str) -> None:
                 target, country_profile, education_analysis, strategy_obj,
                 financial_model, assumptions, AudienceType.INVESTOR,
                 export_as="pdf" if not is_us_state else "pptx",
+                jv_program_name=jv_program_name,
             )
         )
 

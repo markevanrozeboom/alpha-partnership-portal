@@ -801,12 +801,14 @@ async def generate_term_sheet(
     financial_model: FinancialModel,
     assumptions: FinancialAssumptions,
     term_sheet_assumptions: FinancialAssumptions | None = None,
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
     """Generate a combined proposal document (term sheet + deal terms).
 
-    Returns (summary_markdown, proposal_docx_path).
+    Returns (summary_markdown, proposal_docx_path, jv_program_name).
     The DOCX is the primary deliverable — a professionally formatted
     document matching the Alpha_Ed71_Combined_Proposal benchmark.
+    ``jv_program_name`` is the localized school-network brand name so
+    downstream generators (e.g. the proposal deck) use the same name.
     """
     logger.info("Generating combined proposal for %s", target)
 
@@ -848,7 +850,7 @@ async def generate_term_sheet(
     )
 
     logger.info("Combined proposal generated for %s", target)
-    return summary_md, docx_path
+    return summary_md, docx_path, cv.jv_program_name
 
 
 # ---------------------------------------------------------------------------
