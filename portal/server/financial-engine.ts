@@ -2,7 +2,7 @@
  * Financial Engine — implements the rules from financial_rules_v1.md
  *
  * Dual-school model:
- *   Flagship: Halo Alpha Schools (100% Alpha Holdings, Inc.-owned, revenue-optimized)
+ *   Flagship: Alpha Flagship Schools (100% Alpha Holdings, Inc.-owned, revenue-optimized)
  *   National: National Schools (100% country/state-owned, $25K fixed budget)
  */
 
@@ -262,7 +262,7 @@ export function computeFinancialModel(
   data: FinancialResearchData,
   countryName: string,
 ): FinancialModel {
-  // ── Flagship: Halo Alpha Schools ──
+  // ── Flagship: Alpha Flagship Schools ──
   const flagship = optimizeFlagships(data);
 
   // ── National: Counterparty Schools ──

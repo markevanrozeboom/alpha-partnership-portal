@@ -1088,7 +1088,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="partner-detail">Modelled after the Marriott hotel management model. ${ctx.country} owns 100% of the local entity; Alpha is the exclusive operator and licensor.</div>
     </div>
     <div class="partner-card">
-      <div class="partner-label">Halo Alpha Schools</div>
+      <div class="partner-label">Alpha Flagship Schools</div>
       <div class="partner-value">${model.flagship.totalSchoolCount} School${model.flagship.totalSchoolCount !== 1 ? 's' : ''} · ${(() => { const t = Array.from(new Set(model.flagship.schools.map(s => s.tuitionPerYear))); return t.length === 1 ? fmtUsd(t[0]) : `${fmtUsd(Math.min(...t))} – ${fmtUsd(Math.max(...t))}`; })()}/yr</div>
       <div class="partner-detail">${model.flagship.schools.map(s => `${s.metro} (${s.count} @ ${fmtUsd(s.tuitionPerYear)})`).join(', ')}. ${model.flagship.scholarshipNote ? model.flagship.scholarshipNote : `${fmtNum(model.flagship.capacityPerSchool)} students per school.`}</div>
     </div>
@@ -1101,7 +1101,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:20px;">
     <div>
-      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Why Halo Alpha Schools Are Essential</div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Why Alpha Flagship Schools Are Essential</div>
       <ul style="list-style:none; padding:0; margin:0;">
         <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
           <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>

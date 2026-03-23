@@ -332,7 +332,7 @@ def generate_term_sheet_assumptions(
         ),
         FinancialAssumption(
             key="ts_num_flagship_schools",
-            label="Halo Alpha Schools",
+            label="Alpha Flagship Schools",
             value=(
                 financial_model.flagship_optimization.total_schools
                 if (financial_model.flagship_optimization
@@ -1546,19 +1546,19 @@ def _add_school_network_section(
 def _add_halo_alpha_strategic_role_section(
     doc: DocxDocument, target: str, cv: CountryVariables,
 ) -> None:
-    """Build the Strategic Role of Halo Alpha Schools section.
+    """Build the Strategic Role of Alpha Flagship Schools section.
 
     Explains why flagship Alpha schools are essential to the
     country/state expansion proposal — placed in the main body
     (Part 1) between the school network and future opportunities.
     """
     doc.add_heading(
-        "Strategic Role of Halo Alpha Schools", level=1,
+        "Strategic Role of Alpha Flagship Schools", level=1,
     )
 
     _add_body(
         doc,
-        "Halo Alpha Schools are 100% owned by Alpha Holdings, "
+        "Alpha Flagship Schools are 100% owned by Alpha Holdings, "
         "Inc. and serve as the premium \u201chalo brand\u201d "
         "\u2014 flagship schools that demonstrate the full Alpha "
         "experience at the highest level of execution.",
@@ -1566,7 +1566,7 @@ def _add_halo_alpha_strategic_role_section(
 
     _add_body(
         doc,
-        f"The Halo Alpha Schools are considered essential to the "
+        f"The Alpha Flagship Schools are considered essential to the "
         f"{target} expansion proposal because they act as the apex "
         "brand that anchors the entire education system and generates "
         "a necessary \u201chalo effect\u201d for the rest of the "
@@ -1602,7 +1602,7 @@ def _add_halo_alpha_strategic_role_section(
 
     _add_body(
         doc,
-        "In summary, the Halo Alpha Schools are the high-profile "
+        "In summary, the Alpha Flagship Schools are the high-profile "
         "\u201cgold standard\u201d institutions meant to drive demand "
         "and trust for the broader, larger-scale expansion.",
     )
@@ -1867,11 +1867,11 @@ def _add_school_design_section(
 
     Table 3: Alpha Flagships — Key Metrics
     """
-    doc.add_heading("2. Halo Alpha Schools", level=1)
+    doc.add_heading("2. Alpha Flagship Schools", level=1)
 
     _add_body(
         doc,
-        "Halo Alpha Schools are 100% owned by Alpha Holdings, Inc. and serve as the premium "
+        "Alpha Flagship Schools are 100% owned by Alpha Holdings, Inc. and serve as the premium "
         "\"halo brand\" \u2014 flagship schools that demonstrate the full Alpha experience at "
         "the highest level of execution. They establish Alpha\u2019s reputation in each market, "
         "set the benchmark for academic and life-skills outcomes, and create aspirational demand "
@@ -2143,7 +2143,7 @@ def _add_flagship_summary_table(
     doc: DocxDocument, cv: CountryVariables,
     fin: dict, model: FinancialModel,
 ) -> None:
-    """Add the Halo Alpha Schools summary table (Table 3).
+    """Add the Alpha Flagship Schools summary table (Table 3).
 
     Uses the optimization result when available — shows real metro names,
     data-driven school counts, capacity, and tuition from the grid search.
@@ -2157,7 +2157,7 @@ def _add_flagship_summary_table(
     if flagship_tuition == 0 or flagship_schools == 0:
         _add_body(
             doc,
-            "Halo Alpha School details to be determined based on "
+            "Alpha Flagship School details to be determined based on "
             "metro-level AGI analysis.",
         )
         return

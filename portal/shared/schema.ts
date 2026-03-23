@@ -54,7 +54,7 @@ export interface FlagshipSchoolAllocation {
   capacityPerSchool: number;
 }
 
-/** Flagship: Halo Alpha schools model result */
+/** Flagship: Alpha Flagship schools model result */
 export interface FlagshipModel {
   schools: FlagshipSchoolAllocation[];
   tuitionPerYear: number;
