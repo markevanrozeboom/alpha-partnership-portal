@@ -246,7 +246,7 @@ class SchoolTypeDeployment(BaseModel):
     name: str = Field(
         default="",
         description=(
-            "School type name. Only Halo Alpha Schools (Flagship, 100% Alpha-owned) "
+            "School type name. Only Alpha Flagship Schools (Flagship, 100% Alpha-owned) "
             "may use 'Alpha' in their name. Country/state-owned schools (National) "
             "MUST NOT include 'Alpha' in their name."
         ),

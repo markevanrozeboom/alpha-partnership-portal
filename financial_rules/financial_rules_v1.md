@@ -1,16 +1,16 @@
-# **Halo Alpha Schools**
+# **Alpha Flagship Schools**
 
 100% owned by Alpha Holdings, Inc. These are the "halo brand" — premium flagship schools that demonstrate the full Alpha experience at the highest level of execution. They establish Alpha's reputation in each market, set the benchmark for academic and life-skills outcomes, and create aspirational demand that drives enrollment across the broader national school network.
 
-We have N Halo Alpha Schools in the Country or State's top metros, sized as 250-, 500-, or 1,000-student schools, with tuition per year of {min $40,000, max $100,000, scaling in $5,000 increments}. These schools operate at 25% operating margin. 
+We have N Alpha Flagship Schools in the Country or State's top metros, sized as 250-, 500-, or 1,000-student schools, with tuition per year of {min $40,000, max $100,000, scaling in $5,000 increments}. These schools operate at 25% operating margin. 
 
-N \= \# of K-12 children in families with AGI ≥ 5 times tuition \* 20% (penetration rate) divided by capacity of each Halo Alpha School; limited to max 3 in the capital city and 1 in each of the other top metros. We are assuming these families will pay up to 20% of AGI for education and we can get 20% of these students. 
+N \= \# of K-12 children in families with AGI ≥ 5 times tuition \* 20% (penetration rate) divided by capacity of each Alpha Flagship School; limited to max 3 in the capital city and 1 in each of the other top metros. We are assuming these families will pay up to 20% of AGI for education and we can get 20% of these students. 
 
-Top metros \= limited to 3 largest metros in a given country, provided each metro has greater than 250 children in families with AGI ≥ 5 times $40k (i.e. min Halo Alpha School is 250 students at $40,000 tuition). If none of the top 3 metros support a 250-student, $40,000/year tuition Halo Alpha School, then it should note the scholarship requirements that the country/state would need to fund to reach that minimum requirement. 
+Top metros \= limited to 3 largest metros in a given country, provided each metro has greater than 250 children in families with AGI ≥ 5 times $40k (i.e. min Alpha Flagship School is 250 students at $40,000 tuition). If none of the top 3 metros support a 250-student, $40,000/year tuition Alpha Flagship School, then it should note the scholarship requirements that the country/state would need to fund to reach that minimum requirement. 
 
 Tuition should be more expensive than the most expensive non-boarding school in the Country or State. 
 
-Tuition and Halo Alpha School capacity should be sized to maximize revenue. 
+Tuition and Alpha Flagship School capacity should be sized to maximize revenue. 
 
 The country/state will need to provide a contractual backstop: it must guarantee 50% of capacity backstop for 5 years.
 

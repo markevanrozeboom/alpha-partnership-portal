@@ -32,7 +32,7 @@ proposal_sections:
 
   - section_number: 4
     title: "Dual-School Model"
-    description: "Halo Alpha Schools: $40K-$100K tuition, AGI top 20%, capital cities + National/Public Schools: $25K fixed budget, 100K student-year min."
+    description: "Alpha Flagship Schools: $40K-$100K tuition, AGI top 20%, capital cities + National/Public Schools: $25K fixed budget, 100K student-year min."
     required_data_fields:
       - "flagship_schools"
       - "national_schools"

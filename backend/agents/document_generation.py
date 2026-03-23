@@ -987,7 +987,8 @@ covering:
 5. Our Results — Bloom's 2-Sigma, growth metrics, SAT/AP scores, 97% love school, life skills projects
 6. Market Opportunity — why this country, why now, key market drivers
 7. The Complete Platform — Alpha education stack vs country-owned stack, deployment overview
-8. School Type Portfolio — Halo Alpha School (flagship) and National school descriptions. National/country-owned schools MUST NOT have 'Alpha' in their name.
+8. School Type Portfolio — Alpha Flagship School and National school descriptions. \
+National/country-owned schools MUST NOT have 'Alpha' in their name.
 9. Country-Owned Schools & Investment — ownership structure, per-student budget, investment table
 10. 5-Year Rollout Plan — phased approach with student targets
 11. Thank You / closing
@@ -1663,7 +1664,7 @@ def _build_gamma_investor_input(
     else:
         slides.append(
             "# School Type Portfolio\n\n"
-            "Halo Alpha School — $40K–$100K tuition:\n"
+            "Alpha Flagship School — $40K–$100K tuition:\n"
             "Innovative and personalized education. Flagship schools serve as the premium anchor — "
             "demonstrating the full Alpha experience at the highest level of execution.\n\n"
             "National School — $25K Fixed Budget:\n"
@@ -1782,7 +1783,7 @@ async def _build_investor_deck_gamma(
                 "happy children learning, and innovative classroom environments. These should be aspirational "
                 "and aligned with a premium education brand. Use icons where helpful for visual hierarchy. "
                 "IMPORTANT: Country/state-owned schools (National) MUST NOT have 'Alpha' in their name. "
-                "Only Halo Alpha Schools (Flagship, which are 100% Alpha-owned) may use the Alpha brand."
+                "Only Alpha Flagship Schools (Flagship, which are 100% Alpha-owned) may use the Alpha brand."
             ),
             export_as=export_as,
         )
