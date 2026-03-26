@@ -2327,7 +2327,7 @@ def _add_styled_table(
         is_separator = (
             bool(row_data)
             and len(set(row_data)) == 1
-            and len(row_data[0]) > 20
+            and row_data[0] != ""
         )
         is_last = (ri == len(rows) - 1)
 
