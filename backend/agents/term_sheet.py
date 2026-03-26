@@ -2088,7 +2088,7 @@ def _add_investment_table(
 
     rows = [
         # --- Separator: Upfront ---
-        [sep_upfront, "", "", ""],
+        [sep_upfront, sep_upfront, sep_upfront, sep_upfront],
         [
             "Alpha Core License",
             f"${fin['upfront_alphacore']:,.0f}",
@@ -2114,7 +2114,7 @@ def _add_investment_table(
             "",
         ],
         # --- Separator: Prepaid ---
-        [sep_prepaid, "", "", ""],
+        [sep_prepaid, sep_prepaid, sep_prepaid, sep_prepaid],
         [
             "Timeback (Prepaid)",
             f"${fin['upfront_timeback']:,.0f}",
@@ -2128,7 +2128,7 @@ def _add_investment_table(
             f"{national_students:,} student/years x ${2_500:,}",
         ],
         # --- Separator: Ongoing ---
-        [sep_ongoing, "", "", ""],
+        [sep_ongoing, sep_ongoing, sep_ongoing, sep_ongoing],
         [
             "Parent Education / Launch / Guides",
             "",
@@ -2326,11 +2326,20 @@ def _add_styled_table(
     # --- Data rows ---
     _SEP = "_SEP_"
     for ri, row_data in enumerate(rows):
-        is_separator = bool(row_data) and row_data[0].startswith(_SEP)
+        is_separator = (
+            bool(row_data)
+            and len(row_data[0]) > 0
+            and (
+                row_data[0].startswith(_SEP)
+                or (len(set(row_data)) == 1 and row_data[0] != "")
+            )
+        )
         is_last = (ri == len(rows) - 1)
 
         if is_separator:
-            label = row_data[0][len(_SEP):]
+            label = row_data[0]
+            if label.startswith(_SEP):
+                label = label[len(_SEP):]
             # Merge all cells into one separator row
             first_cell = table.rows[ri + 1].cells[0]
             last_cell = table.rows[ri + 1].cells[num_cols - 1]
