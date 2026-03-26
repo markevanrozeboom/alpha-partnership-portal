@@ -2081,13 +2081,14 @@ def _add_investment_table(
         "Notes",
     ]
 
-    sep_upfront = "Upfront Development Costs"
-    sep_prepaid = "Prepaid Fees"
-    sep_ongoing = "Ongoing Annual Costs (per 100,000 students)"
+    _SEP = "_SEP_"
+    sep_upfront = f"{_SEP}Upfront Development Costs"
+    sep_prepaid = f"{_SEP}Prepaid Fees"
+    sep_ongoing = f"{_SEP}Ongoing Annual Costs (per 100,000 students)"
 
     rows = [
         # --- Separator: Upfront ---
-        [sep_upfront, sep_upfront, sep_upfront, sep_upfront],
+        [sep_upfront, "", "", ""],
         [
             "Alpha Core License",
             f"${fin['upfront_alphacore']:,.0f}",
@@ -2113,7 +2114,7 @@ def _add_investment_table(
             "",
         ],
         # --- Separator: Prepaid ---
-        [sep_prepaid, sep_prepaid, sep_prepaid, sep_prepaid],
+        [sep_prepaid, "", "", ""],
         [
             "Timeback (Prepaid)",
             f"${fin['upfront_timeback']:,.0f}",
@@ -2127,7 +2128,7 @@ def _add_investment_table(
             f"{national_students:,} student/years x ${2_500:,}",
         ],
         # --- Separator: Ongoing ---
-        [sep_ongoing, sep_ongoing, sep_ongoing, sep_ongoing],
+        [sep_ongoing, "", "", ""],
         [
             "Parent Education / Launch / Guides",
             "",
@@ -2323,24 +2324,25 @@ def _add_styled_table(
         tc_pr.append(shading_el)
 
     # --- Data rows ---
+    _SEP = "_SEP_"
     for ri, row_data in enumerate(rows):
-        is_separator = (
-            bool(row_data)
-            and len(set(row_data)) == 1
-            and row_data[0] != ""
-        )
+        is_separator = bool(row_data) and row_data[0].startswith(_SEP)
         is_last = (ri == len(rows) - 1)
 
         if is_separator:
+            label = row_data[0][len(_SEP):]
             # Merge all cells into one separator row
             first_cell = table.rows[ri + 1].cells[0]
             last_cell = table.rows[ri + 1].cells[num_cols - 1]
             merged = first_cell.merge(last_cell)
+            # Clear any inherited paragraph content
+            for old_p in list(merged.paragraphs):
+                old_p.clear()
             paras = merged.paragraphs
             p = paras[0] if paras else merged.add_paragraph()
             p.paragraph_format.space_before = DocxPt(2)
             p.paragraph_format.space_after = DocxPt(2)
-            run = p.add_run(row_data[0])
+            run = p.add_run(label)
             run.font.name = "Calibri"
             run.font.size = DocxPt(8)
             run.font.color.rgb = DocxRGB(0x66, 0x66, 0x66)
