@@ -359,7 +359,10 @@ def _build_gamma_input(
     # --- Slide 11: Closing ---
     slides.append(
         "# AI is transforming every industry.\n\n"
-        "Education is last. The governor who moves first wins."
+        "Education is last. The governor who moves first wins.\n\n"
+        "[DO NOT include any image on this slide. "
+        "Use a clean, minimal design with text only — "
+        "solid background, no photos, no icons, no placeholders.]"
     )
 
     return "\n---\n".join(slides)

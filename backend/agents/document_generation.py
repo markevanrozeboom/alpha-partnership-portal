@@ -1950,7 +1950,13 @@ def _build_gamma_investor_input(
     slides.append(
         "# Thank You\n\n"
         "Alpha Holdings, Inc. — Transforming Education Globally\n\n"
-        "CONFIDENTIAL"
+        f"This document has been prepared exclusively for the "
+        f"Government of {target} and contains confidential and "
+        f"proprietary information belonging to Alpha Holdings, Inc.\n\n"
+        "CONFIDENTIAL\n\n"
+        "[DO NOT include any image on this slide. "
+        "Use a clean, minimal design with text only — "
+        "solid background, no photos, no icons, no placeholders.]"
     )
 
     return "\n---\n".join(slides)
@@ -2003,6 +2009,8 @@ def _build_investor_deck_additional_instructions(
         "OTHER SLIDES: On selected slides (not every slide), include high-quality images of modern schools, "
         "happy children learning, and innovative classroom environments. These should be aspirational "
         "and aligned with a premium education brand. Use icons where helpful for visual hierarchy. "
+        "LAST SLIDE (Thank You / closing): Do NOT include any image. Use a clean, minimal, "
+        "text-only design with a solid background — no photos, no icons, no image placeholders. "
         "IMPORTANT: Country/state-owned schools (National) MUST NOT have 'Alpha' in their name. "
         "Only Alpha Flagship Schools (Flagship, which are 100% Alpha-owned) may use the Alpha brand."
     )
