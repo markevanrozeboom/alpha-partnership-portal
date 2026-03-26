@@ -288,13 +288,13 @@ export function computeFinancialModel(
       item: "Timeback License Prepay",
       amountUsd: timebackPrepay,
       recipient: "Alpha Holdings, Inc.",
-      note: `${fmtNum(COUNTERPARTY.MIN_STUDENTS)} students × ${fmtUsd(FEES.TIMEBACK_PER_STUDENT)}`,
+      note: `Prepaid for ${fmtNum(COUNTERPARTY.MIN_STUDENTS)} student-years`,
     },
     {
       item: "Operating Fee Prepay",
       amountUsd: operatingFeePrepay,
       recipient: "Alpha Holdings, Inc.",
-      note: `${fmtNum(COUNTERPARTY.MIN_STUDENTS)} students × ${fmtUsd(FEES.OPERATING_FEE_PER_STUDENT)}`,
+      note: `Prepaid for ${fmtNum(COUNTERPARTY.MIN_STUDENTS)} student-years`,
     },
   ];
 
@@ -318,7 +318,7 @@ export function computeFinancialModel(
       {
         item: "Scholarships or Increased Public Funding",
         amount: scholarshipPerStudent > 0
-          ? `${fmtUsd(scholarshipPerStudent)} per student (${fmtCompact(totalScholarshipAnnual)} / year for ${fmtNum(COUNTERPARTY.MIN_STUDENTS)} students)`
+          ? `$25,000 less ${fmtUsd(data.currentPublicFundingPerStudent)} public funding = ${fmtUsd(scholarshipPerStudent)} per student`
           : "Fully funded by existing public spending",
         recipient: "Local expense",
       },
@@ -342,9 +342,9 @@ export function computeFinancialModel(
     currentFunding: data.currentPublicFundingPerStudent,
     note:
       scholarshipPerStudent > 0
-        ? `${countryName} currently funds approximately ${fmtUsd(data.currentPublicFundingPerStudent)} per student annually. ` +
-          `The gap of ${fmtUsd(scholarshipPerStudent)} per student (${fmtCompact(totalScholarshipAnnual)} annually ` +
-          `for ${fmtNum(COUNTERPARTY.MIN_STUDENTS)} students) must be covered through scholarships or increased public funding.`
+        ? `Per-student budget of $25,000 less ${fmtUsd(data.currentPublicFundingPerStudent)} current public funding = ` +
+          `${fmtUsd(scholarshipPerStudent)} per student scholarship gap. ` +
+          `${countryName} must cover the gap through scholarships or increased public funding.`
         : `${countryName}'s current per-student public funding meets or exceeds the $25,000 budget requirement.`,
   };
 

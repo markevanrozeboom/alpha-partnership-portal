@@ -1061,7 +1061,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
           <li style="margin-bottom:4px;">• <strong>${fmtCompact(model.upfront.totalUsd)}</strong> up-front spend</li>
           <li style="margin-bottom:4px;">• ${ctx.country} asset and infrastructure development</li>
           <li style="margin-bottom:4px;">• Prepaid fees to Alpha (for first ${fmtNum(model.counterparty.minStudentsPerYear)} student-years)</li>
-          <li>• <strong>First schools open SY26-27</strong> — start with ${model.flagship.schools.length > 0 ? model.flagship.schools.slice(0, 2).map(s => s.metro).join(' & ') : ctx.country} model schools</li>
+          <li>• <strong>First schools open ${(() => { const n = new Date(); const readyBy = new Date(n.getFullYear(), n.getMonth() + 16, 1); let ly = readyBy.getFullYear(); if (readyBy.getMonth() > 8) ly++; return `SY${String(ly).slice(-2)}-${String(ly + 1).slice(-2)}`; })()}</strong> — start with Alpha Flagship school</li>
         </ul>
       </div>
     </div>
@@ -1090,11 +1090,11 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
     <div class="partner-card">
       <div class="partner-label">Alpha Flagship Schools</div>
       <div class="partner-value">${model.flagship.totalSchoolCount} School${model.flagship.totalSchoolCount !== 1 ? 's' : ''} · ${(() => { const t = Array.from(new Set(model.flagship.schools.map(s => s.tuitionPerYear))); return t.length === 1 ? fmtUsd(t[0]) : `${fmtUsd(Math.min(...t))} – ${fmtUsd(Math.max(...t))}`; })()}/yr</div>
-      <div class="partner-detail">${model.flagship.schools.map(s => `${s.metro} (${s.count} @ ${fmtUsd(s.tuitionPerYear)})`).join(', ')}. ${model.flagship.scholarshipNote ? model.flagship.scholarshipNote : `${fmtNum(model.flagship.capacityPerSchool)} students per school.`}</div>
+      <div class="partner-detail">${model.flagship.schools.map(s => `${s.metro} (${s.count} @ ${fmtUsd(s.tuitionPerYear)})`).join(', ')}. ${(() => { const backstopTotal = model.flagship.schools.reduce((sum, s) => sum + s.count * s.capacityPerSchool * s.tuitionPerYear * 0.50 * 5, 0); return `50% capacity backstop for 5 years (${fmtCompact(backstopTotal)}).`; })()}${model.flagship.scholarshipNote ? ' ' + model.flagship.scholarshipNote : ''}</div>
     </div>
     <div class="partner-card">
       <div class="partner-label">${programName} Schools</div>
-      <div class="partner-value">${fmtNum(model.counterparty.minStudentsPerYear)} Student-Year Min</div>
+      <div class="partner-value">${fmtNum(model.counterparty.minStudentsPerYear)} Student-Years Min</div>
       <div class="partner-detail">Fixed $${model.counterparty.perStudentBudget.toLocaleString("en-US")} per-student annual budget. Powered by <strong>${ctx.localizedLifeSkillsName || ctx.country + 'Core'}</strong> life-skills program. ${ctx.country} funds 100% of local entity operations.</div>
     </div>
   </div>
@@ -1152,7 +1152,52 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 10 — COUNTRY-OWNED SCHOOLS & INVESTMENT
+     SLIDE 10 — FUTURE OPPORTUNITIES & SEQUENCING
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="slide slide-content">
+  <div class="label">Roadmap</div>
+  <h2>Future Regional Opportunities &amp; <span>Sequencing Plan</span></h2>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px; margin-top:24px;">
+
+    <div>
+      <div style="font-size:15px; font-weight:700; color:#0a1628; margin-bottom:12px;">Future Regional Opportunities</div>
+      <p style="font-size:13px; color:#2d3748; line-height:1.6;">Regional expansion to neighboring countries and territories represents a significant follow-on opportunity. These can be structured as separate arrangements and are not required for <strong>${programName}</strong> to succeed.</p>
+    </div>
+
+    <div>
+      <div style="font-size:15px; font-weight:700; color:#0a1628; margin-bottom:12px;">High-level Sequencing Plan</div>
+      <ul style="list-style:none; padding:0; margin:0;">
+        ${(() => {
+          const n = new Date();
+          const readyBy = new Date(n.getFullYear(), n.getMonth() + 16, 1);
+          let ly = readyBy.getFullYear();
+          if (readyBy.getMonth() > 8) ly++;
+          const p1 = `SY${String(ly).slice(-2)}-${String(ly + 1).slice(-2)}`;
+          const p2 = `SY${String(ly + 1).slice(-2)}-${String(ly + 2).slice(-2)}`;
+          return [
+            { bold: `Phase 0 (Now – Summer ${ly})`, rest: `IP Transfer, ${ctx.localizedLifeSkillsName || ctx.country + 'Core'} design, and eduLLM model training.` },
+            { bold: `Phase 1 (${p1})`, rest: `Launch of Alpha Flagship school.` },
+            { bold: `Phase 2 (${p2})`, rest: `National rollout of the ${programName} school network.` },
+          ].map(p => `<li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
+            <span style="font-size:13px; color:#2d3748; line-height:1.5;"><strong>${p.bold}:</strong> ${p.rest}</span>
+          </li>`).join('\n        ');
+        })()}
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="slide-footer">
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <span>© ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">10</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 11 — COUNTRY-OWNED SCHOOLS & INVESTMENT
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">Country-Owned Schools</div>
@@ -1174,7 +1219,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
         </li>
         <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
           <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
-          <span style="font-size:13px; color:#2d3748; line-height:1.5;">Minimum <strong>${fmtNum(model.counterparty.minStudentsPerYear)}</strong> students per year commitment.</span>
+          <span style="font-size:13px; color:#2d3748; line-height:1.5;">Minimum <strong>${fmtNum(model.counterparty.minStudentsPerYear)}</strong> student-years commitment.</span>
         </li>
         <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
           <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
@@ -1204,11 +1249,11 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
           </tr>
         </thead>
         <tbody>
-          <tr class="section-header"><td colspan="4">Upfront Development Costs (FIXED — do not scale by country)</td></tr>
+          <tr class="section-header"><td colspan="4">Upfront Development Costs</td></tr>
           ${model.upfront.fixedItems.map(r => `<tr><td>${r.item}</td><td class="amt" style="text-align:right;">${fmtCompact(r.amountUsd)}</td><td></td><td class="notes">Paid upfront${r.recipient === 'Alpha Holdings, Inc.' ? ' to Alpha Holdings, Inc.' : ''}</td></tr>`).join("\n          ")}
-          <tr class="section-header"><td colspan="4">Prepaid Fees (scale by student commitment)</td></tr>
+          <tr class="section-header"><td colspan="4">Prepaid Fees</td></tr>
           ${model.upfront.variableItems.map(r => `<tr><td>${r.item}</td><td class="amt" style="text-align:right;">${fmtCompact(r.amountUsd)}</td><td></td><td class="notes">${r.note || r.recipient}</td></tr>`).join("\n          ")}
-          <tr class="section-header"><td colspan="4">Ongoing Annual Costs (scale above ${fmtNum(model.counterparty.minStudentsPerYear)} students)</td></tr>
+          <tr class="section-header"><td colspan="4">Ongoing Annual Costs (per ${fmtNum(model.counterparty.minStudentsPerYear)} students)</td></tr>
           ${model.ongoing.items.map(r => `<tr><td>${r.item}</td><td></td><td class="amt" style="text-align:right;">${r.amount}</td><td class="notes">${r.recipient}</td></tr>`).join("\n          ")}
           <tr class="total-row">
             <td>TOTAL UPFRONT</td>
@@ -1225,12 +1270,12 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   <div class="slide-footer">
     <span class="brand">ALPHA HOLDINGS, INC.</span>
     <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">10</span>
+    <span class="slide-num">11</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 11 — THANK YOU / CLOSING
+     SLIDE 12 — THANK YOU / CLOSING
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-cover" style="display:flex; align-items:center; justify-content:center; text-align:center;">
   <div>
@@ -1240,7 +1285,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
   <div class="slide-footer" style="color: rgba(255,255,255,0.3);">
     <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA HOLDINGS, INC.</span>
-    <span class="slide-num">11</span>
+    <span class="slide-num">12</span>
   </div>
 </div>
 
@@ -1406,6 +1451,6 @@ export function registerRoutes(server: Server, app: Express) {
   });
 
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", version: "2.3.0-slides-revamp", slides: 11 });
+    res.json({ status: "ok", version: "2.4.0-term-sheet-fixes", slides: 12 });
   });
 }

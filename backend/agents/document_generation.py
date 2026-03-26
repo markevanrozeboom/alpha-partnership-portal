@@ -199,6 +199,39 @@ def _get_capital_city(country_profile) -> str:
     return ""
 
 
+def _get_flagship_tuition_display(model: FinancialModel) -> str:
+    """Return a display string for flagship tuition based on actual model data.
+
+    Uses the optimization result when available (per-metro tuitions),
+    falls back to the single model tuition, and finally to the generic range.
+    """
+    opt = model.flagship_optimization
+    if opt and opt.metros:
+        tuitions = sorted(set(mr.tuition for mr in opt.metros))
+        if len(tuitions) == 1:
+            return f"${tuitions[0] / 1000:.0f}K"
+        return f"${tuitions[0] / 1000:.0f}K\u2013${tuitions[-1] / 1000:.0f}K"
+    if model.flagship_tuition and model.flagship_tuition > 0:
+        return f"${model.flagship_tuition / 1000:.0f}K"
+    return "$40K\u2013$100K"
+
+
+def _get_addressable_base_display(country_profile) -> str:
+    """Return addressable student base with real numbers from the country profile."""
+    if country_profile:
+        k12 = getattr(country_profile.education, "k12_enrolled", None)
+        if k12 and k12 > 0:
+            if k12 >= 1_000_000:
+                return f"{k12 / 1_000_000:.1f}M K\u201312 students"
+            return f"{k12:,.0f} K\u201312 students"
+        pop = getattr(country_profile.demographics, "population_0_18", None)
+        if pop and pop > 0:
+            if pop >= 1_000_000:
+                return f"{pop / 1_000_000:.1f}M school-age population (0\u201318)"
+            return f"{pop:,.0f} school-age population (0\u201318)"
+    return "significant K\u201312 school-age population"
+
+
 def _build_region_avoid_list(target: str, region: str) -> str:
     """Build a 'DO NOT USE' list from the region confusion map, excluding the target country."""
     landmarks = REGION_CONFUSION_MAP.get(region, [])
@@ -305,9 +338,9 @@ IMPORTANT DEAL MODEL:
 - Counterparty owns 100% of the local entity, Alpha owns 0% equity
 - Alpha is the exclusive operator & licensor
 - Dual-school model:
-  Flagship: $40K-$100K tuition, capital city + biggest cities, 2-3 schools, 50% backstop
+  Flagship: {flagship_tuition_display} tuition, capital city + biggest cities, 2-3 schools, 50% backstop for 5 years
   National: FIXED $25K per-student budget, 100K student-year minimum commitment
-- Fixed upfront development: $250M AlphaCore + $250M App R&D + $250M LifeSkills = $750M total (non-negotiable)
+- Fixed upfront development: $250M AlphaCore License + $250M Incept EdLLM + $250M EdTech Apps + $250M Life Skills = $1B total (non-negotiable)
 - Management fee: 10% of combined revenue (non-negotiable)
 - Timeback license: 20% of combined revenue (non-negotiable)
 - NOTE: The term sheet / deal terms should be embedded as a section within this document,
@@ -406,9 +439,9 @@ IMPORTANT: This uses the Operator & Licensor model (Marriott hotel model) — NO
 - Counterparty owns 100% of the local entity, Alpha owns 0% equity
 - Alpha is the exclusive operator & licensor
 - Dual-school model:
-  Flagship: $40K-$100K tuition, 2-3 schools in capital + biggest cities, 50% backstop
+  Flagship: {flagship_tuition_display} tuition, 2-3 schools in capital + biggest cities, 50% backstop for 5 years
   National: FIXED $25K per-student budget, 100K student-year minimum commitment
-- Fixed upfront development costs: $250M each (AlphaCore, App R&D, LifeSkills) = $750M total (non-negotiable)
+- Fixed upfront development costs: $250M each (AlphaCore License, Incept EdLLM, EdTech Apps, Life Skills) = $1B total (non-negotiable)
 - Management fee: 10% of combined revenue (non-negotiable)
 - Timeback license: 20% of combined revenue (non-negotiable)
 - Prepaid management + timeback fees scale by student count
@@ -441,9 +474,9 @@ Write the FINANCIAL ANALYSIS section of an investment memorandum for the Alpha H
 partnership.
 
 IMPORTANT: Financial parameters are FIXED — do not derive from country GDP or PPP data.
-- Flagship: $40K-$100K tuition (set by AGI of top 20% families)
+- Flagship: {flagship_tuition_display} tuition (set by AGI of top 20% families)
 - National: FIXED $25K per-student budget (non-negotiable)
-- Fixed development costs: $250M each × 3 = $750M total (non-negotiable)
+- Fixed development costs: $250M each × 4 = $1B total (non-negotiable)
 - Management fee: 10%, Timeback: 20% (both non-negotiable)
 - Research data is "color commentary" for narrative context only
 
@@ -455,7 +488,7 @@ Financial Data:
 
 Write 2,500-3,000 words covering:
 1. KEY ASSUMPTIONS — Enrollment ramp (Flagship + National), pricing
-   (FIXED $25K national, $40K-$100K flagship), cost structure, capital expenditure,
+   (FIXED $25K national, {flagship_tuition_display} flagship), cost structure, capital expenditure,
    working capital. No PPP/GDP scaling — all financial figures are fixed.
 2. 5-YEAR P&L PROJECTION — Year-by-year walkthrough of students, schools, revenue, COGS,
    gross margin, OPEX, EBITDA, net income, FCF. Include commentary on drivers and inflection points.
@@ -588,12 +621,19 @@ async def generate_documents(
     }
 
     # --- Get deck content from LLM ---
+    _jv_name_for_prompt = (
+        jv_program_name
+        or (strategy.brand.jv_name_suggestion if strategy else None)
+        or f"{target} Education"
+    )
     deck_outline = await call_llm_plain(
         system_prompt=DECK_OUTLINE_PROMPT.format(
             target=target,
             context=context,
             audience_label=audience_labels.get(audience, "investor"),
             slide_count=11,
+            jv_program_name=_jv_name_for_prompt,
+            flagship_tuition_display=_get_flagship_tuition_display(financial_model),
         ),
         user_prompt=(
             f"Produce the detailed slide outline for {target}."
@@ -606,7 +646,9 @@ async def generate_documents(
     try:
         local_pptx_path = _build_pptx(
             target, strategy, financial_model, deck_outline,
-            audience, output_dir, jv_program_name=jv_program_name,
+            audience, output_dir,
+            jv_program_name=jv_program_name,
+            country_profile=country_profile,
         )
         logger.info("Local PPTX generated: %s", local_pptx_path)
     except Exception as exc:
@@ -875,6 +917,8 @@ async def _build_investment_memorandum(
         ("appendices", "IX. APPENDICES"),
     ]
 
+    _flagship_display = _get_flagship_tuition_display(financial_model)
+
     async def _generate_section(section_key: str, section_title: str) -> tuple[str, str]:
         prompt_template = IM_SECTION_PROMPTS[section_key]
         formatted_prompt = prompt_template.format(
@@ -884,6 +928,7 @@ async def _build_investment_memorandum(
             education_data=education_data,
             strategy_data=strategy_data,
             financial_data=financial_data,
+            flagship_tuition_display=_flagship_display,
         )
         user_prompt = f"Write the {section_title} section now."
         if revision_notes:
@@ -1198,6 +1243,7 @@ DECK_OUTLINE_PROMPT = HEAD_OF_STATE_PREAMBLE + \
 drafting an investor/government presentation deck outline for a {audience_label} audience.
 
 Target market: {target}
+Program name: {jv_program_name}
 {context}
 
 IMPORTANT: Use the Ed71 deck as the template reference for deal structure presentation.
@@ -1205,22 +1251,25 @@ Reference file: Ed71_ The World's First AI-Native National Education System.pptx
 
 Deal model:
 - Operator & Licensor — NOT a JV. Counterparty owns 100%, Alpha operates.
-- Dual-school: Flagship ($40K-$100K) + National ($25K FIXED, 100K student-year min)
-- Fixed development: $750M total ($250M × 3). Management fee 10%, Timeback 20%.
+- Dual-school: Flagship ({flagship_tuition_display}) + National ($25K FIXED, 100K student-year min)
+- AlphaCore curriculum OS license ($250M) + development costs.
+- Fixed development: $750M+ total. Management fee 10%, Timeback 20%.
+- Alpha Flagship Schools: 50% capacity backstop for 5 years from counterparty.
 
 Produce a detailed slide-by-slide outline for an {slide_count}-slide presentation deck
 covering:
-1. Title slide with tagline
+1. Title slide with tagline and {jv_program_name} program name
 2. Vision — 'Educated in [Country]' as a Global Credential, Alpha as the Stanford of K-12 Education
 3. The Key to Success — reinvented school day, core truths, Traditional vs Alpha Model comparison
 4. The Alpha Model — Timeback, AlphaCore, Guide School, Incept eduLLM
 5. Our Results — Bloom's 2-Sigma, growth metrics, SAT/AP scores, 97% love school, life skills projects
-6. Market Opportunity — why this country, why now, key market drivers
+6. Market Opportunity — why this country, why now, specific addressable student base, key market drivers
 7. The Complete Platform — Alpha education stack vs country-owned stack, deployment overview
-8. School Type Portfolio — Alpha Flagship School and National school descriptions. \
-National/country-owned schools MUST NOT have 'Alpha' in their name.
-9. Country-Owned Schools & Investment — ownership structure, per-student budget, investment table
-10. 5-Year Rollout Plan — phased approach with student targets
+8. School Type Portfolio — Alpha Flagship School and {jv_program_name} school descriptions. \
+{jv_program_name}/country-owned schools MUST NOT have 'Alpha' in their name.
+9. {jv_program_name} Schools & Investment — ownership structure, per-student budget, investment table, \
+Alpha Flagship School backstop commitment
+10. {jv_program_name} 5-Year Rollout Plan — phased approach with student targets
 11. Thank You / closing
 
 DO NOT include slides about: financial returns (IRR/MOIC), unit economics, risk mitigation,
@@ -1239,6 +1288,7 @@ def _build_pptx(
     output_dir: str,
     *,
     jv_program_name: str | None = None,
+    country_profile=None,
 ) -> str:
     """Build a local PPTX investor deck as a fallback when the Gamma API is
     unavailable.  Returns the absolute path to the generated ``.pptx`` file.
@@ -1253,6 +1303,8 @@ def _build_pptx(
         or strategy.brand.jv_name_suggestion
         or f"{target} Education"
     )
+    flagship_tuition_str = _get_flagship_tuition_display(model)
+    addressable_base_str = _get_addressable_base_display(country_profile)
 
     prs = PptxPresentation()
     prs.slide_width = PptxInches(13.333)
@@ -1453,8 +1505,9 @@ def _build_pptx(
     slide_num += 1
     s = _add_slide()
     _add_accent_bar(s, top=0.0, height=0.06)
-    _add_title(s, f"Alpha Holdings, Inc. × {target}", top=2.2)
-    _add_body(s, ["Strategic Partnership Proposal"], top=3.3)
+    _add_title(s, f"Alpha Holdings, Inc. × {target}", top=2.0)
+    _add_subtitle(s, jv_name, top=2.9)
+    _add_body(s, ["Strategic Partnership Proposal"], top=3.4)
     # CONFIDENTIAL badge
     txBox = s.shapes.add_textbox(
         PptxInches(0.8), PptxInches(4.2), PptxInches(3.0), PptxInches(0.4),
@@ -1499,9 +1552,10 @@ def _build_pptx(
         _add_kpi_boxes(s, kpis[:4], top=1.5)
 
     exec_lines = [
-        f"• Transform K-12 education in {target} through AI-powered learning",
+        f"• {jv_name}: Transform K-12 education in {target} through AI-powered learning",
         "• Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
-        f"• Dual-school: Alpha Flagship ($40K-$100K) + {jv_name} schools ($25K fixed)",
+        f"• Dual-school: Alpha Flagship ({flagship_tuition_str}) + {jv_name} schools ($25K fixed)",
+        "• AlphaCore curriculum OS + Timeback AI platform power every school",
         "• Proven model: UAE deal ($1.5B, 200K students) as reference",
     ]
     _add_body(s, exec_lines, top=3.2)
@@ -1533,12 +1587,12 @@ def _build_pptx(
     _add_slide_number(s, slide_num, total_slides)
     _add_footer(s)
     _add_body(s, [
-        "• School-age population: significant K-12 cohort",
+        f"• Addressable base: {addressable_base_str}",
         "• Education sector undergoing reform and modernisation",
         "• Growing demand for premium, innovation-driven education",
         "• Gap between aspirations and current system performance",
         "• Government appetite for public-private partnerships",
-        "• Alpha's model addresses the core pain points",
+        f"• {jv_name}'s model addresses the core pain points",
     ])
 
     # ── Slide 5: Financial Overview with TABLE ─────────────────────────
@@ -1599,12 +1653,12 @@ def _build_pptx(
     deal_rows = [
         ["Structure", "Operator & Licensor (Marriott model)"],
         ["Ownership", "100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor"],
-        ["Flagship", "$40K-$100K tuition, 2-3 schools, 50% backstop"],
+        ["Flagship", f"{flagship_tuition_str} tuition, 50% backstop for 5 years"],
         [jv_name, "$25K/student FIXED, 100K student-year min"],
-        ["Development Costs", "$750M FIXED ($250M × 3)"],
+        ["AlphaCore License", "$250M — AI-age curriculum OS"],
+        ["Development Costs", "$750M+ FIXED (AlphaCore + Incept EdLLM + EdTech + Life Skills)"],
         ["Management Fee", f"{model.management_fee_pct * 100:.0f}% of combined revenue"],
         ["Timeback License", f"{model.timeback_license_pct * 100:.0f}% of combined revenue"],
-        ["Cultural IP Layer", "Local identity, language, and values fully integrated"],
     ]
     _add_table(s, deal_headers, deal_rows, top=1.6, row_height=0.5)
 
@@ -1635,7 +1689,7 @@ def _build_pptx(
     slide_num += 1
     s = _add_slide()
     _add_accent_bar(s)
-    _add_title(s, "5-Year Rollout Plan")
+    _add_title(s, f"{jv_name} — 5-Year Rollout Plan")
     _add_accent_line(s, 0.8, 1.15, 4.0)
     _add_slide_number(s, slide_num, total_slides)
     _add_footer(s)
@@ -1645,6 +1699,14 @@ def _build_pptx(
         rollout_rows = [
             [ph.phase or "", ph.timeline or "", f"{ph.student_count:,}" if ph.student_count else ""]
             for ph in strategy.phased_rollout[:5]
+        ]
+        _add_table(s, rollout_headers, rollout_rows, top=1.6, row_height=0.5)
+    elif model.pnl_projection:
+        rollout_headers = ["Year", "School Year", "Students", "Schools"]
+        rollout_rows = [
+            [f"Year {p.year}", f"SY{25 + p.year}-{26 + p.year}",
+             f"{p.students:,}", f"{p.schools}"]
+            for p in model.pnl_projection
         ]
         _add_table(s, rollout_headers, rollout_rows, top=1.6, row_height=0.5)
     else:
@@ -1784,6 +1846,7 @@ def _build_gamma_investor_input(
     jv_program_name: str | None = None,
     region: str = "",
     capital: str = "",
+    country_profile=None,
 ) -> str:
     """Build Gamma inputText for the investor deck with slide separators.
 
@@ -1794,6 +1857,8 @@ def _build_gamma_investor_input(
         or strategy.brand.jv_name_suggestion
         or f"{target} Education"
     )
+    flagship_tuition_str = _get_flagship_tuition_display(model)
+    addressable_base_str = _get_addressable_base_display(country_profile)
     slides: list[str] = []
 
     # --- Slide 1: Title ---
@@ -1801,6 +1866,7 @@ def _build_gamma_investor_input(
     cover_image_instruction = _get_cover_image_instruction(target, region=region, capital=capital)
     slides.append(
         f"# Alpha Holdings, Inc. × {target}\n\n"
+        f"## {jv_name}\n\n"
         f"Strategic Partnership Proposal\n\n"
         f"Confidential — Prepared exclusively for the Government of {target}\n\n"
         f"CONFIDENTIAL | {year}\n\n"
@@ -1813,8 +1879,9 @@ def _build_gamma_investor_input(
         "Alpha — The \"Stanford of K-12 Education\"\n\n"
         "1. Only AI-native education system, purposefully designed for national scale\n"
         "2. Commitments to students: love school, learn 2× faster, life skills for the AI age\n"
-        "3. Creating the next generation of global leaders through life skills and academic mastery\n\n"
-        f"Our mission: Alpha is the AI-native public education system for all of {target}"
+        "3. Creating the next generation of global leaders through life skills and academic mastery\n"
+        f"4. AlphaCore — the AI-age life-skills curriculum — powers the {jv_name} school network\n\n"
+        f"Our mission: {jv_name} is the AI-native public education system for all of {target}"
     )
 
     # --- Slide 3: The Key to Success ---
@@ -1868,17 +1935,17 @@ def _build_gamma_investor_input(
     slides.append(
         f"# Market Opportunity: {target}\n\n"
         f"Why {target}, Why Now:\n"
-        f"- Significant K-12 school-age population providing a large addressable base\n"
+        f"- Addressable base of {addressable_base_str} providing a large market opportunity\n"
         f"- Education sector actively undergoing reform and modernisation at the national level\n"
         f"- Growing demand for premium, innovation-driven educational alternatives\n"
         f"- Persistent gap between societal aspirations and current system performance\n"
         f"- Government appetite for structured public-private partnership models\n"
-        f"- Alpha's model directly addresses the core pain points of the {target} system"
+        f"- {jv_name}'s model directly addresses the core pain points of the {target} system"
     )
 
     # --- Slide 7: The Complete Platform ---
     slides.append(
-        f"# Launching {target}'s Alpha on the full education stack\n\n"
+        f"# Launching {jv_name} on the full education stack\n\n"
         "| Alpha Education Stack | "
         f"{target} Owned Stack |\n"
         "| --- | --- |\n"
@@ -1913,9 +1980,10 @@ def _build_gamma_investor_input(
     else:
         slides.append(
             "# School Type Portfolio\n\n"
-            "Alpha Flagship School — $40K–$100K tuition:\n"
+            f"Alpha Flagship School — {flagship_tuition_str} tuition:\n"
             "Innovative and personalized education. Flagship schools serve as the premium anchor — "
-            "demonstrating the full Alpha experience at the highest level of execution.\n\n"
+            "demonstrating the full Alpha experience at the highest level of execution. "
+            "Powered by AlphaCore, Alpha's proprietary AI-age life-skills curriculum.\n\n"
             f"{jv_name} Schools — $25K Fixed Budget:\n"
             "Accessible, high-quality education with personalized learning "
             "experiences at a fixed per-student cost. "
@@ -1924,6 +1992,22 @@ def _build_gamma_investor_input(
         )
 
     # --- Slide 9: Country-Owned Schools & Investment ---
+    # Compute investment table values from the financial model
+    _alphacore_m = round(model.upfront_alphacore_license / 1_000_000) if model.upfront_alphacore_license > 1_000_000 else 250
+    _incept_m = round(model.upfront_incept_edllm / 1_000_000) if model.upfront_incept_edllm > 1_000_000 else 250
+    _lifeskills_m = round(model.upfront_lifeskills_rd / 1_000_000) if model.upfront_lifeskills_rd > 1_000_000 else 250
+    _app_rd_m = round(model.upfront_app_content_rd / 1_000_000) if model.upfront_app_content_rd > 1_000_000 else 250
+    _tb_prepay_m = round(model.upfront_timeback_fee / 1_000_000) if model.upfront_timeback_fee > 1_000_000 else 500
+    _mgmt_prepay_m = round(model.upfront_mgmt_fee / 1_000_000) if model.upfront_mgmt_fee > 1_000_000 else 250
+    _total_upfront_m = round(model.upfront_ip_fee / 1_000_000) if model.upfront_ip_fee > 1_000_000 else 1_750
+
+    # Flagship backstop info
+    _flagship_schools = (
+        model.flagship_optimization.total_schools
+        if model.flagship_optimization and model.flagship_optimization.total_schools > 0
+        else 3
+    )
+
     slides.append(
         f"# {jv_name} Schools: "
         f"{target} Owned, Alpha Operated\n\n"
@@ -1940,24 +2024,32 @@ def _build_gamma_investor_input(
         "**Investment Required:**\n\n"
         "| Category | Item | Amount |\n"
         "| --- | --- | --- |\n"
-        "| Upfront Fixed | Alpha Core License | $250M |\n"
-        "| Upfront Fixed | Country-Specific Incept EdLLM "
-        "| $250M |\n"
-        "| Upfront Fixed | Country-Specific Programs "
-        "& Life Skills | $250M |\n"
-        "| Upfront Fixed | Country-Specific EdTech Apps "
-        "| $250M |\n"
-        "| Prepaid | Timeback License Prepay | $500M |\n"
-        "| Prepaid | Operating Fee Prepay | $250M |\n"
-        "| **TOTAL UPFRONT** | | **$1.75B** |\n\n"
+        f"| Upfront Fixed | AlphaCore License | ${_alphacore_m:,}M |\n"
+        f"| Upfront Fixed | Country-Specific Incept EdLLM "
+        f"| ${_incept_m:,}M |\n"
+        f"| Upfront Fixed | Country-Specific Programs "
+        f"& Life Skills | ${_lifeskills_m:,}M |\n"
+        f"| Upfront Fixed | Country-Specific EdTech Apps "
+        f"| ${_app_rd_m:,}M |\n"
+        f"| Prepaid | Timeback License Prepay | ${_tb_prepay_m:,}M |\n"
+        f"| Prepaid | Operating Fee Prepay | ${_mgmt_prepay_m:,}M |\n"
+        f"| **TOTAL UPFRONT** | | **${_total_upfront_m / 1000:.2f}B** |\n\n"
         "**Ongoing Annual:** Parent Education / Launch / "
         "Guides · Timeback License Fee (20% of funding) · "
-        "Operating Fee (10% of funding)"
+        "Operating Fee (10% of funding)\n\n"
+        f"**Alpha Flagship School Backstop:**\n"
+        f"- {_flagship_schools} Alpha Flagship Schools at "
+        f"{flagship_tuition_str} tuition serve as the premium "
+        f"\"halo brand\" anchoring the entire {jv_name} system\n"
+        f"- {target} provides a **50% capacity backstop for 5 years**, "
+        f"ensuring each Flagship school opens at scale and quality\n"
+        f"- Flagship schools are 100% Alpha-owned and generate "
+        f"aspirational demand across the broader {jv_name} national network"
     )
 
     # --- Slide 10: 5-Year Rollout Plan ---
     if strategy.phased_rollout:
-        phases = strategy.phased_rollout[:3]
+        phases = strategy.phased_rollout[:5]
         phase_rows = []
         for ph in phases:
             students = (
@@ -1969,18 +2061,33 @@ def _build_gamma_investor_input(
                 f"| {students} |"
             )
         slides.append(
-            "# 5-Year Rollout Plan\n\n"
-            f"{target} scales systematically — "
+            f"# {jv_name} — 5-Year Rollout Plan\n\n"
+            f"{jv_name} scales systematically — "
             "building operational excellence before expanding, "
             "ensuring every cohort of students receives the "
-            "full Alpha experience from day one.\n\n"
+            f"full Alpha experience from day one.\n\n"
             "| Phase | Timeline | Target |\n"
             "| --- | --- | --- |\n"
             + "\n".join(phase_rows)
         )
+    elif model.pnl_projection:
+        pnl_rows = []
+        for p in model.pnl_projection:
+            pnl_rows.append(
+                f"| **Year {p.year}** | SY{25 + p.year}-{26 + p.year} "
+                f"| {p.students:,} students across {p.schools} schools |"
+            )
+        slides.append(
+            f"# {jv_name} — 5-Year Rollout Plan\n\n"
+            f"{jv_name} scales systematically — "
+            "building operational excellence before expanding.\n\n"
+            "| Year | School Year | Target |\n"
+            "| --- | --- | --- |\n"
+            + "\n".join(pnl_rows)
+        )
     else:
         slides.append(
-            "# 5-Year Rollout Plan\n\n"
+            f"# {jv_name} — 5-Year Rollout Plan\n\n"
             "Phased rollout details in strategy report"
         )
 
@@ -2081,6 +2188,7 @@ async def _build_investor_deck_gamma(
         jv_program_name=jv_program_name,
         region=region,
         capital=capital,
+        country_profile=country_profile,
     )
 
     try:

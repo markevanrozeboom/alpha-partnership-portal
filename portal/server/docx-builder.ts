@@ -208,7 +208,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
                 spacing: { before: 0, after: 60 },
                 children: [
                   new TextRun({
-                    text: `${fmtNum(model.counterparty.minStudentsPerYear)} students / year`,
+                    text: `${fmtNum(model.counterparty.minStudentsPerYear)} student-years`,
                     bold: true,
                     size: 20,
                     font: "Calibri",
@@ -364,7 +364,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
           headerCell("Notes", 20),
         ],
       }),
-      sectionHeader("FIXED DEVELOPMENT COSTS", 4),
+      sectionHeader("UPFRONT DEVELOPMENT COSTS", 4),
       ...model.upfront.fixedItems.map(
         (r) =>
           new TableRow({
@@ -377,7 +377,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
             ],
           }),
       ),
-      sectionHeader("PREPAID FEES (VARIABLE WITH STUDENT COUNT)", 4),
+      sectionHeader("PREPAID FEES", 4),
       ...model.upfront.variableItems.map(
         (r) =>
           new TableRow({
@@ -445,15 +445,17 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
         ],
       }),
       ...(() => {
+        const backstopTotal = model.flagship.schools.reduce(
+          (sum, s) => sum + s.count * s.capacityPerSchool * s.tuitionPerYear * 0.50 * 5, 0,
+        );
         const rows = [
           ["Ownership", "100% Alpha", `100% ${ctx.country} / 0% Alpha`],
           ["Operated By", "Alpha", `Alpha (on behalf of ${ctx.country})`],
-          ["Students", fmtNum(model.flagship.totalStudents), `${fmtNum(model.counterparty.minStudentsPerYear)} minimum`],
+          ["Students", fmtNum(model.flagship.totalStudents), `${fmtNum(model.counterparty.minStudentsPerYear)} student-years`],
           ["Tuition / Funding", `${fmtUsd(model.flagship.tuitionPerYear)} / year`, `${fmtUsd(model.counterparty.perStudentBudget)} / year (fixed)`],
-          ["Operating Margin", "25%", "Per cost structure"],
           ["Operating Fee", "N/A (Alpha-owned)", `10% of funding (min ${fmtUsd(2500)}/student)`],
           ["Timeback License", "N/A (Alpha-owned)", `20% of funding (min ${fmtUsd(5000)}/student)`],
-          ["Backstop", "50% capacity, 5 years", "N/A"],
+          ["Capacity Backstop", `50% capacity, 5 years (${fmtCompact(backstopTotal)})`, "N/A"],
           ["Real Estate", "Sourced by counterparty", "Sourced by counterparty"],
         ];
         return rows.map(
@@ -594,15 +596,13 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
               new TextRun({
                 text: (() => {
                   const tuitions = model.flagship.schools.map(s => s.tuitionPerYear);
-                  const capacities = model.flagship.schools.map(s => s.capacityPerSchool);
                   const tuitionStr = new Set(tuitions).size === 1
                     ? `Tuition: ${fmtUsd(tuitions[0])}/year.`
                     : `Tuition: ${fmtUsd(Math.min(...tuitions))} – ${fmtUsd(Math.max(...tuitions))}/year (varies by metro).`;
-                  const capStr = new Set(capacities).size === 1
-                    ? `${fmtNum(capacities[0])} students per school.`
-                    : `${fmtNum(Math.min(...capacities))} – ${fmtNum(Math.max(...capacities))} students per school.`;
-                  return `Sized as 250-, 500-, or 1,000-student schools in ${ctx.country}'s top metropolitan areas. ` +
-                    `${tuitionStr} ${capStr} 25% operating margin. 50% capacity backstop required for 5 years.`;
+                  const backstopTotal = model.flagship.schools.reduce(
+                    (sum, s) => sum + s.count * s.capacityPerSchool * s.tuitionPerYear * 0.50 * 5, 0,
+                  );
+                  return `${tuitionStr} 50% capacity backstop required for 5 years (${fmtCompact(backstopTotal)} total).`;
                 })(),
                 size: 18,
                 font: "Calibri",
@@ -630,6 +630,64 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
 
           new Paragraph({ spacing: { before: 120, after: 0 }, children: [] }),
 
+          // ── Future Regional Opportunities ──
+          new Paragraph({
+            spacing: { before: 200, after: 80 },
+            children: [new TextRun({ text: "Future Regional Opportunities", bold: true, size: 28, font: "Calibri", color: "0A1628" })],
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 120 },
+            children: [
+              new TextRun({
+                text: `Regional expansion to neighboring countries and territories represents a significant follow-on opportunity. ` +
+                  `These can be structured as separate arrangements and are not required for ${programName} to succeed.`,
+                size: 18,
+                font: "Calibri",
+                color: "4A5568",
+              }),
+            ],
+          }),
+
+          // ── Sequencing Plan ──
+          new Paragraph({
+            spacing: { before: 200, after: 80 },
+            children: [new TextRun({ text: "High-level Sequencing Plan", bold: true, size: 28, font: "Calibri", color: "0A1628" })],
+          }),
+          ...(() => {
+            const minPrepMonths = 16;
+            const readyBy = new Date(now.getFullYear(), now.getMonth() + minPrepMonths, 1);
+            let launchYear = readyBy.getFullYear();
+            if (readyBy.getMonth() > 8) launchYear++;
+            const phase1SY = `SY${String(launchYear).slice(-2)}-${String(launchYear + 1).slice(-2)}`;
+            const phase2SY = `SY${String(launchYear + 1).slice(-2)}-${String(launchYear + 2).slice(-2)}`;
+
+            const phases: Array<{ bold: string; rest: string }> = [
+              {
+                bold: `Phase 0 (Now – Summer ${launchYear}): `,
+                rest: `IP Transfer, ${ctx.localizedLifeSkillsName || ctx.country + 'Core'} design, and eduLLM model training.`,
+              },
+              {
+                bold: `Phase 1 (${phase1SY}): `,
+                rest: `Launch of Alpha Flagship school.`,
+              },
+              {
+                bold: `Phase 2 (${phase2SY}): `,
+                rest: `National rollout of the ${programName} school network.`,
+              },
+            ];
+
+            return phases.map(p => new Paragraph({
+              spacing: { before: 40, after: 40 },
+              bullet: { level: 0 },
+              children: [
+                new TextRun({ text: p.bold, bold: true, size: 18, font: "Calibri", color: "0A1628" }),
+                new TextRun({ text: p.rest, size: 18, font: "Calibri", color: "4A5568" }),
+              ],
+            }));
+          })(),
+
+          new Paragraph({ spacing: { before: 120, after: 0 }, children: [] }),
+
           // ── Counterparty schools ──
           new Paragraph({
             spacing: { before: 0, after: 40 },
@@ -647,7 +705,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
             children: [
               new TextRun({
                 text: `100% owned by ${ctx.country}. 0% owned by Alpha. Alpha operates schools on behalf of the country/state. ` +
-                  `Minimum commitment: ${fmtNum(model.counterparty.minStudentsPerYear)} students/year. ` +
+                  `Minimum commitment: ${fmtNum(model.counterparty.minStudentsPerYear)} student-years. ` +
                   `Per-student funding: ${fmtUsd(model.counterparty.perStudentBudget)}/year.`,
                 size: 18,
                 font: "Calibri",
@@ -688,7 +746,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
             spacing: { before: 0, after: 120 },
             children: [
               new TextRun({
-                text: `Indicative of ${fmtNum(model.counterparty.minStudentsPerYear)} students. Upfront development costs do not change; prepaid fees scale above ${fmtNum(model.counterparty.minStudentsPerYear)} students.`,
+                text: `Indicative of ${fmtNum(model.counterparty.minStudentsPerYear)} student-years commitment.`,
                 size: 16,
                 font: "Calibri",
                 color: "718096",

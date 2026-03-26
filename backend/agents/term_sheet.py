@@ -1615,15 +1615,14 @@ def _add_future_opportunities_section(
 ) -> None:
     """Build the Future Opportunities section."""
     doc.add_heading(
-        "Future Alpha and Regional Opportunities", level=1,
+        "Future Regional Opportunities", level=1,
     )
 
     _add_body(
         doc,
-        f"Alpha-branded private schools in {target}, regional "
-        "expansion, and private-pay offerings are intentionally "
-        "treated as follow-on opportunities. They can be structured "
-        "as separate arrangements and are not required for "
+        "Regional expansion to neighboring countries and territories "
+        "represents a significant follow-on opportunity. These can be "
+        "structured as separate arrangements and are not required for "
         f"{cv.jv_program_name} to succeed.",
     )
 
@@ -1635,40 +1634,30 @@ def _add_sequencing_section(
     """Build the High-level Sequencing Plan (UAE benchmark)."""
     doc.add_heading("High-level Sequencing Plan", level=1)
 
-    # Extract student counts for phase descriptions (national commitment)
-    nat = fin["national_students"]
-    phase1_students = nat // 20   # ~5% of target
-    phase2_mid = nat // 4         # ~25% of target
-    phase2_high = nat // 2        # ~50% of target
+    from datetime import datetime, timedelta
 
-    # Launch school year
-    launch_sy_start = 26  # SY26-27 as baseline
-    launch_sy = f"SY{launch_sy_start}-{launch_sy_start + 1}"
+    now = datetime.now()
+    ready_by = now + timedelta(days=16 * 30)
+    launch_year = ready_by.year
+    if ready_by.month > 9:
+        launch_year += 1
+    phase1_sy = f"SY{str(launch_year)[-2:]}-{str(launch_year + 1)[-2:]}"
+    phase2_sy = f"SY{str(launch_year + 1)[-2:]}-{str(launch_year + 2)[-2:]}"
 
-    # Always use the detailed template matching UAE benchmark
     phases = [
         (
-            "Phase 0 (Months 1-12): ",
+            f"Phase 0 (Now \u2013 Summer {launch_year}): ",
             f"IP Transfer, {cv.cultural_program_name} design, "
             "and eduLLM model training.",
         ),
         (
-            "Phase 1 (Months 9-18): ",
-            f"Launch of 1-2 {cv.jv_program_name} schools in "
-            f"{cv.first_launch_city} in {launch_sy} under "
-            f"{cv.regulatory_framework} by taking over existing "
-            "Model Schools.",
+            f"Phase 1 ({phase1_sy}): ",
+            "Launch of Alpha Flagship school.",
         ),
         (
-            "Phase 2 (Months 12-36): ",
+            f"Phase 2 ({phase2_sy}): ",
             f"National rollout of the {cv.jv_program_name} school "
-            f"network to {phase1_students:,}, then "
-            f"{phase2_mid:,}, then {phase2_high:,}+ students.",
-        ),
-        (
-            "Phase 3 (Year 3+): ",
-            "Continued scaling, with optional follow-on regional "
-            "and private-pay expatriate expansions.",
+            "network.",
         ),
     ]
 
