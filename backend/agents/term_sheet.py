@@ -2082,7 +2082,7 @@ def _add_investment_table(
     ]
 
     sep_upfront = "Upfront Development Costs"
-    sep_prepaid = "Prepaid Fees (scale by student commitment)"
+    sep_prepaid = "Prepaid Fees"
     sep_ongoing = "Ongoing Annual Costs (per 100,000 students)"
 
     rows = [
@@ -2118,13 +2118,13 @@ def _add_investment_table(
             "Timeback (Prepaid)",
             f"${fin['upfront_timeback']:,.0f}",
             "",
-            f"{national_students:,} students x ${5_000:,}/student",
+            f"{national_students:,} student/years x ${5_000:,}",
         ],
         [
             "Operating Fee (Prepaid)",
             f"${fin['upfront_mgmt']:,.0f}",
             "",
-            f"{national_students:,} students x ${2_500:,}/student",
+            f"{national_students:,} student/years x ${2_500:,}",
         ],
         # --- Separator: Ongoing ---
         [sep_ongoing, sep_ongoing, sep_ongoing, sep_ongoing],
