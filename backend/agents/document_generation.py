@@ -36,6 +36,7 @@ from models.schemas import (
     CountryProfile, EducationAnalysis, Strategy,
     FinancialModel, FinancialAssumptions, AudienceType,
 )
+from agents.term_sheet import extract_financial_values
 from services.llm import call_llm_plain
 from config import OUTPUT_DIR
 
@@ -232,6 +233,73 @@ def _get_addressable_base_display(country_profile) -> str:
     return "significant K\u201312 school-age population"
 
 
+def _check_deck_term_sheet_consistency(
+    fin: dict,
+    model: FinancialModel,
+    target: str,
+) -> None:
+    """Log warnings if the shared financial values diverge from the model.
+
+    Runs before deck generation as a quality gate so discrepancies
+    between the term sheet and the proposal deck are caught early.
+    """
+    issues: list[str] = []
+
+    # Upfront total
+    model_upfront_m = (
+        round(model.upfront_ip_fee / 1_000_000)
+        if model.upfront_ip_fee > 1_000_000
+        else model.upfront_ip_fee
+    )
+    fin_upfront = fin.get("upfront_total", 0)
+    if model_upfront_m and fin_upfront and abs(model_upfront_m - fin_upfront) > 1:
+        issues.append(
+            f"Upfront total: model=${model_upfront_m:,.0f}M vs fin=${fin_upfront:,.0f}M"
+        )
+
+    # Management / Timeback fee %
+    model_mgmt = round(model.management_fee_pct * 100)
+    fin_mgmt = fin.get("mgmt_pct", 0)
+    if model_mgmt and fin_mgmt and model_mgmt != fin_mgmt:
+        issues.append(
+            f"Management fee: model={model_mgmt}% vs fin={fin_mgmt}%"
+        )
+
+    model_tb = round(model.timeback_license_pct * 100)
+    fin_tb = fin.get("timeback_pct", 0)
+    if model_tb and fin_tb and model_tb != fin_tb:
+        issues.append(
+            f"Timeback fee: model={model_tb}% vs fin={fin_tb}%"
+        )
+
+    # Y5 students
+    if model.pnl_projection:
+        model_y5 = model.pnl_projection[-1].students
+        fin_y5 = fin.get("y5_students", 0)
+        if model_y5 and fin_y5 and abs(model_y5 - fin_y5) > 100:
+            issues.append(
+                f"Y5 students: model={model_y5:,} vs fin={fin_y5:,}"
+            )
+
+    # Flagship tuition
+    if model.flagship_tuition and fin.get("flagship_tuition"):
+        if abs(model.flagship_tuition - fin["flagship_tuition"]) > 1000:
+            issues.append(
+                f"Flagship tuition: model=${model.flagship_tuition:,.0f} "
+                f"vs fin=${fin['flagship_tuition']:,.0f}"
+            )
+
+    if issues:
+        logger.warning(
+            "DECK ↔ TERM SHEET CONSISTENCY CHECK for %s — %d issue(s):\n  %s",
+            target, len(issues), "\n  ".join(issues),
+        )
+    else:
+        logger.info(
+            "Deck ↔ term sheet consistency check passed for %s", target,
+        )
+
+
 def _build_region_avoid_list(target: str, region: str) -> str:
     """Build a 'DO NOT USE' list from the region confusion map, excluding the target country."""
     landmarks = REGION_CONFUSION_MAP.get(region, [])
@@ -338,11 +406,11 @@ IMPORTANT DEAL MODEL:
 - Counterparty owns 100% of the local entity, Alpha owns 0% equity
 - Alpha is the exclusive operator & licensor
 - Dual-school model:
-  Flagship: {flagship_tuition_display} tuition, capital city + biggest cities, 2-3 schools, 50% backstop for 5 years
-  National: FIXED $25K per-student budget, 100K student-year minimum commitment
-- Fixed upfront development: $250M AlphaCore License + $250M Incept EdLLM + $250M EdTech Apps + $250M Life Skills = $1B total (non-negotiable)
-- Management fee: 10% of combined revenue (non-negotiable)
-- Timeback license: 20% of combined revenue (non-negotiable)
+  Flagship: {flagship_tuition_display} tuition, capital city + biggest cities, {flagship_schools} schools, 50% backstop for 5 years
+  National: FIXED ${per_student_budget:,} per-student budget, {national_students:,} student-year minimum commitment
+- IP development: ${ip_development_total:,}M total (AlphaCore + EdLLM + EdTech + Life Skills). Total upfront: ${upfront_total:,}M.
+- Management fee: {mgmt_pct}% of combined revenue (non-negotiable)
+- Timeback license: {timeback_pct}% of combined revenue (non-negotiable)
 - NOTE: The term sheet / deal terms should be embedded as a section within this document,
   producing ONE combined investment memorandum (not a separate deliverable).
 
@@ -439,11 +507,11 @@ IMPORTANT: This uses the Operator & Licensor model (Marriott hotel model) — NO
 - Counterparty owns 100% of the local entity, Alpha owns 0% equity
 - Alpha is the exclusive operator & licensor
 - Dual-school model:
-  Flagship: {flagship_tuition_display} tuition, 2-3 schools in capital + biggest cities, 50% backstop for 5 years
-  National: FIXED $25K per-student budget, 100K student-year minimum commitment
-- Fixed upfront development costs: $250M each (AlphaCore License, Incept EdLLM, EdTech Apps, Life Skills) = $1B total (non-negotiable)
-- Management fee: 10% of combined revenue (non-negotiable)
-- Timeback license: 20% of combined revenue (non-negotiable)
+  Flagship: {flagship_tuition_display} tuition, {flagship_schools} schools in capital + biggest cities, 50% backstop for 5 years
+  National: FIXED ${per_student_budget:,} per-student budget, {national_students:,} student-year minimum commitment
+- IP development: ${ip_development_total:,}M total (AlphaCore + EdLLM + EdTech + Life Skills). Total upfront: ${upfront_total:,}M.
+- Management fee: {mgmt_pct}% of combined revenue (non-negotiable)
+- Timeback license: {timeback_pct}% of combined revenue (non-negotiable)
 - Prepaid management + timeback fees scale by student count
 
 Context:
@@ -457,8 +525,8 @@ Write 1,500-2,000 words covering:
    governance framework, board composition. NOT a JV — counterparty owns 100%, Alpha operates.
 2. DUAL-SCHOOL MODEL — Flagship as proof-of-concept/brand anchor,
    National for scale. How the two school types interact strategically.
-3. IP LICENSING & FEE STRUCTURE — FIXED $750M upfront development costs ($250M × 3),
-   ongoing management fees (10%), Timeback license fees (20%), prepaid fee structure
+3. IP LICENSING & FEE STRUCTURE — FIXED ${ip_development_total:,}M IP development costs,
+   ongoing management fees ({mgmt_pct}%), Timeback license fees ({timeback_pct}%), prepaid fee structure
 4. CAPITAL STRUCTURE — Total capital requirement, deployment phasing, counterparty funds
    100% of entity, Alpha contributes operational expertise and IP
 5. GOVERNANCE & CONTROLS — Decision rights, quality assurance, curriculum oversight,
@@ -475,9 +543,9 @@ partnership.
 
 IMPORTANT: Financial parameters are FIXED — do not derive from country GDP or PPP data.
 - Flagship: {flagship_tuition_display} tuition (set by AGI of top 20% families)
-- National: FIXED $25K per-student budget (non-negotiable)
-- Fixed development costs: $250M each × 4 = $1B total (non-negotiable)
-- Management fee: 10%, Timeback: 20% (both non-negotiable)
+- National: FIXED ${per_student_budget:,} per-student budget (non-negotiable)
+- IP development: ${ip_development_total:,}M total. Total upfront: ${upfront_total:,}M.
+- Management fee: {mgmt_pct}%, Timeback: {timeback_pct}% (both non-negotiable)
 - Research data is "color commentary" for narrative context only
 
 Context:
@@ -488,18 +556,18 @@ Financial Data:
 
 Write 2,500-3,000 words covering:
 1. KEY ASSUMPTIONS — Enrollment ramp (Flagship + National), pricing
-   (FIXED $25K national, {flagship_tuition_display} flagship), cost structure, capital expenditure,
+   (FIXED ${per_student_budget:,} national, {flagship_tuition_display} flagship), cost structure, capital expenditure,
    working capital. No PPP/GDP scaling — all financial figures are fixed.
 2. 5-YEAR P&L PROJECTION — Year-by-year walkthrough of students, schools, revenue, COGS,
    gross margin, OPEX, EBITDA, net income, FCF. Include commentary on drivers and inflection points.
    Show Flagship and National revenue separately where relevant.
 3. UNIT ECONOMICS — Per-student revenue, cost, and margin by school type
    (Flagship vs National). Compare to industry benchmarks.
-4. REVENUE STREAMS — Management fees (10% of combined revenue), Timeback license (20%),
-   FIXED $750M upfront development fees. Break down Alpha's operator revenue vs local entity revenue.
+4. REVENUE STREAMS — Management fees ({mgmt_pct}% of combined revenue), Timeback license ({timeback_pct}%),
+   FIXED ${ip_development_total:,}M IP development fees. Break down Alpha's operator revenue vs local entity revenue.
 5. RETURNS ANALYSIS — IRR, MOIC, payback period, enterprise value at exit.
    Include sensitivity analysis on key variables.
-6. CAPITAL DEPLOYMENT — Year-by-year capex schedule, FIXED $750M development costs,
+6. CAPITAL DEPLOYMENT — Year-by-year capex schedule, FIXED ${ip_development_total:,}M IP development costs,
    launch capital, real estate/infrastructure.
 7. VALUATION & COMPARABLE TRANSACTIONS — How this deal compares to recent education sector
    M&A and partnerships globally. EV/EBITDA, EV/Revenue multiples.
@@ -594,6 +662,7 @@ async def generate_documents(
     revision_notes: str | None = None,
     export_as: str = "pptx",
     jv_program_name: str | None = None,
+    term_sheet_assumptions: FinancialAssumptions | None = None,
 ) -> tuple[str | None, str | None, str, str, str | None, str]:
     """Generate presentation deck (via Gamma with local fallback), investment memorandum, and spreadsheet.
 
@@ -606,6 +675,15 @@ async def generate_documents(
 
     output_dir = os.path.join(OUTPUT_DIR, target.lower().replace(" ", "_"))
     os.makedirs(output_dir, exist_ok=True)
+
+    # --- Build shared financial values dict (same source-of-truth as term sheet) ---
+    ts_dict: dict = {}
+    if term_sheet_assumptions and term_sheet_assumptions.assumptions:
+        ts_dict = {item.key: item.value for item in term_sheet_assumptions.assumptions}
+    fin = extract_financial_values(financial_model, ts_dict, strategy)
+
+    # --- Pre-generation quality check: deck ↔ term sheet consistency ---
+    _check_deck_term_sheet_consistency(fin, financial_model, target)
 
     # --- Build context strings ---
     context = _build_context(country_profile, strategy, financial_model)
@@ -634,6 +712,12 @@ async def generate_documents(
             slide_count=11,
             jv_program_name=_jv_name_for_prompt,
             flagship_tuition_display=_get_flagship_tuition_display(financial_model),
+            per_student_budget=fin.get("per_student", 25_000),
+            national_students=fin.get("national_students", 100_000),
+            ip_development_total=fin.get("ip_development_total", 1_000),
+            upfront_total=fin.get("upfront_total", 1_750),
+            mgmt_pct=fin.get("mgmt_pct", 10),
+            timeback_pct=fin.get("timeback_pct", 20),
         ),
         user_prompt=(
             f"Produce the detailed slide outline for {target}."
@@ -649,6 +733,7 @@ async def generate_documents(
             audience, output_dir,
             jv_program_name=jv_program_name,
             country_profile=country_profile,
+            fin=fin,
         )
         logger.info("Local PPTX generated: %s", local_pptx_path)
     except Exception as exc:
@@ -658,7 +743,7 @@ async def generate_documents(
     gamma_url, export_url, deck_input_text = await _build_investor_deck_gamma(
         target, strategy, financial_model, deck_outline, audience,
         export_as=export_as, jv_program_name=jv_program_name,
-        country_profile=country_profile,
+        country_profile=country_profile, fin=fin,
     )
 
     # If Gamma succeeded, log it; otherwise the local PPTX is our backup
@@ -675,7 +760,7 @@ async def generate_documents(
         target, country_profile, education_analysis, strategy,
         financial_model, assumptions, audience, output_dir,
         context, country_data, education_data, strategy_data, financial_data,
-        revision_notes,
+        revision_notes, fin=fin,
     )
 
     # --- Generate XLSX ---
@@ -897,6 +982,7 @@ async def _build_investment_memorandum(
     strategy_data: str,
     financial_data: str,
     revision_notes: str | None = None,
+    fin: dict | None = None,
 ) -> str:
     """Build a comprehensive investment memorandum (30-50+ pages) with multiple LLM calls."""
 
@@ -918,6 +1004,7 @@ async def _build_investment_memorandum(
     ]
 
     _flagship_display = _get_flagship_tuition_display(financial_model)
+    _fin = fin or {}
 
     async def _generate_section(section_key: str, section_title: str) -> tuple[str, str]:
         prompt_template = IM_SECTION_PROMPTS[section_key]
@@ -929,6 +1016,13 @@ async def _build_investment_memorandum(
             strategy_data=strategy_data,
             financial_data=financial_data,
             flagship_tuition_display=_flagship_display,
+            per_student_budget=_fin.get("per_student", 25_000),
+            national_students=_fin.get("national_students", 100_000),
+            flagship_schools=_fin.get("flagship_schools", 3),
+            ip_development_total=_fin.get("ip_development_total", 1_000),
+            upfront_total=_fin.get("upfront_total", 1_750),
+            mgmt_pct=_fin.get("mgmt_pct", 10),
+            timeback_pct=_fin.get("timeback_pct", 20),
         )
         user_prompt = f"Write the {section_title} section now."
         if revision_notes:
@@ -1251,9 +1345,9 @@ Reference file: Ed71_ The World's First AI-Native National Education System.pptx
 
 Deal model:
 - Operator & Licensor — NOT a JV. Counterparty owns 100%, Alpha operates.
-- Dual-school: Flagship ({flagship_tuition_display}) + National ($25K FIXED, 100K student-year min)
-- AlphaCore curriculum OS license ($250M) + development costs.
-- Fixed development: $750M+ total. Management fee 10%, Timeback 20%.
+- Dual-school: Flagship ({flagship_tuition_display}) + National (${per_student_budget:,} FIXED, {national_students:,} student-year min)
+- IP development: ${ip_development_total:,}M (AlphaCore + EdLLM + EdTech + Life Skills). Total upfront: ${upfront_total:,}M.
+- Management fee {mgmt_pct}%, Timeback {timeback_pct}%.
 - Alpha Flagship Schools: 50% capacity backstop for 5 years from counterparty.
 
 Produce a detailed slide-by-slide outline for an {slide_count}-slide presentation deck
@@ -1289,12 +1383,15 @@ def _build_pptx(
     *,
     jv_program_name: str | None = None,
     country_profile=None,
+    fin: dict | None = None,
 ) -> str:
     """Build a local PPTX investor deck as a fallback when the Gamma API is
     unavailable.  Returns the absolute path to the generated ``.pptx`` file.
 
     The deck mirrors the same content structure used by ``_build_gamma_investor_input``
     but with professional tables, accent bars, and visual design elements.
+    Uses the shared ``fin`` dict from ``extract_financial_values``
+    to ensure every number matches the term sheet.
     """
     from pptx.oxml.ns import qn
 
@@ -1305,6 +1402,8 @@ def _build_pptx(
     )
     flagship_tuition_str = _get_flagship_tuition_display(model)
     addressable_base_str = _get_addressable_base_display(country_profile)
+    if fin is None:
+        fin = {}
 
     prs = PptxPresentation()
     prs.slide_width = PptxInches(13.333)
@@ -1554,7 +1653,7 @@ def _build_pptx(
     exec_lines = [
         f"• {jv_name}: Transform K-12 education in {target} through AI-powered learning",
         "• Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
-        f"• Dual-school: Alpha Flagship ({flagship_tuition_str}) + {jv_name} schools ($25K fixed)",
+        f"• Dual-school: Alpha Flagship ({flagship_tuition_str}) + {jv_name} schools (${fin.get('per_student', 25_000):,.0f} fixed)",
         "• AlphaCore curriculum OS + Timeback AI platform power every school",
         "• Proven model: UAE deal ($1.5B, 200K students) as reference",
     ]
@@ -1635,9 +1734,9 @@ def _build_pptx(
     ]
     _add_kpi_boxes(s, returns_kpis, top=1.5)
     _add_body(s, [
-        f"• Fixed development costs: ${model.upfront_ip_fee:,.0f} ($250M × 3)",
-        f"• Management fee: {model.management_fee_pct * 100:.0f}% of combined Flagship + {jv_name} revenue",
-        f"• Timeback license: {model.timeback_license_pct * 100:.0f}% of combined Flagship + {jv_name} revenue",
+        f"• IP development: ${fin.get('ip_development_total', 1000):,.0f}M | Total upfront: ${fin.get('upfront_total', 1750):,.0f}M",
+        f"• Management fee: {fin.get('mgmt_pct', 10)}% of combined Flagship + {jv_name} revenue",
+        f"• Timeback license: {fin.get('timeback_pct', 20)}% of combined Flagship + {jv_name} revenue",
     ], top=3.5)
 
     # ── Slide 7: Deal Structure ────────────────────────────────────────
@@ -1649,16 +1748,24 @@ def _build_pptx(
     _add_slide_number(s, slide_num, total_slides)
     _add_footer(s)
 
+    _f_per_student = fin.get("per_student", 25_000)
+    _f_national = fin.get("national_students", 100_000)
+    _f_ip_total = fin.get("ip_development_total", 1_000)
+    _f_upfront_total = fin.get("upfront_total", 1_750)
+    _f_mgmt_pct = fin.get("mgmt_pct", 10)
+    _f_tb_pct = fin.get("timeback_pct", 20)
+    _f_flagship_schools = fin.get("flagship_schools", 3)
+
     deal_headers = ["Component", "Details"]
     deal_rows = [
         ["Structure", "Operator & Licensor (Marriott model)"],
         ["Ownership", "100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor"],
-        ["Flagship", f"{flagship_tuition_str} tuition, 50% backstop for 5 years"],
-        [jv_name, "$25K/student FIXED, 100K student-year min"],
-        ["AlphaCore License", "$250M — AI-age curriculum OS"],
-        ["Development Costs", "$750M+ FIXED (AlphaCore + Incept EdLLM + EdTech + Life Skills)"],
-        ["Management Fee", f"{model.management_fee_pct * 100:.0f}% of combined revenue"],
-        ["Timeback License", f"{model.timeback_license_pct * 100:.0f}% of combined revenue"],
+        ["Flagship", f"{_f_flagship_schools} schools, {flagship_tuition_str} tuition, 50% backstop for 5 years"],
+        [jv_name, f"${_f_per_student:,.0f}/student FIXED, {_f_national:,} student-year min"],
+        ["IP Development", f"${_f_ip_total:,.0f}M FIXED (AlphaCore + EdLLM + EdTech + Life Skills)"],
+        ["Total Upfront", f"${_f_upfront_total:,.0f}M (IP development + fee prepayments)"],
+        ["Management Fee", f"{_f_mgmt_pct}% of combined revenue"],
+        ["Timeback License", f"{_f_tb_pct}% of combined revenue"],
     ]
     _add_table(s, deal_headers, deal_rows, top=1.6, row_height=0.5)
 
@@ -1694,19 +1801,13 @@ def _build_pptx(
     _add_slide_number(s, slide_num, total_slides)
     _add_footer(s)
 
-    if strategy.phased_rollout:
+    _pptx_scaling = fin.get("scaling_plan", [])
+    if _pptx_scaling:
         rollout_headers = ["Phase", "Timeline", "Students"]
         rollout_rows = [
-            [ph.phase or "", ph.timeline or "", f"{ph.student_count:,}" if ph.student_count else ""]
-            for ph in strategy.phased_rollout[:5]
-        ]
-        _add_table(s, rollout_headers, rollout_rows, top=1.6, row_height=0.5)
-    elif model.pnl_projection:
-        rollout_headers = ["Year", "School Year", "Students", "Schools"]
-        rollout_rows = [
-            [f"Year {p.year}", f"SY{25 + p.year}-{26 + p.year}",
-             f"{p.students:,}", f"{p.schools}"]
-            for p in model.pnl_projection
+            [sp["phase"], sp["timeline"],
+             f"{sp['students']:,}" if sp.get("students") else ""]
+            for sp in _pptx_scaling
         ]
         _add_table(s, rollout_headers, rollout_rows, top=1.6, row_height=0.5)
     else:
@@ -1847,10 +1948,13 @@ def _build_gamma_investor_input(
     region: str = "",
     capital: str = "",
     country_profile=None,
+    fin: dict | None = None,
 ) -> str:
     """Build Gamma inputText for the investor deck with slide separators.
 
     11-slide structure aligned with the Ed71 reference deck.
+    Uses the shared ``fin`` dict from ``extract_financial_values``
+    to ensure every number matches the term sheet.
     """
     jv_name = (
         jv_program_name
@@ -1859,6 +1963,8 @@ def _build_gamma_investor_input(
     )
     flagship_tuition_str = _get_flagship_tuition_display(model)
     addressable_base_str = _get_addressable_base_display(country_profile)
+    if fin is None:
+        fin = {}
     slides: list[str] = []
 
     # --- Slide 1: Title ---
@@ -1960,8 +2066,8 @@ def _build_gamma_investor_input(
         "| **Guide School:** Talent academy for training Guides | "
         "**National eduLLM:** Embedded local laws, values, culture |\n"
         "| **Incept eduLLM:** Personalized content generation | "
-        "**$25K/student** annual budget (~2× current public funding) |\n"
-        "| **Scale:** 2,500 students → 100K across 100 campuses | "
+        f"**${fin.get('per_student', 25_000):,.0f}/student** annual budget (~2× current public funding) |\n"
+        f"| **Scale:** 2,500 students → {fin.get('national_students', 100_000):,} across {fin.get('num_schools', 100)} campuses | "
         f"**First schools open SY26-27** in {target} |"
     )
 
@@ -1984,28 +2090,44 @@ def _build_gamma_investor_input(
             "Innovative and personalized education. Flagship schools serve as the premium anchor — "
             "demonstrating the full Alpha experience at the highest level of execution. "
             "Powered by AlphaCore, Alpha's proprietary AI-age life-skills curriculum.\n\n"
-            f"{jv_name} Schools — $25K Fixed Budget:\n"
+            f"{jv_name} Schools — ${fin.get('per_student', 25_000):,.0f} Fixed Budget:\n"
             "Accessible, high-quality education with personalized learning "
             "experiences at a fixed per-student cost. "
             f"{jv_name} schools are the engine of scale — "
-            "targeting 100,000+ student-years."
+            f"targeting {fin.get('national_students', 100_000):,}+ student-years."
         )
 
     # --- Slide 9: Country-Owned Schools & Investment ---
-    # Compute investment table values from the financial model
-    _alphacore_m = round(model.upfront_alphacore_license / 1_000_000) if model.upfront_alphacore_license > 1_000_000 else 250
-    _incept_m = round(model.upfront_incept_edllm / 1_000_000) if model.upfront_incept_edllm > 1_000_000 else 250
-    _lifeskills_m = round(model.upfront_lifeskills_rd / 1_000_000) if model.upfront_lifeskills_rd > 1_000_000 else 250
-    _app_rd_m = round(model.upfront_app_content_rd / 1_000_000) if model.upfront_app_content_rd > 1_000_000 else 250
-    _tb_prepay_m = round(model.upfront_timeback_fee / 1_000_000) if model.upfront_timeback_fee > 1_000_000 else 500
-    _mgmt_prepay_m = round(model.upfront_mgmt_fee / 1_000_000) if model.upfront_mgmt_fee > 1_000_000 else 250
-    _total_upfront_m = round(model.upfront_ip_fee / 1_000_000) if model.upfront_ip_fee > 1_000_000 else 1_750
+    # All values sourced from shared `fin` dict (same as term sheet)
+    _per_student = fin.get("per_student", 25_000)
+    _national_students = fin.get("national_students", 100_000)
+    _alphacore_m = fin.get("upfront_alphacore", 250)
+    _incept_m = fin.get("upfront_incept_edllm", 250)
+    _lifeskills_m = fin.get("upfront_lifeskills", 250)
+    _app_rd_m = fin.get("upfront_app_rd", 250)
+    _tb_prepay_m = fin.get("upfront_timeback", 500)
+    _mgmt_prepay_m = fin.get("upfront_mgmt", 250)
+    _upfront_total = fin.get("upfront_total", 1_750)
+    _ip_dev_total = fin.get("ip_development_total", 1_000)
+    _fee_prepays = fin.get("fee_prepays_total", 750)
+    _mgmt_pct = fin.get("mgmt_pct", 10)
+    _tb_pct = fin.get("timeback_pct", 20)
+    _parent_ed = fin.get("parent_education_annual", 50)
+    _flagship_schools = fin.get("flagship_schools", 3)
 
-    # Flagship backstop info
-    _flagship_schools = (
-        model.flagship_optimization.total_schools
-        if model.flagship_optimization and model.flagship_optimization.total_schools > 0
-        else 3
+    # Ongoing annual fees at scale (matches term sheet _add_investment_table)
+    _ongoing_timeback = round(
+        _national_students * _per_student * (_tb_pct / 100) / 1_000_000
+    )
+    _ongoing_operating = round(
+        _national_students * _per_student * (_mgmt_pct / 100) / 1_000_000
+    )
+
+    # Total upfront display
+    _upfront_display = (
+        f"${_upfront_total / 1000:.2f}B"
+        if _upfront_total >= 1000
+        else f"${_upfront_total:,.0f}M"
     )
 
     slides.append(
@@ -2017,26 +2139,27 @@ def _build_gamma_investor_input(
         "**Partnership Structure:**\n"
         f"- 100% {target} owned, 0% Alpha owned. "
         "Alpha operates on behalf of the Country/State.\n"
-        "- Per student funding/tuition: **$25,000/year**\n"
-        "- Minimum **100,000 students per year** commitment\n"
+        f"- Per student funding/tuition: **${_per_student:,.0f}/year**\n"
+        f"- Minimum **{_national_students:,} students per year** commitment\n"
         "- Schools operated as either public or private\n"
         f"- {target} sources real estate; schools pay rent\n\n"
         "**Investment Required:**\n\n"
         "| Category | Item | Amount |\n"
         "| --- | --- | --- |\n"
-        f"| Upfront Fixed | AlphaCore License | ${_alphacore_m:,}M |\n"
+        f"| Upfront Fixed | AlphaCore License | ${_alphacore_m:,.0f}M |\n"
         f"| Upfront Fixed | Country-Specific Incept EdLLM "
-        f"| ${_incept_m:,}M |\n"
+        f"| ${_incept_m:,.0f}M |\n"
         f"| Upfront Fixed | Country-Specific Programs "
-        f"& Life Skills | ${_lifeskills_m:,}M |\n"
+        f"& Life Skills | ${_lifeskills_m:,.0f}M |\n"
         f"| Upfront Fixed | Country-Specific EdTech Apps "
-        f"| ${_app_rd_m:,}M |\n"
-        f"| Prepaid | Timeback License Prepay | ${_tb_prepay_m:,}M |\n"
-        f"| Prepaid | Operating Fee Prepay | ${_mgmt_prepay_m:,}M |\n"
-        f"| **TOTAL UPFRONT** | | **${_total_upfront_m / 1000:.2f}B** |\n\n"
-        "**Ongoing Annual:** Parent Education / Launch / "
-        "Guides · Timeback License Fee (20% of funding) · "
-        "Operating Fee (10% of funding)\n\n"
+        f"| ${_app_rd_m:,.0f}M |\n"
+        f"| Prepaid | Timeback License Prepay | ${_tb_prepay_m:,.0f}M |\n"
+        f"| Prepaid | Operating Fee Prepay | ${_mgmt_prepay_m:,.0f}M |\n"
+        f"| **TOTAL UPFRONT** | | **{_upfront_display}** |\n\n"
+        f"**Ongoing Annual:** Parent Education / Launch / Guides "
+        f"(${_parent_ed:,.0f}M/yr) · Timeback License Fee "
+        f"({_tb_pct}% = ${_ongoing_timeback:,}M/yr at scale) · "
+        f"Operating Fee ({_mgmt_pct}% = ${_ongoing_operating:,}M/yr at scale)\n\n"
         f"**Alpha Flagship School Backstop:**\n"
         f"- {_flagship_schools} Alpha Flagship Schools at "
         f"{flagship_tuition_str} tuition serve as the premium "
@@ -2048,16 +2171,17 @@ def _build_gamma_investor_input(
     )
 
     # --- Slide 10: 5-Year Rollout Plan ---
-    if strategy.phased_rollout:
-        phases = strategy.phased_rollout[:5]
+    # Use fin["scaling_plan"] for consistency with term sheet
+    _scaling_plan = fin.get("scaling_plan", [])
+    if _scaling_plan:
         phase_rows = []
-        for ph in phases:
+        for sp in _scaling_plan:
             students = (
-                f"{ph.student_count:,} students"
-                if ph.student_count else "TBD"
+                f"{sp['students']:,} students"
+                if sp.get("students") else "TBD"
             )
             phase_rows.append(
-                f"| **{ph.phase}** | {ph.timeline} "
+                f"| **{sp['phase']}** | {sp['timeline']} "
                 f"| {students} |"
             )
         slides.append(
@@ -2069,21 +2193,6 @@ def _build_gamma_investor_input(
             "| Phase | Timeline | Target |\n"
             "| --- | --- | --- |\n"
             + "\n".join(phase_rows)
-        )
-    elif model.pnl_projection:
-        pnl_rows = []
-        for p in model.pnl_projection:
-            pnl_rows.append(
-                f"| **Year {p.year}** | SY{25 + p.year}-{26 + p.year} "
-                f"| {p.students:,} students across {p.schools} schools |"
-            )
-        slides.append(
-            f"# {jv_name} — 5-Year Rollout Plan\n\n"
-            f"{jv_name} scales systematically — "
-            "building operational excellence before expanding.\n\n"
-            "| Year | School Year | Target |\n"
-            "| --- | --- | --- |\n"
-            + "\n".join(pnl_rows)
         )
     else:
         slides.append(
@@ -2169,6 +2278,7 @@ async def _build_investor_deck_gamma(
     export_as: str = "pptx",
     jv_program_name: str | None = None,
     country_profile=None,
+    fin: dict | None = None,
 ) -> tuple[str | None, str | None, str]:
     """Build the investor deck via Gamma API.
 
@@ -2179,6 +2289,7 @@ async def _build_investor_deck_gamma(
     Args:
         export_as: 'pptx' or 'pdf' — controls the format of the export URL.
         country_profile: CountryProfile for extracting region/capital for image guidance.
+        fin: Shared financial values dict from extract_financial_values (term-sheet consistent).
     """
     region = country_profile.target.region if country_profile else ""
     capital = _get_capital_city(country_profile) if country_profile else ""
@@ -2189,6 +2300,7 @@ async def _build_investor_deck_gamma(
         region=region,
         capital=capital,
         country_profile=country_profile,
+        fin=fin,
     )
 
     try:

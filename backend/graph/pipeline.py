@@ -378,6 +378,7 @@ async def _run_documents(state: dict) -> None:
         target, country_profile, education_analysis, strategy_obj,
         model, assumptions, audience, revision_notes,
         jv_program_name=jv_program_name,
+        term_sheet_assumptions=ts_assumptions,
     )
 
     # For US states, use the state deck Gamma URLs; for sovereign nations, use the investor deck ones

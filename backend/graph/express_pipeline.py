@@ -172,6 +172,7 @@ async def run_express_pipeline(run_id: str) -> None:
                 financial_model, assumptions, AudienceType.INVESTOR,
                 export_as="pdf" if not is_us_state else "pptx",
                 jv_program_name=jv_program_name,
+                term_sheet_assumptions=ts_assumptions,
             )
         )
 

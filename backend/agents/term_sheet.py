@@ -884,7 +884,7 @@ def _build_proposal_docx(
     _configure_styles(doc)
 
     # --- Extract key financial values ---
-    fin = _extract_financial_values(financial_model, ts, strategy)
+    fin = extract_financial_values(financial_model, ts, strategy)
 
     # ===============================================================
     # PART 1: COMBINED PROPOSAL (Pages 1-5)
@@ -969,10 +969,14 @@ def _configure_styles(doc: DocxDocument) -> None:
 # Financial Value Extraction
 # ---------------------------------------------------------------------------
 
-def _extract_financial_values(
+def extract_financial_values(
     model: FinancialModel, ts: dict, strategy: Strategy,
 ) -> dict:
-    """Extract all financial values needed for the template."""
+    """Extract all financial values needed for the template.
+
+    Public API — also used by ``document_generation`` to ensure
+    the proposal deck mirrors the term sheet exactly.
+    """
     per_student = ts.get("ts_per_student_budget", 25_000)
     pnl = model.pnl_projection
     y5_students = int(ts.get(
