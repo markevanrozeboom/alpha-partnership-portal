@@ -252,6 +252,44 @@ def _get_cover_image_instruction(target: str, region: str = "", capital: str = "
     )
 
 
+def _get_closing_image_instruction(target: str, region: str = "", capital: str = "") -> str:
+    """Return image instruction for the closing slide — different from the cover."""
+    hint = COVER_IMAGE_HINTS.get(target)
+    avoid_str = _build_region_avoid_list(target, region)
+    avoid_clause = (
+        f"Specifically AVOID: {avoid_str}. "
+        if avoid_str
+        else "Do NOT use imagery from neighboring or nearby countries. "
+    )
+
+    if hint:
+        return (
+            f"[CLOSING IMAGE: Use a DIFFERENT iconic photograph of {target} "
+            f"from the one used on the title slide. "
+            f"Choose from: {hint['use']} — but pick a different landmark "
+            f"than the title slide. "
+            f"CRITICAL: {hint['avoid']}. "
+            f"The image must be unmistakably {target}.]"
+        )
+
+    location_hint = ""
+    if capital:
+        location_hint = (
+            f"If the title slide showed {capital}, pick a different city "
+            f"or a natural landscape of {target}. "
+        )
+    return (
+        f"[CLOSING IMAGE: Use a DIFFERENT iconic photograph of {target} "
+        f"from the one used on the title slide. "
+        f"Show a famous landmark, cultural site, or scenic landscape "
+        f"located WITHIN {target} that was NOT already used on slide 1. "
+        f"{location_hint}"
+        f"{avoid_clause}"
+        f"The image must be unmistakably {target} — geographically "
+        f"accurate and verifiable.]"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Investment Memorandum Prompts (multi-section generation)
 # ---------------------------------------------------------------------------
@@ -1947,16 +1985,15 @@ def _build_gamma_investor_input(
         )
 
     # --- Slide 11: Thank You ---
+    closing_image = _get_closing_image_instruction(target, region=region, capital=capital)
     slides.append(
         "# Thank You\n\n"
         "Alpha Holdings, Inc. — Transforming Education Globally\n\n"
         f"This document has been prepared exclusively for the "
         f"Government of {target} and contains confidential and "
         f"proprietary information belonging to Alpha Holdings, Inc.\n\n"
-        "CONFIDENTIAL\n\n"
-        "[DO NOT include any image on this slide. "
-        "Use a clean, minimal design with text only — "
-        "solid background, no photos, no icons, no placeholders.]"
+        f"CONFIDENTIAL\n\n"
+        f"{closing_image}"
     )
 
     return "\n---\n".join(slides)
@@ -2009,8 +2046,8 @@ def _build_investor_deck_additional_instructions(
         "OTHER SLIDES: On selected slides (not every slide), include high-quality images of modern schools, "
         "happy children learning, and innovative classroom environments. These should be aspirational "
         "and aligned with a premium education brand. Use icons where helpful for visual hierarchy. "
-        "LAST SLIDE (Thank You / closing): Do NOT include any image. Use a clean, minimal, "
-        "text-only design with a solid background — no photos, no icons, no image placeholders. "
+        "LAST SLIDE (Thank You / closing): Feature a DIFFERENT iconic image of the target "
+        "country/state than the one used on the title slide — same geographic accuracy rules apply. "
         "IMPORTANT: Country/state-owned schools (National) MUST NOT have 'Alpha' in their name. "
         "Only Alpha Flagship Schools (Flagship, which are 100% Alpha-owned) may use the Alpha brand."
     )

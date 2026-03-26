@@ -158,6 +158,39 @@ def _get_state_cover_image_instruction(state: str) -> str:
     )
 
 
+def _get_state_closing_image_instruction(state: str) -> str:
+    """Return closing-slide image instruction — different from the cover."""
+    capital = US_STATE_CAPITALS.get(state, "")
+    major_city = US_STATE_MAJOR_CITIES.get(state, "")
+    override = STATE_COVER_IMAGE_OVERRIDES.get(state)
+
+    if override:
+        return (
+            f"[CLOSING IMAGE: Use a DIFFERENT iconic photograph of {state} "
+            f"from the one used on the title slide. "
+            f"Choose from: {override['use']} — but pick a different "
+            f"landmark than the title slide. "
+            f"AVOID: {override['avoid']}. "
+            f"The image must be unmistakably {state}.]"
+        )
+
+    location_hint = ""
+    if capital and major_city and major_city != capital:
+        location_hint = (
+            f"If the title slide showed {major_city}, use {capital} "
+            f"or a natural landscape of {state}, and vice versa. "
+        )
+    return (
+        f"[CLOSING IMAGE: Use a DIFFERENT iconic photograph of {state} "
+        f"from the one used on the title slide. "
+        f"Show a famous landmark, state building, or scenic landscape "
+        f"located WITHIN {state} that was NOT already used on slide 1. "
+        f"{location_hint}"
+        f"Do NOT use imagery from neighboring states. "
+        f"The image must be unmistakably {state}.]"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Prompt for state-specific research synthesis
 # ---------------------------------------------------------------------------
@@ -357,12 +390,11 @@ def _build_gamma_input(
     )
 
     # --- Slide 11: Closing ---
+    closing_image = _get_state_closing_image_instruction(state)
     slides.append(
         "# AI is transforming every industry.\n\n"
         "Education is last. The governor who moves first wins.\n\n"
-        "[DO NOT include any image on this slide. "
-        "Use a clean, minimal design with text only — "
-        "solid background, no photos, no icons, no placeholders.]"
+        f"{closing_image}"
     )
 
     return "\n---\n".join(slides)
