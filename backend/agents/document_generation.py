@@ -64,11 +64,74 @@ ABSOLUTE RULES:
 """
 
 # ---------------------------------------------------------------------------
-# Cover-image landmark hints — helps Gamma pick the RIGHT country imagery
+# Cover-image geographic-accuracy system — ensures Gamma picks the RIGHT
+# country/state imagery on every single run, not just known problem cases.
 # ---------------------------------------------------------------------------
 
+# Region → well-known landmarks that are commonly mis-attributed to neighbours.
+# Used to auto-generate "DO NOT USE" lists for any country in the region.
+REGION_CONFUSION_MAP: dict[str, list[str]] = {
+    "Middle East": [
+        "Burj Khalifa (UAE)", "Dubai skyline (UAE)", "Sheikh Zayed Mosque (UAE)",
+        "Makkah Grand Mosque (Saudi Arabia)", "Kingdom Centre Tower (Saudi Arabia)",
+        "Doha skyline (Qatar)", "Lusail Stadium (Qatar)",
+        "Kuwait Towers (Kuwait)", "Bahrain World Trade Center (Bahrain)",
+    ],
+    "East Asia": [
+        "Great Wall of China (China)", "Forbidden City (China)", "Shanghai Pudong (China)",
+        "Mount Fuji (Japan)", "Tokyo Tower (Japan)", "Fushimi Inari shrine (Japan)",
+        "N Seoul Tower (South Korea)", "Gyeongbokgung Palace (South Korea)",
+    ],
+    "Southeast Asia": [
+        "Marina Bay Sands (Singapore)", "Merlion (Singapore)",
+        "Petronas Twin Towers (Malaysia)", "Angkor Wat (Cambodia)",
+        "Grand Palace (Thailand)", "Wat Arun (Thailand)",
+        "Borobudur Temple (Indonesia)", "Ha Long Bay (Vietnam)",
+    ],
+    "South Asia": [
+        "Taj Mahal (India)", "Gateway of India (India)", "India Gate (India)",
+        "Faisal Mosque (Pakistan)", "Sigiriya (Sri Lanka)",
+    ],
+    "North Africa": [
+        "Pyramids of Giza (Egypt)", "Sphinx (Egypt)",
+        "Hassan II Mosque (Morocco)", "Chefchaouen (Morocco)",
+        "Carthage ruins (Tunisia)",
+    ],
+    "Sub-Saharan Africa": [
+        "Table Mountain (South Africa)", "Lagos skyline (Nigeria)",
+        "Nairobi skyline (Kenya)", "Mount Kilimanjaro (Tanzania)",
+        "Victoria Falls (Zimbabwe/Zambia)", "Kigali Convention Centre (Rwanda)",
+    ],
+    "Western Europe": [
+        "Eiffel Tower (France)", "Big Ben (United Kingdom)",
+        "Colosseum (Italy)", "Brandenburg Gate (Germany)",
+        "Sagrada Familia (Spain)", "Rijksmuseum (Netherlands)",
+    ],
+    "Eastern Europe": [
+        "St. Basil's Cathedral (Russia)", "Charles Bridge (Czech Republic)",
+        "Wawel Castle (Poland)", "Parliament Building (Hungary)",
+    ],
+    "South America": [
+        "Christ the Redeemer (Brazil)", "Machu Picchu (Peru)",
+        "Buenos Aires obelisk (Argentina)", "Angel Falls (Venezuela)",
+    ],
+    "Central America & Caribbean": [
+        "Chichen Itza (Mexico)", "Palacio de Bellas Artes (Mexico)",
+        "Panama Canal (Panama)", "El Castillo (Mexico)",
+    ],
+    "Oceania": [
+        "Sydney Opera House (Australia)", "Uluru (Australia)",
+        "Sky Tower (New Zealand)", "Milford Sound (New Zealand)",
+    ],
+    "North America": [
+        "Statue of Liberty (USA)", "CN Tower (Canada)",
+        "White House (USA)", "Niagara Falls (USA/Canada)",
+    ],
+}
+
+# Explicit per-country overrides for the worst offenders — countries whose
+# imagery is most commonly confused by AI image models.
 COVER_IMAGE_HINTS: dict[str, dict[str, str]] = {
-    # Middle East — commonly confused with each other
     "Saudi Arabia": {
         "use": "Makkah (Mecca) Grand Mosque, Riyadh skyline with Kingdom Centre Tower, Jeddah Corniche, Al-Ula desert formations, or Madinah",
         "avoid": "Dubai, Burj Khalifa, Abu Dhabi, Sheikh Zayed Mosque, or any UAE imagery",
@@ -93,7 +156,6 @@ COVER_IMAGE_HINTS: dict[str, dict[str, str]] = {
         "use": "Sultan Qaboos Grand Mosque, Muscat Royal Opera House, Mutrah Corniche, or Wahiba Sands desert",
         "avoid": "Dubai, Burj Khalifa, Doha, or any UAE/Qatar imagery",
     },
-    # East & Southeast Asia
     "Japan": {
         "use": "Mount Fuji, Tokyo skyline with Tokyo Tower or Skytree, Fushimi Inari shrine, or Osaka Castle",
         "avoid": "Great Wall of China, Seoul, or any Chinese/Korean imagery",
@@ -114,88 +176,45 @@ COVER_IMAGE_HINTS: dict[str, dict[str, str]] = {
         "use": "Petronas Twin Towers, Kuala Lumpur skyline, Batu Caves, or Langkawi",
         "avoid": "Marina Bay Sands, Singapore skyline, Bangkok, or any Singaporean/Thai imagery",
     },
-    "Thailand": {
-        "use": "Grand Palace and Wat Phra Kaew in Bangkok, Bangkok skyline, or Wat Arun",
-        "avoid": "Angkor Wat (Cambodia), Petronas Towers (Malaysia), or any Cambodian/Malaysian imagery",
-    },
-    "Indonesia": {
-        "use": "Jakarta skyline, Borobudur Temple, Bali rice terraces, or National Monument (Monas)",
-        "avoid": "Petronas Towers, Manila, Singapore skyline, or any Malaysian/Philippine imagery",
-    },
-    "Vietnam": {
-        "use": "Ha Long Bay, Ho Chi Minh City skyline, Hanoi Old Quarter, or Golden Bridge in Da Nang",
-        "avoid": "Angkor Wat (Cambodia), Bangkok temples, or any Thai/Cambodian imagery",
-    },
-    # South Asia
     "India": {
         "use": "Taj Mahal, Mumbai skyline with Gateway of India, India Gate in New Delhi, or Lotus Temple",
         "avoid": "Burj Khalifa, Dubai, or any Middle Eastern imagery",
     },
-    "Pakistan": {
-        "use": "Faisal Mosque in Islamabad, Lahore Fort, Badshahi Mosque, or Karakoram mountain range",
-        "avoid": "Taj Mahal (India), Dubai, or any Indian/UAE imagery",
-    },
-    # Africa
     "Egypt": {
         "use": "Pyramids of Giza, Sphinx, Cairo skyline, or Nile River with Luxor Temple",
         "avoid": "Dubai, Marrakech, or any Gulf/Moroccan imagery",
     },
-    "Morocco": {
-        "use": "Hassan II Mosque in Casablanca, Marrakech medina, Chefchaouen blue city, or Atlas Mountains",
-        "avoid": "Pyramids of Giza, Cairo, or any Egyptian imagery",
-    },
-    "Nigeria": {
-        "use": "Lagos skyline, Eko Atlantic, National Mosque in Abuja, or Zuma Rock",
-        "avoid": "Pyramids, Nairobi skyline, or any North/East African imagery",
-    },
-    "Kenya": {
-        "use": "Nairobi skyline, Maasai Mara savanna, Mount Kenya, or Kenyatta International Convention Centre",
-        "avoid": "Kilimanjaro (Tanzania), Lagos, or any Nigerian/Tanzanian imagery",
-    },
-    "South Africa": {
-        "use": "Table Mountain and Cape Town, Johannesburg skyline, Union Buildings in Pretoria, or Durban beachfront",
-        "avoid": "Victoria Falls (Zimbabwe/Zambia), Nairobi, or any East African imagery",
-    },
-    "Rwanda": {
-        "use": "Kigali skyline, Kigali Convention Centre, Volcanoes National Park, or Lake Kivu",
-        "avoid": "Nairobi, Kilimanjaro, or any Kenyan/Tanzanian imagery",
-    },
-    # Europe
-    "France": {
-        "use": "Eiffel Tower, Paris skyline, Arc de Triomphe, Champs-Elysees, or Palace of Versailles",
-        "avoid": "Big Ben, Colosseum, or any British/Italian imagery",
-    },
-    "United Kingdom": {
-        "use": "Big Ben and Houses of Parliament, Tower Bridge, London skyline with The Shard, or Buckingham Palace",
-        "avoid": "Eiffel Tower, Colosseum, or any French/Italian imagery",
-    },
-    "Germany": {
-        "use": "Brandenburg Gate, Berlin skyline, Neuschwanstein Castle, or Cologne Cathedral",
-        "avoid": "Eiffel Tower, Big Ben, or any French/British imagery",
-    },
-    # Americas
-    "Brazil": {
-        "use": "Christ the Redeemer in Rio de Janeiro, Sugarloaf Mountain, Sao Paulo skyline, or Iguazu Falls",
-        "avoid": "Machu Picchu (Peru), Buenos Aires, or any Peruvian/Argentine imagery",
-    },
-    "Mexico": {
-        "use": "Angel of Independence in Mexico City, Chichen Itza pyramid, Palacio de Bellas Artes, or Mexico City skyline",
-        "avoid": "Machu Picchu (Peru), Cristo Redentor (Brazil), or any South American imagery",
-    },
-    # Oceania
-    "Australia": {
-        "use": "Sydney Opera House, Harbour Bridge, Melbourne skyline, or Uluru (Ayers Rock)",
-        "avoid": "Sky Tower (New Zealand), or any New Zealand imagery",
-    },
-    "New Zealand": {
-        "use": "Auckland Sky Tower, Milford Sound, Wellington harbour, or Mount Cook",
-        "avoid": "Sydney Opera House, Uluru, or any Australian imagery",
-    },
 }
 
 
-def _get_cover_image_instruction(target: str) -> str:
-    """Return a detailed, geographically precise image instruction for the cover slide."""
+def _get_capital_city(country_profile) -> str:
+    """Extract the capital city name from the country profile's flagship metro data."""
+    fmd = country_profile.flagship_market_data if country_profile else None
+    if fmd and fmd.metros:
+        for metro in fmd.metros:
+            if metro.is_capital:
+                return metro.metro_name
+        return fmd.metros[0].metro_name
+    return ""
+
+
+def _build_region_avoid_list(target: str, region: str) -> str:
+    """Build a 'DO NOT USE' list from the region confusion map, excluding the target country."""
+    landmarks = REGION_CONFUSION_MAP.get(region, [])
+    avoid = [lm for lm in landmarks if f"({target})" not in lm]
+    if not avoid:
+        return ""
+    return ", ".join(avoid)
+
+
+def _get_cover_image_instruction(target: str, region: str = "", capital: str = "") -> str:
+    """Return a geographically precise image instruction for the cover slide.
+
+    Uses three layers of specificity:
+      1. Explicit per-country hints (for worst offenders)
+      2. Dynamic region-aware anti-examples (for every country in a mapped region)
+      3. Capital-city anchoring (for every country with metro data)
+    """
     hint = COVER_IMAGE_HINTS.get(target)
     if hint:
         return (
@@ -205,11 +224,27 @@ def _get_cover_image_instruction(target: str) -> str:
             f"Specifically AVOID: {hint['avoid']}. "
             f"The image must be unmistakably {target} — geographically accurate and verifiable.]"
         )
+
+    # Dynamic instruction for countries without explicit hints
+    use_parts = []
+    if capital:
+        use_parts.append(f"the {capital} skyline or a famous landmark in {capital}")
+    use_parts.append(f"the national capitol building, a world-famous monument, or an iconic natural landscape of {target}")
+    use_str = ", ".join(use_parts)
+
+    avoid_str = _build_region_avoid_list(target, region)
+    avoid_clause = (
+        f"Specifically AVOID: {avoid_str}. "
+        if avoid_str
+        else f"Do NOT use imagery from neighboring or nearby countries. "
+    )
+
     return (
         f"[COVER IMAGE: Use a real, iconic photograph that is unmistakably {target}. "
-        f"Show a famous landmark, skyline, or cultural symbol located WITHIN {target}. "
-        f"CRITICAL: Do NOT use imagery from neighboring or nearby countries. "
-        f"The image must be geographically accurate and verifiable as {target}.]"
+        f"Show: {use_str}. "
+        f"CRITICAL: Geographic accuracy matters — this deck will be presented to heads of state. "
+        f"{avoid_clause}"
+        f"Every image must be verifiably located WITHIN {target}.]"
     )
 
 
@@ -539,6 +574,7 @@ async def generate_documents(
     gamma_url, export_url, deck_input_text = await _build_investor_deck_gamma(
         target, strategy, financial_model, deck_outline, audience,
         export_as=export_as, jv_program_name=jv_program_name,
+        country_profile=country_profile,
     )
 
     # If Gamma succeeded, log it; otherwise the local PPTX is our backup
@@ -1704,6 +1740,8 @@ def _build_gamma_investor_input(
     audience: AudienceType,
     *,
     jv_program_name: str | None = None,
+    region: str = "",
+    capital: str = "",
 ) -> str:
     """Build Gamma inputText for the investor deck with slide separators.
 
@@ -1718,7 +1756,7 @@ def _build_gamma_investor_input(
 
     # --- Slide 1: Title ---
     year = datetime.now().year
-    cover_image_instruction = _get_cover_image_instruction(target)
+    cover_image_instruction = _get_cover_image_instruction(target, region=region, capital=capital)
     slides.append(
         f"# Alpha Holdings, Inc. × {target}\n\n"
         f"Strategic Partnership Proposal\n\n"
@@ -1914,7 +1952,9 @@ def _build_gamma_investor_input(
     return "\n---\n".join(slides)
 
 
-def _build_investor_deck_additional_instructions(target: str) -> str:
+def _build_investor_deck_additional_instructions(
+    target: str, region: str = "", capital: str = "",
+) -> str:
     """Build Gamma additional_instructions with geographically precise image guidance."""
     hint = COVER_IMAGE_HINTS.get(target)
     if hint:
@@ -1927,11 +1967,25 @@ def _build_investor_deck_additional_instructions(target: str) -> str:
             f"Verify the landmark is actually located in {target} before selecting it."
         )
     else:
+        use_parts = []
+        if capital:
+            use_parts.append(f"the {capital} skyline or a famous landmark in {capital}")
+        use_parts.append(f"a world-famous monument or iconic landscape of {target}")
+        use_str = ", ".join(use_parts)
+
+        avoid_str = _build_region_avoid_list(target, region)
+        avoid_clause = (
+            f"DO NOT USE: {avoid_str}. "
+            if avoid_str
+            else f"Do NOT use imagery from any neighboring or nearby country. "
+        )
+
         title_img = (
             f"TITLE SLIDE IMAGE — GEOGRAPHIC ACCURACY IS CRITICAL: "
             f"The first slide MUST feature a prominent, iconic image that is unmistakably {target}. "
-            f"Use a famous landmark, government building, skyline, or cultural symbol located WITHIN {target}. "
-            f"Do NOT use imagery from neighboring or nearby countries — this will offend the audience. "
+            f"USE: {use_str}. "
+            f"{avoid_clause}"
+            f"Using imagery from the wrong country is a serious error that will offend the audience. "
             f"Verify the landmark is actually located in {target} before selecting it."
         )
     return (
@@ -1958,6 +2012,7 @@ async def _build_investor_deck_gamma(
     audience: AudienceType,
     export_as: str = "pptx",
     jv_program_name: str | None = None,
+    country_profile=None,
 ) -> tuple[str | None, str | None, str]:
     """Build the investor deck via Gamma API.
 
@@ -1967,10 +2022,16 @@ async def _build_investor_deck_gamma(
 
     Args:
         export_as: 'pptx' or 'pdf' — controls the format of the export URL.
+        country_profile: CountryProfile for extracting region/capital for image guidance.
     """
+    region = country_profile.target.region if country_profile else ""
+    capital = _get_capital_city(country_profile) if country_profile else ""
+
     input_text = _build_gamma_investor_input(
         target, strategy, model, outline, audience,
         jv_program_name=jv_program_name,
+        region=region,
+        capital=capital,
     )
 
     try:
@@ -1980,7 +2041,9 @@ async def _build_investor_deck_gamma(
             text_mode="condense",
             card_split="inputTextBreaks",
             text_amount="extensive",
-            additional_instructions=_build_investor_deck_additional_instructions(target),
+            additional_instructions=_build_investor_deck_additional_instructions(
+                target, region=region, capital=capital,
+            ),
             export_as=export_as,
         )
     except Exception as exc:

@@ -52,112 +52,108 @@ PRICING = {
 NATIONAL_AVG_PER_PUPIL_FALLBACK = 20_322
 
 # ---------------------------------------------------------------------------
-# Cover-image landmark hints — state-specific imagery for Gamma
+# Cover-image system — ensures Gamma picks correct state imagery for ALL states
 # ---------------------------------------------------------------------------
 
-STATE_COVER_IMAGE_HINTS: dict[str, dict[str, str]] = {
-    "Oklahoma": {
-        "use": "Oklahoma State Capitol, Oklahoma City skyline, or Devon Energy Center tower",
-        "avoid": "Texas State Capitol, Dallas skyline, or any Texas imagery",
-    },
-    "Texas": {
-        "use": "Texas State Capitol in Austin, Dallas skyline, San Antonio Alamo, or Houston Space Center",
-        "avoid": "Oklahoma City, or any Oklahoma imagery",
-    },
-    "California": {
-        "use": "Golden Gate Bridge, Los Angeles skyline, Sacramento Capitol, or Silicon Valley landscape",
-        "avoid": "Space Needle (Washington), Las Vegas strip (Nevada)",
-    },
-    "New York": {
-        "use": "Statue of Liberty, Manhattan skyline, Empire State Building, or New York State Capitol in Albany",
-        "avoid": "Philadelphia skyline (Pennsylvania), Boston (Massachusetts)",
-    },
-    "Florida": {
-        "use": "Miami skyline, Florida State Capitol in Tallahassee, Kennedy Space Center, or St. Augustine",
-        "avoid": "Savannah (Georgia), New Orleans (Louisiana)",
+US_STATE_CAPITALS: dict[str, str] = {
+    "Alabama": "Montgomery", "Alaska": "Juneau", "Arizona": "Phoenix",
+    "Arkansas": "Little Rock", "California": "Sacramento", "Colorado": "Denver",
+    "Connecticut": "Hartford", "Delaware": "Dover", "Florida": "Tallahassee",
+    "Georgia": "Atlanta", "Hawaii": "Honolulu", "Idaho": "Boise",
+    "Illinois": "Springfield", "Indiana": "Indianapolis", "Iowa": "Des Moines",
+    "Kansas": "Topeka", "Kentucky": "Frankfort", "Louisiana": "Baton Rouge",
+    "Maine": "Augusta", "Maryland": "Annapolis", "Massachusetts": "Boston",
+    "Michigan": "Lansing", "Minnesota": "Saint Paul", "Mississippi": "Jackson",
+    "Missouri": "Jefferson City", "Montana": "Helena", "Nebraska": "Lincoln",
+    "Nevada": "Carson City", "New Hampshire": "Concord", "New Jersey": "Trenton",
+    "New Mexico": "Santa Fe", "New York": "Albany", "North Carolina": "Raleigh",
+    "North Dakota": "Bismarck", "Ohio": "Columbus", "Oklahoma": "Oklahoma City",
+    "Oregon": "Salem", "Pennsylvania": "Harrisburg", "Rhode Island": "Providence",
+    "South Carolina": "Columbia", "South Dakota": "Pierre", "Tennessee": "Nashville",
+    "Texas": "Austin", "Utah": "Salt Lake City", "Vermont": "Montpelier",
+    "Virginia": "Richmond", "Washington": "Olympia", "West Virginia": "Charleston",
+    "Wisconsin": "Madison", "Wyoming": "Cheyenne",
+}
+
+US_STATE_MAJOR_CITIES: dict[str, str] = {
+    "Alabama": "Birmingham", "Alaska": "Anchorage", "Arizona": "Phoenix",
+    "Arkansas": "Little Rock", "California": "Los Angeles or San Francisco",
+    "Colorado": "Denver", "Connecticut": "Hartford or New Haven",
+    "Delaware": "Wilmington", "Florida": "Miami or Orlando",
+    "Georgia": "Atlanta", "Hawaii": "Honolulu", "Idaho": "Boise",
+    "Illinois": "Chicago", "Indiana": "Indianapolis", "Iowa": "Des Moines",
+    "Kansas": "Wichita", "Kentucky": "Louisville or Lexington",
+    "Louisiana": "New Orleans", "Maine": "Portland",
+    "Maryland": "Baltimore", "Massachusetts": "Boston",
+    "Michigan": "Detroit", "Minnesota": "Minneapolis",
+    "Mississippi": "Jackson", "Missouri": "Kansas City or St. Louis",
+    "Montana": "Billings", "Nebraska": "Omaha",
+    "Nevada": "Las Vegas", "New Hampshire": "Manchester",
+    "New Jersey": "Newark or Jersey City", "New Mexico": "Albuquerque",
+    "New York": "New York City", "North Carolina": "Charlotte or Raleigh",
+    "North Dakota": "Fargo", "Ohio": "Columbus or Cleveland",
+    "Oklahoma": "Oklahoma City or Tulsa", "Oregon": "Portland",
+    "Pennsylvania": "Philadelphia or Pittsburgh",
+    "Rhode Island": "Providence", "South Carolina": "Charleston or Columbia",
+    "South Dakota": "Sioux Falls", "Tennessee": "Nashville or Memphis",
+    "Texas": "Houston, Dallas, or San Antonio", "Utah": "Salt Lake City",
+    "Vermont": "Burlington", "Virginia": "Virginia Beach or Richmond",
+    "Washington": "Seattle", "West Virginia": "Charleston",
+    "Wisconsin": "Milwaukee or Madison", "Wyoming": "Cheyenne",
+}
+
+# Explicit overrides for the most commonly confused states
+STATE_COVER_IMAGE_OVERRIDES: dict[str, dict[str, str]] = {
+    "Washington": {
+        "use": "Seattle skyline with Space Needle and Mount Rainier, or Washington State Capitol in Olympia",
+        "avoid": "Washington D.C. monuments (White House, Capitol Building, Lincoln Memorial) — those are the DISTRICT, not the state",
     },
     "Georgia": {
-        "use": "Atlanta skyline, Georgia State Capitol, Stone Mountain, or Savannah historic district",
-        "avoid": "Miami skyline (Florida), Charlotte skyline (North Carolina)",
-    },
-    "Illinois": {
-        "use": "Chicago skyline with Willis Tower, Illinois State Capitol in Springfield, or Cloud Gate (Bean)",
-        "avoid": "Gateway Arch (Missouri), Indianapolis (Indiana)",
-    },
-    "Ohio": {
-        "use": "Columbus skyline, Ohio Statehouse, Cleveland skyline, or Rock and Roll Hall of Fame",
-        "avoid": "Indianapolis (Indiana), Pittsburgh (Pennsylvania)",
-    },
-    "Pennsylvania": {
-        "use": "Philadelphia skyline, Liberty Bell, Pennsylvania State Capitol in Harrisburg, or Pittsburgh skyline",
-        "avoid": "Statue of Liberty (New York), Baltimore (Maryland)",
-    },
-    "Arizona": {
-        "use": "Grand Canyon, Phoenix skyline, Arizona State Capitol, or Sedona red rocks",
-        "avoid": "Las Vegas strip (Nevada), Monument Valley (if showing Utah side)",
-    },
-    "Colorado": {
-        "use": "Denver skyline with Rocky Mountains, Colorado State Capitol, Red Rocks Amphitheatre, or Garden of the Gods",
-        "avoid": "Yellowstone (Wyoming), Arches (Utah)",
+        "use": "Atlanta skyline with Peachtree towers, Georgia State Capitol, or Savannah historic district",
+        "avoid": "the country of Georgia (Tbilisi, Caucasus mountains), Miami (Florida), Charlotte (North Carolina)",
     },
     "Virginia": {
         "use": "Richmond skyline, Virginia State Capitol, Arlington skyline, or Shenandoah Valley",
-        "avoid": "Washington D.C. monuments, Baltimore (Maryland)",
+        "avoid": "Washington D.C. monuments, Baltimore (Maryland) — do NOT use the White House or Lincoln Memorial",
     },
-    "North Carolina": {
-        "use": "Charlotte skyline, North Carolina State Capitol in Raleigh, or Blue Ridge Parkway",
-        "avoid": "Atlanta (Georgia), Virginia Beach (Virginia)",
+    "New York": {
+        "use": "Manhattan skyline, Statue of Liberty, Empire State Building, Brooklyn Bridge, or Times Square",
+        "avoid": "Philadelphia (Pennsylvania), Boston (Massachusetts), Newark (New Jersey)",
     },
-    "Massachusetts": {
-        "use": "Boston skyline, Massachusetts State House, Harvard campus, or Fenway Park",
-        "avoid": "Statue of Liberty (New York), Providence (Rhode Island)",
-    },
-    "Tennessee": {
-        "use": "Nashville skyline with AT&T Building (Batman Building), Tennessee State Capitol, or Memphis Beale Street",
-        "avoid": "Atlanta skyline (Georgia), Louisville (Kentucky)",
-    },
-    "Indiana": {
-        "use": "Indianapolis skyline, Indiana Statehouse, Indianapolis Motor Speedway, or Monument Circle",
-        "avoid": "Chicago skyline (Illinois), Columbus OH (Ohio)",
-    },
-    "Michigan": {
-        "use": "Detroit skyline, Michigan State Capitol in Lansing, Mackinac Bridge, or Henry Ford Museum",
-        "avoid": "Chicago skyline (Illinois), Cleveland (Ohio)",
-    },
-    "Washington": {
-        "use": "Seattle skyline with Space Needle and Mount Rainier, Washington State Capitol in Olympia",
-        "avoid": "Portland (Oregon), Washington D.C.",
-    },
-    "Oregon": {
-        "use": "Portland skyline, Oregon State Capitol in Salem, Crater Lake, or Multnomah Falls",
-        "avoid": "Space Needle (Washington), San Francisco (California)",
-    },
-    "Louisiana": {
-        "use": "New Orleans French Quarter, Louisiana State Capitol in Baton Rouge, or New Orleans skyline",
-        "avoid": "Houston (Texas), Miami (Florida)",
-    },
-    "Nevada": {
-        "use": "Las Vegas strip, Nevada State Capitol in Carson City, Hoover Dam, or Red Rock Canyon",
-        "avoid": "Grand Canyon (Arizona), Los Angeles (California)",
+    "New Jersey": {
+        "use": "Atlantic City boardwalk, Newark skyline, Jersey Shore, or New Jersey State House in Trenton",
+        "avoid": "Manhattan skyline (New York), Philadelphia (Pennsylvania) — do NOT show the Statue of Liberty",
     },
 }
 
 
 def _get_state_cover_image_instruction(state: str) -> str:
-    """Return a geographically precise image instruction for a US state cover slide."""
-    hint = STATE_COVER_IMAGE_HINTS.get(state)
-    if hint:
+    """Return a geographically precise image instruction for any US state cover slide."""
+    override = STATE_COVER_IMAGE_OVERRIDES.get(state)
+    if override:
         return (
             f"[COVER IMAGE: Use a real, iconic photograph of {state}. "
-            f"Specifically: {hint['use']}. "
-            f"DO NOT use imagery from other states. "
-            f"Specifically AVOID: {hint['avoid']}. "
+            f"Specifically: {override['use']}. "
+            f"DO NOT use imagery from other states or countries. "
+            f"Specifically AVOID: {override['avoid']}. "
             f"The image must be unmistakably {state}.]"
         )
+
+    capital = US_STATE_CAPITALS.get(state, "")
+    major_city = US_STATE_MAJOR_CITIES.get(state, "")
+    use_parts = []
+    if major_city and major_city != capital:
+        use_parts.append(f"the {major_city} skyline")
+    if capital:
+        use_parts.append(f"the {state} State Capitol in {capital}")
+    use_parts.append(f"a famous landmark or landscape located in {state}")
+    use_str = ", ".join(use_parts)
+
     return (
-        f"[COVER IMAGE: Use a real, iconic photograph that is unmistakably {state}. "
-        f"Show the state capitol building, a famous skyline, or a well-known landmark "
-        f"located WITHIN {state}. Do NOT use imagery from neighboring states.]"
+        f"[COVER IMAGE: Use a real, iconic photograph that is unmistakably the U.S. state of {state}. "
+        f"Show: {use_str}. "
+        f"CRITICAL: Do NOT use imagery from neighboring states or other countries. "
+        f"The image must be verifiably located WITHIN {state}.]"
     )
 
 
@@ -370,22 +366,32 @@ def _build_gamma_input(
 
 def _build_state_deck_additional_instructions(state: str) -> str:
     """Build Gamma additional_instructions with state-specific image guidance."""
-    hint = STATE_COVER_IMAGE_HINTS.get(state)
-    if hint:
+    override = STATE_COVER_IMAGE_OVERRIDES.get(state)
+    if override:
         title_img = (
             f"TITLE SLIDE IMAGE — GEOGRAPHIC ACCURACY IS CRITICAL: "
             f"The first slide MUST feature a prominent, iconic image of {state}. "
-            f"USE: {hint['use']}. "
-            f"DO NOT USE: {hint['avoid']}. "
+            f"USE: {override['use']}. "
+            f"DO NOT USE: {override['avoid']}. "
             f"Using imagery from the wrong state is a serious error. "
             f"Verify the landmark is actually located in {state} before selecting it."
         )
     else:
+        capital = US_STATE_CAPITALS.get(state, "")
+        major_city = US_STATE_MAJOR_CITIES.get(state, "")
+        use_parts = []
+        if major_city and major_city != capital:
+            use_parts.append(f"the {major_city} skyline")
+        if capital:
+            use_parts.append(f"the {state} State Capitol in {capital}")
+        use_parts.append(f"a famous landmark in {state}")
+        use_str = ", ".join(use_parts)
         title_img = (
             f"TITLE SLIDE IMAGE — GEOGRAPHIC ACCURACY IS CRITICAL: "
-            f"The first slide MUST feature a prominent, iconic image that is unmistakably {state}. "
-            f"Use the state capitol building, a famous skyline, or well-known landmark "
-            f"located WITHIN {state}. Do NOT use imagery from neighboring states."
+            f"The first slide MUST feature a prominent, iconic image of the U.S. state of {state}. "
+            f"USE: {use_str}. "
+            f"Do NOT use imagery from neighboring states or other countries. "
+            f"Verify the landmark is actually located in {state} before selecting it."
         )
     return (
         f"This is a governor pitch deck for {state}. "
