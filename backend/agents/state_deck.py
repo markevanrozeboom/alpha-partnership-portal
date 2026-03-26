@@ -51,6 +51,115 @@ PRICING = {
 # Fallback national average per-pupil spending (Reason Foundation Spending Spotlight 2025)
 NATIONAL_AVG_PER_PUPIL_FALLBACK = 20_322
 
+# ---------------------------------------------------------------------------
+# Cover-image landmark hints — state-specific imagery for Gamma
+# ---------------------------------------------------------------------------
+
+STATE_COVER_IMAGE_HINTS: dict[str, dict[str, str]] = {
+    "Oklahoma": {
+        "use": "Oklahoma State Capitol, Oklahoma City skyline, or Devon Energy Center tower",
+        "avoid": "Texas State Capitol, Dallas skyline, or any Texas imagery",
+    },
+    "Texas": {
+        "use": "Texas State Capitol in Austin, Dallas skyline, San Antonio Alamo, or Houston Space Center",
+        "avoid": "Oklahoma City, or any Oklahoma imagery",
+    },
+    "California": {
+        "use": "Golden Gate Bridge, Los Angeles skyline, Sacramento Capitol, or Silicon Valley landscape",
+        "avoid": "Space Needle (Washington), Las Vegas strip (Nevada)",
+    },
+    "New York": {
+        "use": "Statue of Liberty, Manhattan skyline, Empire State Building, or New York State Capitol in Albany",
+        "avoid": "Philadelphia skyline (Pennsylvania), Boston (Massachusetts)",
+    },
+    "Florida": {
+        "use": "Miami skyline, Florida State Capitol in Tallahassee, Kennedy Space Center, or St. Augustine",
+        "avoid": "Savannah (Georgia), New Orleans (Louisiana)",
+    },
+    "Georgia": {
+        "use": "Atlanta skyline, Georgia State Capitol, Stone Mountain, or Savannah historic district",
+        "avoid": "Miami skyline (Florida), Charlotte skyline (North Carolina)",
+    },
+    "Illinois": {
+        "use": "Chicago skyline with Willis Tower, Illinois State Capitol in Springfield, or Cloud Gate (Bean)",
+        "avoid": "Gateway Arch (Missouri), Indianapolis (Indiana)",
+    },
+    "Ohio": {
+        "use": "Columbus skyline, Ohio Statehouse, Cleveland skyline, or Rock and Roll Hall of Fame",
+        "avoid": "Indianapolis (Indiana), Pittsburgh (Pennsylvania)",
+    },
+    "Pennsylvania": {
+        "use": "Philadelphia skyline, Liberty Bell, Pennsylvania State Capitol in Harrisburg, or Pittsburgh skyline",
+        "avoid": "Statue of Liberty (New York), Baltimore (Maryland)",
+    },
+    "Arizona": {
+        "use": "Grand Canyon, Phoenix skyline, Arizona State Capitol, or Sedona red rocks",
+        "avoid": "Las Vegas strip (Nevada), Monument Valley (if showing Utah side)",
+    },
+    "Colorado": {
+        "use": "Denver skyline with Rocky Mountains, Colorado State Capitol, Red Rocks Amphitheatre, or Garden of the Gods",
+        "avoid": "Yellowstone (Wyoming), Arches (Utah)",
+    },
+    "Virginia": {
+        "use": "Richmond skyline, Virginia State Capitol, Arlington skyline, or Shenandoah Valley",
+        "avoid": "Washington D.C. monuments, Baltimore (Maryland)",
+    },
+    "North Carolina": {
+        "use": "Charlotte skyline, North Carolina State Capitol in Raleigh, or Blue Ridge Parkway",
+        "avoid": "Atlanta (Georgia), Virginia Beach (Virginia)",
+    },
+    "Massachusetts": {
+        "use": "Boston skyline, Massachusetts State House, Harvard campus, or Fenway Park",
+        "avoid": "Statue of Liberty (New York), Providence (Rhode Island)",
+    },
+    "Tennessee": {
+        "use": "Nashville skyline with AT&T Building (Batman Building), Tennessee State Capitol, or Memphis Beale Street",
+        "avoid": "Atlanta skyline (Georgia), Louisville (Kentucky)",
+    },
+    "Indiana": {
+        "use": "Indianapolis skyline, Indiana Statehouse, Indianapolis Motor Speedway, or Monument Circle",
+        "avoid": "Chicago skyline (Illinois), Columbus OH (Ohio)",
+    },
+    "Michigan": {
+        "use": "Detroit skyline, Michigan State Capitol in Lansing, Mackinac Bridge, or Henry Ford Museum",
+        "avoid": "Chicago skyline (Illinois), Cleveland (Ohio)",
+    },
+    "Washington": {
+        "use": "Seattle skyline with Space Needle and Mount Rainier, Washington State Capitol in Olympia",
+        "avoid": "Portland (Oregon), Washington D.C.",
+    },
+    "Oregon": {
+        "use": "Portland skyline, Oregon State Capitol in Salem, Crater Lake, or Multnomah Falls",
+        "avoid": "Space Needle (Washington), San Francisco (California)",
+    },
+    "Louisiana": {
+        "use": "New Orleans French Quarter, Louisiana State Capitol in Baton Rouge, or New Orleans skyline",
+        "avoid": "Houston (Texas), Miami (Florida)",
+    },
+    "Nevada": {
+        "use": "Las Vegas strip, Nevada State Capitol in Carson City, Hoover Dam, or Red Rock Canyon",
+        "avoid": "Grand Canyon (Arizona), Los Angeles (California)",
+    },
+}
+
+
+def _get_state_cover_image_instruction(state: str) -> str:
+    """Return a geographically precise image instruction for a US state cover slide."""
+    hint = STATE_COVER_IMAGE_HINTS.get(state)
+    if hint:
+        return (
+            f"[COVER IMAGE: Use a real, iconic photograph of {state}. "
+            f"Specifically: {hint['use']}. "
+            f"DO NOT use imagery from other states. "
+            f"Specifically AVOID: {hint['avoid']}. "
+            f"The image must be unmistakably {state}.]"
+        )
+    return (
+        f"[COVER IMAGE: Use a real, iconic photograph that is unmistakably {state}. "
+        f"Show the state capitol building, a famous skyline, or a well-known landmark "
+        f"located WITHIN {state}. Do NOT use imagery from neighboring states.]"
+    )
+
 
 # ---------------------------------------------------------------------------
 # Prompt for state-specific research synthesis
@@ -104,10 +213,12 @@ def _build_gamma_input(
     slides: list[str] = []
 
     # --- Slide 1: Title ---
+    cover_image_instruction = _get_state_cover_image_instruction(state)
     slides.append(
         f"# Alpha: AI-Powered Education for {state}\n\n"
         f"Better outcomes. Lower cost. Proven at scale.\n\n"
-        f"CONFIDENTIAL"
+        f"CONFIDENTIAL\n\n"
+        f"{cover_image_instruction}"
     )
 
     # --- Slide 2: The Problem ---
@@ -257,6 +368,35 @@ def _build_gamma_input(
     return "\n---\n".join(slides)
 
 
+def _build_state_deck_additional_instructions(state: str) -> str:
+    """Build Gamma additional_instructions with state-specific image guidance."""
+    hint = STATE_COVER_IMAGE_HINTS.get(state)
+    if hint:
+        title_img = (
+            f"TITLE SLIDE IMAGE — GEOGRAPHIC ACCURACY IS CRITICAL: "
+            f"The first slide MUST feature a prominent, iconic image of {state}. "
+            f"USE: {hint['use']}. "
+            f"DO NOT USE: {hint['avoid']}. "
+            f"Using imagery from the wrong state is a serious error. "
+            f"Verify the landmark is actually located in {state} before selecting it."
+        )
+    else:
+        title_img = (
+            f"TITLE SLIDE IMAGE — GEOGRAPHIC ACCURACY IS CRITICAL: "
+            f"The first slide MUST feature a prominent, iconic image that is unmistakably {state}. "
+            f"Use the state capitol building, a famous skyline, or well-known landmark "
+            f"located WITHIN {state}. Do NOT use imagery from neighboring states."
+        )
+    return (
+        f"This is a governor pitch deck for {state}. "
+        "Use a professional, data-driven tone. The audience is a state governor. "
+        "Keep slides clean with clear hierarchy. Emphasise outcomes and proof points. "
+        "Use the markdown headings (# Title) as card titles. "
+        "Preserve all financial figures, percentages, and data points exactly as provided. "
+        f"{title_img}"
+    )
+
+
 async def generate_state_deck(
     state: str,
     country_profile: CountryProfile,
@@ -383,13 +523,7 @@ async def generate_state_deck(
             text_mode="condense",
             card_split="inputTextBreaks",
             text_amount="extensive",
-            additional_instructions=(
-                f"This is a governor pitch deck for {state}. "
-                "Use a professional, data-driven tone. The audience is a state governor. "
-                "Keep slides clean with clear hierarchy. Emphasise outcomes and proof points. "
-                "Use the markdown headings (# Title) as card titles. "
-                "Preserve all financial figures, percentages, and data points exactly as provided."
-            ),
+            additional_instructions=_build_state_deck_additional_instructions(state),
             export_as=export_as,
         )
     except Exception as exc:

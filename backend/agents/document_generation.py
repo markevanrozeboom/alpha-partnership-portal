@@ -64,6 +64,156 @@ ABSOLUTE RULES:
 """
 
 # ---------------------------------------------------------------------------
+# Cover-image landmark hints — helps Gamma pick the RIGHT country imagery
+# ---------------------------------------------------------------------------
+
+COVER_IMAGE_HINTS: dict[str, dict[str, str]] = {
+    # Middle East — commonly confused with each other
+    "Saudi Arabia": {
+        "use": "Makkah (Mecca) Grand Mosque, Riyadh skyline with Kingdom Centre Tower, Jeddah Corniche, Al-Ula desert formations, or Madinah",
+        "avoid": "Dubai, Burj Khalifa, Abu Dhabi, Sheikh Zayed Mosque, or any UAE imagery",
+    },
+    "UAE": {
+        "use": "Burj Khalifa, Dubai Marina skyline, Sheikh Zayed Grand Mosque in Abu Dhabi, or Palm Jumeirah",
+        "avoid": "Makkah, Riyadh, Kingdom Centre Tower, or any Saudi Arabia imagery",
+    },
+    "Qatar": {
+        "use": "Doha skyline with The Pearl, Museum of Islamic Art, Lusail Stadium, or Katara Cultural Village",
+        "avoid": "Dubai, Burj Khalifa, Riyadh, or any UAE/Saudi imagery",
+    },
+    "Kuwait": {
+        "use": "Kuwait Towers, Kuwait City skyline, Grand Mosque of Kuwait, or Liberation Tower",
+        "avoid": "Dubai, Burj Khalifa, Doha, or any UAE/Qatar imagery",
+    },
+    "Bahrain": {
+        "use": "Bahrain World Trade Center, Bahrain Fort, Manama skyline, or King Fahd Causeway",
+        "avoid": "Dubai, Doha, Riyadh, or any UAE/Qatar/Saudi imagery",
+    },
+    "Oman": {
+        "use": "Sultan Qaboos Grand Mosque, Muscat Royal Opera House, Mutrah Corniche, or Wahiba Sands desert",
+        "avoid": "Dubai, Burj Khalifa, Doha, or any UAE/Qatar imagery",
+    },
+    # East & Southeast Asia
+    "Japan": {
+        "use": "Mount Fuji, Tokyo skyline with Tokyo Tower or Skytree, Fushimi Inari shrine, or Osaka Castle",
+        "avoid": "Great Wall of China, Seoul, or any Chinese/Korean imagery",
+    },
+    "South Korea": {
+        "use": "Seoul skyline with N Seoul Tower or Lotte World Tower, Gyeongbokgung Palace, or Bukchon Hanok Village",
+        "avoid": "Mount Fuji, Tokyo Tower, Great Wall of China, or any Japanese/Chinese imagery",
+    },
+    "China": {
+        "use": "Great Wall, Shanghai Pudong skyline, Forbidden City in Beijing, or the Bund",
+        "avoid": "Tokyo, Mount Fuji, Seoul, or any Japanese/Korean imagery",
+    },
+    "Singapore": {
+        "use": "Marina Bay Sands, Gardens by the Bay Supertrees, Merlion, or Singapore skyline",
+        "avoid": "Kuala Lumpur, Petronas Towers, Bangkok, or any Malaysian/Thai imagery",
+    },
+    "Malaysia": {
+        "use": "Petronas Twin Towers, Kuala Lumpur skyline, Batu Caves, or Langkawi",
+        "avoid": "Marina Bay Sands, Singapore skyline, Bangkok, or any Singaporean/Thai imagery",
+    },
+    "Thailand": {
+        "use": "Grand Palace and Wat Phra Kaew in Bangkok, Bangkok skyline, or Wat Arun",
+        "avoid": "Angkor Wat (Cambodia), Petronas Towers (Malaysia), or any Cambodian/Malaysian imagery",
+    },
+    "Indonesia": {
+        "use": "Jakarta skyline, Borobudur Temple, Bali rice terraces, or National Monument (Monas)",
+        "avoid": "Petronas Towers, Manila, Singapore skyline, or any Malaysian/Philippine imagery",
+    },
+    "Vietnam": {
+        "use": "Ha Long Bay, Ho Chi Minh City skyline, Hanoi Old Quarter, or Golden Bridge in Da Nang",
+        "avoid": "Angkor Wat (Cambodia), Bangkok temples, or any Thai/Cambodian imagery",
+    },
+    # South Asia
+    "India": {
+        "use": "Taj Mahal, Mumbai skyline with Gateway of India, India Gate in New Delhi, or Lotus Temple",
+        "avoid": "Burj Khalifa, Dubai, or any Middle Eastern imagery",
+    },
+    "Pakistan": {
+        "use": "Faisal Mosque in Islamabad, Lahore Fort, Badshahi Mosque, or Karakoram mountain range",
+        "avoid": "Taj Mahal (India), Dubai, or any Indian/UAE imagery",
+    },
+    # Africa
+    "Egypt": {
+        "use": "Pyramids of Giza, Sphinx, Cairo skyline, or Nile River with Luxor Temple",
+        "avoid": "Dubai, Marrakech, or any Gulf/Moroccan imagery",
+    },
+    "Morocco": {
+        "use": "Hassan II Mosque in Casablanca, Marrakech medina, Chefchaouen blue city, or Atlas Mountains",
+        "avoid": "Pyramids of Giza, Cairo, or any Egyptian imagery",
+    },
+    "Nigeria": {
+        "use": "Lagos skyline, Eko Atlantic, National Mosque in Abuja, or Zuma Rock",
+        "avoid": "Pyramids, Nairobi skyline, or any North/East African imagery",
+    },
+    "Kenya": {
+        "use": "Nairobi skyline, Maasai Mara savanna, Mount Kenya, or Kenyatta International Convention Centre",
+        "avoid": "Kilimanjaro (Tanzania), Lagos, or any Nigerian/Tanzanian imagery",
+    },
+    "South Africa": {
+        "use": "Table Mountain and Cape Town, Johannesburg skyline, Union Buildings in Pretoria, or Durban beachfront",
+        "avoid": "Victoria Falls (Zimbabwe/Zambia), Nairobi, or any East African imagery",
+    },
+    "Rwanda": {
+        "use": "Kigali skyline, Kigali Convention Centre, Volcanoes National Park, or Lake Kivu",
+        "avoid": "Nairobi, Kilimanjaro, or any Kenyan/Tanzanian imagery",
+    },
+    # Europe
+    "France": {
+        "use": "Eiffel Tower, Paris skyline, Arc de Triomphe, Champs-Elysees, or Palace of Versailles",
+        "avoid": "Big Ben, Colosseum, or any British/Italian imagery",
+    },
+    "United Kingdom": {
+        "use": "Big Ben and Houses of Parliament, Tower Bridge, London skyline with The Shard, or Buckingham Palace",
+        "avoid": "Eiffel Tower, Colosseum, or any French/Italian imagery",
+    },
+    "Germany": {
+        "use": "Brandenburg Gate, Berlin skyline, Neuschwanstein Castle, or Cologne Cathedral",
+        "avoid": "Eiffel Tower, Big Ben, or any French/British imagery",
+    },
+    # Americas
+    "Brazil": {
+        "use": "Christ the Redeemer in Rio de Janeiro, Sugarloaf Mountain, Sao Paulo skyline, or Iguazu Falls",
+        "avoid": "Machu Picchu (Peru), Buenos Aires, or any Peruvian/Argentine imagery",
+    },
+    "Mexico": {
+        "use": "Angel of Independence in Mexico City, Chichen Itza pyramid, Palacio de Bellas Artes, or Mexico City skyline",
+        "avoid": "Machu Picchu (Peru), Cristo Redentor (Brazil), or any South American imagery",
+    },
+    # Oceania
+    "Australia": {
+        "use": "Sydney Opera House, Harbour Bridge, Melbourne skyline, or Uluru (Ayers Rock)",
+        "avoid": "Sky Tower (New Zealand), or any New Zealand imagery",
+    },
+    "New Zealand": {
+        "use": "Auckland Sky Tower, Milford Sound, Wellington harbour, or Mount Cook",
+        "avoid": "Sydney Opera House, Uluru, or any Australian imagery",
+    },
+}
+
+
+def _get_cover_image_instruction(target: str) -> str:
+    """Return a detailed, geographically precise image instruction for the cover slide."""
+    hint = COVER_IMAGE_HINTS.get(target)
+    if hint:
+        return (
+            f"[COVER IMAGE: Use a real, iconic photograph of {target} — "
+            f"specifically: {hint['use']}. "
+            f"CRITICAL: Do NOT use imagery from other countries. "
+            f"Specifically AVOID: {hint['avoid']}. "
+            f"The image must be unmistakably {target} — geographically accurate and verifiable.]"
+        )
+    return (
+        f"[COVER IMAGE: Use a real, iconic photograph that is unmistakably {target}. "
+        f"Show a famous landmark, skyline, or cultural symbol located WITHIN {target}. "
+        f"CRITICAL: Do NOT use imagery from neighboring or nearby countries. "
+        f"The image must be geographically accurate and verifiable as {target}.]"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Investment Memorandum Prompts (multi-section generation)
 # ---------------------------------------------------------------------------
 
@@ -1568,13 +1718,13 @@ def _build_gamma_investor_input(
 
     # --- Slide 1: Title ---
     year = datetime.now().year
+    cover_image_instruction = _get_cover_image_instruction(target)
     slides.append(
         f"# Alpha Holdings, Inc. × {target}\n\n"
         f"Strategic Partnership Proposal\n\n"
         f"Confidential — Prepared exclusively for the Government of {target}\n\n"
         f"CONFIDENTIAL | {year}\n\n"
-        f"[Use an iconic image of {target} — a famous landmark, skyline, or cultural symbol "
-        f"that immediately identifies this as a {target}-specific proposal]"
+        f"{cover_image_instruction}"
     )
 
     # --- Slide 2: Vision ---
@@ -1764,6 +1914,42 @@ def _build_gamma_investor_input(
     return "\n---\n".join(slides)
 
 
+def _build_investor_deck_additional_instructions(target: str) -> str:
+    """Build Gamma additional_instructions with geographically precise image guidance."""
+    hint = COVER_IMAGE_HINTS.get(target)
+    if hint:
+        title_img = (
+            f"TITLE SLIDE IMAGE — GEOGRAPHIC ACCURACY IS CRITICAL: "
+            f"The first slide MUST feature a prominent, iconic image of {target}. "
+            f"USE: {hint['use']}. "
+            f"DO NOT USE: {hint['avoid']}. "
+            f"Using imagery from the wrong country is a serious error that will offend the audience. "
+            f"Verify the landmark is actually located in {target} before selecting it."
+        )
+    else:
+        title_img = (
+            f"TITLE SLIDE IMAGE — GEOGRAPHIC ACCURACY IS CRITICAL: "
+            f"The first slide MUST feature a prominent, iconic image that is unmistakably {target}. "
+            f"Use a famous landmark, government building, skyline, or cultural symbol located WITHIN {target}. "
+            f"Do NOT use imagery from neighboring or nearby countries — this will offend the audience. "
+            f"Verify the landmark is actually located in {target} before selecting it."
+        )
+    return (
+        f"This is a strategic partnership proposal / investor deck for {target}. "
+        "The audience is C-suite / head-of-state level. "
+        "Use a professional, data-driven tone. Keep slides clean with clear hierarchy. "
+        "Use the markdown headings (# Title) as card titles. "
+        "Preserve all financial figures, percentages, and data points exactly as provided. "
+        "Do NOT generate charts, graphs, or bar charts. Use tables and text layouts only. "
+        f"{title_img} "
+        "OTHER SLIDES: On selected slides (not every slide), include high-quality images of modern schools, "
+        "happy children learning, and innovative classroom environments. These should be aspirational "
+        "and aligned with a premium education brand. Use icons where helpful for visual hierarchy. "
+        "IMPORTANT: Country/state-owned schools (National) MUST NOT have 'Alpha' in their name. "
+        "Only Alpha Flagship Schools (Flagship, which are 100% Alpha-owned) may use the Alpha brand."
+    )
+
+
 async def _build_investor_deck_gamma(
     target: str,
     strategy: Strategy,
@@ -1794,22 +1980,7 @@ async def _build_investor_deck_gamma(
             text_mode="condense",
             card_split="inputTextBreaks",
             text_amount="extensive",
-            additional_instructions=(
-                f"This is a strategic partnership proposal / investor deck for {target}. "
-                "The audience is C-suite / head-of-state level. "
-                "Use a professional, data-driven tone. Keep slides clean with clear hierarchy. "
-                "Use the markdown headings (# Title) as card titles. "
-                "Preserve all financial figures, percentages, and data points exactly as provided. "
-                "Do NOT generate charts, graphs, or bar charts. Use tables and text layouts only. "
-                f"TITLE SLIDE: The first slide MUST feature a prominent, iconic image specific to {target} "
-                f"(e.g. a famous landmark, skyline, or cultural symbol of {target}) — NOT a generic school image. "
-                f"This immediately signals the proposal is tailored to {target}. "
-                "OTHER SLIDES: On selected slides (not every slide), include high-quality images of modern schools, "
-                "happy children learning, and innovative classroom environments. These should be aspirational "
-                "and aligned with a premium education brand. Use icons where helpful for visual hierarchy. "
-                "IMPORTANT: Country/state-owned schools (National) MUST NOT have 'Alpha' in their name. "
-                "Only Alpha Flagship Schools (Flagship, which are 100% Alpha-owned) may use the Alpha brand."
-            ),
+            additional_instructions=_build_investor_deck_additional_instructions(target),
             export_as=export_as,
         )
     except Exception as exc:
