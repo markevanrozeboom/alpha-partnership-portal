@@ -366,7 +366,7 @@ async def _run_documents(state: dict) -> None:
         if ts_data and isinstance(ts_data, dict) and ts_data.get("assumptions")
         else None
     )
-    _, term_sheet_path, jv_program_name = await generate_term_sheet(
+    _, term_sheet_path, jv_program_name, cultural_program_name = await generate_term_sheet(
         target, country_profile, education_analysis,
         strategy_obj, model, assumptions,
         term_sheet_assumptions=ts_assumptions,
@@ -378,6 +378,7 @@ async def _run_documents(state: dict) -> None:
         target, country_profile, education_analysis, strategy_obj,
         model, assumptions, audience, revision_notes,
         jv_program_name=jv_program_name,
+        cultural_program_name=cultural_program_name,
         term_sheet_assumptions=ts_assumptions,
     )
 

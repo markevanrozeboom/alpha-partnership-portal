@@ -697,6 +697,7 @@ async def generate_documents(
     revision_notes: str | None = None,
     export_as: str = "pptx",
     jv_program_name: str | None = None,
+    cultural_program_name: str | None = None,
     term_sheet_assumptions: FinancialAssumptions | None = None,
 ) -> tuple[str | None, str | None, str, str, str | None, str]:
     """Generate presentation deck (via Gamma with local fallback), investment memorandum, and spreadsheet.
@@ -746,7 +747,7 @@ async def generate_documents(
             audience_label=audience_labels.get(audience, "investor"),
             slide_count=11,
             jv_program_name=_jv_name_for_prompt,
-            flagship_tuition_display=_get_flagship_tuition_display(financial_model),
+            flagship_tuition_display=fin.get("flagship_tuition_display") or _get_flagship_tuition_display(financial_model),
             per_student_budget=fin.get("per_student", 25_000),
             national_students=fin.get("national_students", 100_000),
             ip_development_total=fin.get("ip_development_total", 1_000),
@@ -767,6 +768,7 @@ async def generate_documents(
             target, strategy, financial_model, deck_outline,
             audience, output_dir,
             jv_program_name=jv_program_name,
+            cultural_program_name=cultural_program_name,
             country_profile=country_profile,
             fin=fin,
         )
@@ -778,6 +780,7 @@ async def generate_documents(
     gamma_url, export_url, deck_input_text = await _build_investor_deck_gamma(
         target, strategy, financial_model, deck_outline, audience,
         export_as=export_as, jv_program_name=jv_program_name,
+        cultural_program_name=cultural_program_name,
         country_profile=country_profile, fin=fin,
     )
 
@@ -1038,8 +1041,8 @@ async def _build_investment_memorandum(
         ("appendices", "IX. APPENDICES"),
     ]
 
-    _flagship_display = _get_flagship_tuition_display(financial_model)
     _fin = fin or {}
+    _flagship_display = _fin.get("flagship_tuition_display") or _get_flagship_tuition_display(financial_model)
 
     async def _generate_section(section_key: str, section_title: str) -> tuple[str, str]:
         prompt_template = IM_SECTION_PROMPTS[section_key]
@@ -1417,6 +1420,7 @@ def _build_pptx(
     output_dir: str,
     *,
     jv_program_name: str | None = None,
+    cultural_program_name: str | None = None,
     country_profile=None,
     fin: dict | None = None,
 ) -> str:
@@ -1435,10 +1439,11 @@ def _build_pptx(
         or strategy.brand.jv_name_suggestion
         or f"{target} Education"
     )
-    flagship_tuition_str = _get_flagship_tuition_display(model)
-    addressable_base_str = _get_addressable_base_display(country_profile)
+    culture_name = cultural_program_name or f"{target}Core"
     if fin is None:
         fin = {}
+    flagship_tuition_str = fin.get("flagship_tuition_display") or _get_flagship_tuition_display(model)
+    addressable_base_str = _get_addressable_base_display(country_profile)
 
     prs = PptxPresentation()
     prs.slide_width = PptxInches(13.333)
@@ -1689,7 +1694,7 @@ def _build_pptx(
         f"• {jv_name}: Transform K-12 education in {target} through AI-powered learning",
         "• Operator & Licensor model (Marriott) — Counterparty owns 100%, Alpha operates",
         f"• Dual-school: Alpha Flagship ({flagship_tuition_str}) + {jv_name} schools (${fin.get('per_student', 25_000):,.0f} fixed)",
-        "• AlphaCore curriculum OS + Timeback AI platform power every school",
+        f"• AlphaCore + {culture_name}: life-skills curriculum powering every school",
         "• Proven model: UAE deal ($1.5B, 200K students) as reference",
     ]
     _add_body(s, exec_lines, top=3.2)
@@ -1706,7 +1711,7 @@ def _build_pptx(
     _add_body(s, [
         "• Timeback: AI compresses core academics into 2 hours/day",
         "• Remaining time: STEM, sports, arts, entrepreneurship, life skills",
-        "• AlphaCore: Curriculum OS managing the full student journey",
+        f"• AlphaCore / {culture_name}: Curriculum OS managing the full student journey",
         "• Guide School: 12-month program transforming teachers into Guides",
         "• Incept eduLLM: Custom AI adapted to local curriculum & culture",
         "• Three commitments: Love school | Learn 2x faster | Future-ready skills",
@@ -1806,7 +1811,7 @@ def _build_pptx(
         ["Ownership", "100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor"],
         ["Flagship", f"{_f_flagship_schools} schools, {flagship_tuition_str} tuition, 50% backstop for 5 years (${_f_backstop_annual_m:,.0f}M/year)"],
         [jv_name, f"${_f_per_student:,.0f}/student FIXED, {_f_national:,} student-year min"],
-        ["IP Development", f"${_f_ip_total:,.0f}M FIXED (AlphaCore + EdLLM + EdTech + Life Skills)"],
+        ["IP Development", f"${_f_ip_total:,.0f}M FIXED ({culture_name} + EdLLM + EdTech + Life Skills)"],
         ["Total Upfront", f"${_f_upfront_total:,.0f}M (IP development + fee prepayments)"],
         ["Management Fee", f"{_f_mgmt_pct}% of combined revenue"],
         ["Timeback License", f"{_f_tb_pct}% of combined revenue"],
@@ -1989,6 +1994,7 @@ def _build_gamma_investor_input(
     audience: AudienceType,
     *,
     jv_program_name: str | None = None,
+    cultural_program_name: str | None = None,
     region: str = "",
     capital: str = "",
     country_profile=None,
@@ -2005,14 +2011,24 @@ def _build_gamma_investor_input(
         or strategy.brand.jv_name_suggestion
         or f"{target} Education"
     )
-    flagship_tuition_str = _get_flagship_tuition_display(model)
-    addressable_base_str = _get_addressable_base_display(country_profile)
+    culture_name = cultural_program_name or f"{target}Core"
     if fin is None:
         fin = {}
+    flagship_tuition_str = fin.get("flagship_tuition_display") or _get_flagship_tuition_display(model)
+    addressable_base_str = _get_addressable_base_display(country_profile)
     slides: list[str] = []
 
+    from datetime import timedelta
+    now = datetime.now()
+    ready_by = now + timedelta(days=16 * 30)
+    launch_year = ready_by.year
+    if ready_by.month > 9:
+        launch_year += 1
+    phase0_label = f"Now \u2013 Summer {launch_year}"
+    phase1_sy = f"SY{str(launch_year)[-2:]}-{str(launch_year + 1)[-2:]}"
+
     # --- Slide 1: Title ---
-    year = datetime.now().year
+    year = now.year
     cover_image_instruction = _get_cover_image_instruction(target, region=region, capital=capital)
     slides.append(
         f"# Alpha Holdings, Inc. × {target}\n\n"
@@ -2030,7 +2046,7 @@ def _build_gamma_investor_input(
         "1. Only AI-native education system, purposefully designed for national scale\n"
         "2. Commitments to students: love school, learn 2× faster, life skills for the AI age\n"
         "3. Creating the next generation of global leaders through life skills and academic mastery\n"
-        f"4. AlphaCore — the AI-age life-skills curriculum — powers the {jv_name} school network\n\n"
+        f"4. AlphaCore / {culture_name} — the AI-age life-skills curriculum — powers the {jv_name} school network\n\n"
         f"Our mission: {jv_name} is the AI-native public education system for all of {target}"
     )
 
@@ -2045,7 +2061,7 @@ def _build_gamma_investor_input(
         "Alpha Model: 2 hours academic mastery + 4 hours life-skills development\n\n"
         "Timeback: the AI and learning science platform delivering academic mastery "
         "10× faster than traditional schooling\n"
-        "AlphaCore: an AI-age life-skills curriculum developing student leadership, "
+        f"{culture_name}: {target}'s AI-age life-skills curriculum developing student leadership, "
         "teamwork, communication, resilience, and other non-academic capabilities"
     )
 
@@ -2057,7 +2073,7 @@ def _build_gamma_investor_input(
         "Three core commitments underpin every school: Love school | Learn 2× faster | Future-ready skills.\n\n"
         "Timeback: Proprietary AI engine that compresses core academic instruction into 2 hours per day "
         "without sacrificing depth or rigor, unlocking time for enrichment.\n"
-        "AlphaCore: The Curriculum OS that manages the full student journey — from onboarding through assessment — "
+        f"{culture_name}: The Curriculum OS that manages the full student journey — from onboarding through assessment — "
         "ensuring consistency and continuous improvement across every school.\n"
         "Guide School: A 12-month transformation program that converts traditional teachers into Guides — "
         "facilitators of self-directed, AI-augmented learning experiences.\n"
@@ -2105,14 +2121,14 @@ def _build_gamma_investor_input(
         "**Infrastructure:** Built to scale across 100+ schools |\n"
         "| **Timeback:** AI platform for 10× faster mastery | "
         f"**Localized AI Apps:** Built for {target} |\n"
-        "| **AlphaCore:** Strongest K-12 life-skills curriculum | "
+        f"| **{culture_name}:** Strongest K-12 life-skills curriculum | "
         "**Talent Academy:** Recruit and train local Guides |\n"
         "| **Guide School:** Talent academy for training Guides | "
         "**National eduLLM:** Embedded local laws, values, culture |\n"
         "| **Incept eduLLM:** Personalized content generation | "
         f"**${fin.get('per_student', 25_000):,.0f}/student** annual budget (~2× current public funding) |\n"
         f"| **Scale:** 2,500 students → {fin.get('national_students', 100_000):,} across {fin.get('num_schools', 100)} campuses | "
-        f"**First schools open SY26-27** in {target} |"
+        f"**First schools open {phase1_sy}** in {target} |"
     )
 
     # --- Slide 8: School Type Portfolio ---
@@ -2133,7 +2149,7 @@ def _build_gamma_investor_input(
             f"Alpha Flagship School — {flagship_tuition_str} tuition:\n"
             "Innovative and personalized education. Flagship schools serve as the premium anchor — "
             "demonstrating the full Alpha experience at the highest level of execution. "
-            "Powered by AlphaCore, Alpha's proprietary AI-age life-skills curriculum.\n\n"
+            f"Powered by {culture_name}, {target}'s AI-age life-skills curriculum.\n\n"
             f"{jv_name} Schools — ${fin.get('per_student', 25_000):,.0f} Fixed Budget:\n"
             "Accessible, high-quality education with personalized learning "
             "experiences at a fixed per-student cost. "
@@ -2199,7 +2215,7 @@ def _build_gamma_investor_input(
         "**Investment Required:**\n\n"
         "| Category | Item | Amount |\n"
         "| --- | --- | --- |\n"
-        f"| Upfront Fixed | AlphaCore License | ${_alphacore_m:,.0f}M |\n"
+        f"| Upfront Fixed | {culture_name} / AlphaCore License | ${_alphacore_m:,.0f}M |\n"
         f"| Upfront Fixed | Country-Specific Incept EdLLM "
         f"| ${_incept_m:,.0f}M |\n"
         f"| Upfront Fixed | Country-Specific Programs "
@@ -2331,6 +2347,7 @@ async def _build_investor_deck_gamma(
     audience: AudienceType,
     export_as: str = "pptx",
     jv_program_name: str | None = None,
+    cultural_program_name: str | None = None,
     country_profile=None,
     fin: dict | None = None,
 ) -> tuple[str | None, str | None, str]:
@@ -2351,6 +2368,7 @@ async def _build_investor_deck_gamma(
     input_text = _build_gamma_investor_input(
         target, strategy, model, outline, audience,
         jv_program_name=jv_program_name,
+        cultural_program_name=cultural_program_name,
         region=region,
         capital=capital,
         country_profile=country_profile,

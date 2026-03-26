@@ -804,11 +804,12 @@ async def generate_term_sheet(
 ) -> tuple[str, str, str]:
     """Generate a combined proposal document (term sheet + deal terms).
 
-    Returns (summary_markdown, proposal_docx_path, jv_program_name).
+    Returns (summary_markdown, proposal_docx_path, jv_program_name, cultural_program_name).
     The DOCX is the primary deliverable — a professionally formatted
     document matching the Alpha_Ed71_Combined_Proposal benchmark.
-    ``jv_program_name`` is the localized school-network brand name so
-    downstream generators (e.g. the proposal deck) use the same name.
+    ``jv_program_name`` is the localized school-network brand name and
+    ``cultural_program_name`` is the country-specific life-skills curriculum
+    brand so downstream generators (e.g. the proposal deck) use the same names.
     """
     logger.info("Generating combined proposal for %s", target)
 
@@ -850,7 +851,7 @@ async def generate_term_sheet(
     )
 
     logger.info("Combined proposal generated for %s", target)
-    return summary_md, docx_path, cv.jv_program_name
+    return summary_md, docx_path, cv.jv_program_name, cv.cultural_program_name
 
 
 # ---------------------------------------------------------------------------
@@ -1070,7 +1071,14 @@ def extract_financial_values(
         if cumulative_students else 0
     )
 
-    # Scaling plan
+    # Scaling plan — derive school-year labels from dynamic launch year
+    from datetime import datetime as _dt, timedelta as _td
+    _now = _dt.now()
+    _ready = _now + _td(days=16 * 30)
+    _launch_yr = _ready.year
+    if _ready.month > 9:
+        _launch_yr += 1
+
     scaling_plan: list[dict] = []
     if strategy.phased_rollout:
         for ph in strategy.phased_rollout[:5]:
@@ -1081,9 +1089,10 @@ def extract_financial_values(
             })
     elif pnl:
         for p in pnl:
+            yr = _launch_yr + p.year - 1
             scaling_plan.append({
                 "phase": f"Year {p.year}",
-                "timeline": f"SY{26 + p.year - 1}-{27 + p.year - 1}",
+                "timeline": f"SY{str(yr)[-2:]}-{str(yr + 1)[-2:]}",
                 "students": p.students,
             })
 
@@ -1151,7 +1160,26 @@ def extract_financial_values(
         "flagship_schools": flagship_schools,
         "flagship_per_school": flagship_per_school,
         "flagship_optimization": flagship_opt,
+        "flagship_tuition_display": _flagship_tuition_display(flagship_opt, flagship_tuition),
     }
+
+
+def _flagship_tuition_display(
+    opt, tuition: int | float,
+) -> str:
+    """Single source-of-truth display string for flagship tuition.
+
+    Used by both the term sheet and the proposal deck so the numbers
+    always match.
+    """
+    if opt and getattr(opt, "metros", None):
+        tuitions = sorted(set(mr.tuition for mr in opt.metros))
+        if len(tuitions) == 1:
+            return f"${tuitions[0] / 1000:.0f}K"
+        return f"${tuitions[0] / 1000:.0f}K\u2013${tuitions[-1] / 1000:.0f}K"
+    if tuition and tuition > 0:
+        return f"${tuition / 1000:.0f}K"
+    return "$40K\u2013$100K"
 
 
 # ---------------------------------------------------------------------------
