@@ -894,8 +894,8 @@ def _build_proposal_docx(
     _add_overview_section(doc, target, cv, fin)
     _add_transformation_section(doc, target, cv, fin)
     _add_cultural_program_section(doc, target, cv, fin)
-    _add_school_network_section(doc, target, cv, fin, strategy)
     _add_halo_alpha_strategic_role_section(doc, target, cv)
+    _add_school_network_section(doc, target, cv, fin, strategy)
     _add_future_opportunities_section(doc, target, cv)
     _add_sequencing_section(doc, target, cv, fin, strategy)
     _add_funding_section(doc, target, cv, fin)
@@ -2064,25 +2064,25 @@ def _add_investment_table(
             "Alpha Core License",
             f"${fin['upfront_alphacore']:,.0f}",
             "",
-            "Paid upfront to Alpha Holdings",
+            "",
         ],
         [
             "Country-Specific Incept EdLLM",
             f"${fin['upfront_incept_edllm']:,.0f}",
             "",
-            "Paid upfront",
+            "",
         ],
         [
             "Country-Specific Programs & Life Skills",
             f"${fin['upfront_lifeskills']:,.0f}",
             "",
-            "Paid upfront",
+            "",
         ],
         [
             "Country-Specific EdTech Apps",
             f"${fin['upfront_app_rd']:,.0f}",
             "",
-            "Paid upfront",
+            "",
         ],
         # --- Separator: Prepaid ---
         [sep_prepaid, sep_prepaid, sep_prepaid, sep_prepaid],
@@ -2110,7 +2110,7 @@ def _add_investment_table(
             "Scholarships / Increased Public Funding",
             "",
             f"${ongoing_scholarship:,.0f}" if ongoing_scholarship > 0 else "TBD",
-            f"${per_student:,.0f} - current public funding/student",
+            f"assumed public funding/student of ${per_student:,.0f}",
         ],
         [
             f"Timeback ({tb_pct}% of funding/tuition)",
