@@ -106,7 +106,8 @@ US_STATE_MAJOR_CITIES: dict[str, str] = {
 STATE_COVER_IMAGE_OVERRIDES: dict[str, dict[str, str]] = {
     "Washington": {
         "use": "Seattle skyline with Space Needle and Mount Rainier, or Washington State Capitol in Olympia",
-        "avoid": "Washington D.C. monuments (White House, Capitol Building, Lincoln Memorial) — those are the DISTRICT, not the state",
+        "avoid": ("Washington D.C. monuments (White House, Capitol Building, "
+                  "Lincoln Memorial) — those are the DISTRICT, not the state"),
     },
     "Georgia": {
         "use": "Atlanta skyline with Peachtree towers, Georgia State Capitol, or Savannah historic district",

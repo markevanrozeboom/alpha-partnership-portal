@@ -133,7 +133,8 @@ REGION_CONFUSION_MAP: dict[str, list[str]] = {
 # imagery is most commonly confused by AI image models.
 COVER_IMAGE_HINTS: dict[str, dict[str, str]] = {
     "Saudi Arabia": {
-        "use": "Makkah (Mecca) Grand Mosque, Riyadh skyline with Kingdom Centre Tower, Jeddah Corniche, Al-Ula desert formations, or Madinah",
+        "use": ("Makkah (Mecca) Grand Mosque, Riyadh skyline with Kingdom Centre Tower, "
+                "Jeddah Corniche, Al-Ula desert formations, or Madinah"),
         "avoid": "Dubai, Burj Khalifa, Abu Dhabi, Sheikh Zayed Mosque, or any UAE imagery",
     },
     "UAE": {
@@ -229,14 +230,17 @@ def _get_cover_image_instruction(target: str, region: str = "", capital: str = "
     use_parts = []
     if capital:
         use_parts.append(f"the {capital} skyline or a famous landmark in {capital}")
-    use_parts.append(f"the national capitol building, a world-famous monument, or an iconic natural landscape of {target}")
+    use_parts.append(
+        f"the national capitol building, a world-famous monument, "
+        f"or an iconic natural landscape of {target}"
+    )
     use_str = ", ".join(use_parts)
 
     avoid_str = _build_region_avoid_list(target, region)
     avoid_clause = (
         f"Specifically AVOID: {avoid_str}. "
         if avoid_str
-        else f"Do NOT use imagery from neighboring or nearby countries. "
+        else "Do NOT use imagery from neighboring or nearby countries. "
     )
 
     return (
@@ -1977,7 +1981,7 @@ def _build_investor_deck_additional_instructions(
         avoid_clause = (
             f"DO NOT USE: {avoid_str}. "
             if avoid_str
-            else f"Do NOT use imagery from any neighboring or nearby country. "
+            else "Do NOT use imagery from any neighboring or nearby country. "
         )
 
         title_img = (
