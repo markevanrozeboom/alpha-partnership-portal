@@ -906,10 +906,10 @@ def _build_proposal_docx(
 
     doc.add_page_break()
     _add_confidential_header(doc, target, cv)
-    _add_deal_terms_section(doc, target, cv, fin, financial_model)
     _add_school_design_section(
         doc, target, cv, fin, financial_model,
     )
+    _add_deal_terms_section(doc, target, cv, fin, financial_model)
 
     # --- Save ---
     output_dir = os.path.join(
@@ -1808,7 +1808,7 @@ def _add_deal_terms_section(
     Table 2: Country/State Owned Schools — Investment Required
     """
     doc.add_heading(
-        f"1. {cv.jv_program_name} Schools "
+        f"2. {cv.jv_program_name} Schools "
         f"(Country/State Owned, Alpha Operated)",
         level=1,
     )
@@ -1824,7 +1824,7 @@ def _add_deal_terms_section(
     )
     _add_list_item(
         doc,
-        f"Minimum {fin['national_students']:,} students per year commitment.",
+        f"Minimum {fin['national_students']:,} students commitment.",
     )
     _add_list_item(
         doc,
@@ -1862,7 +1862,7 @@ def _add_school_design_section(
 
     Table 3: Alpha Flagships — Key Metrics
     """
-    doc.add_heading("2. Alpha Flagship Schools", level=1)
+    doc.add_heading("1. Alpha Flagship Schools", level=1)
 
     _add_body(
         doc,
@@ -1870,16 +1870,10 @@ def _add_school_design_section(
         "\"halo brand\" \u2014 flagship schools that demonstrate the full Alpha experience at "
         "the highest level of execution. They establish Alpha\u2019s reputation in each market, "
         "set the benchmark for academic and life-skills outcomes, and create aspirational demand "
-        "that drives enrollment across the broader national school network. "
-        "Sized as 250-, 500-, or 1,000-student schools.",
+        "that drives enrollment across the broader national school network.",
     )
 
     flagship_opt = fin.get("flagship_optimization")
-
-    _add_list_item(
-        doc,
-        "Flagship schools operate at 25% operating margin.",
-    )
 
     # Tuition / capacity may vary per metro — show range when they differ
     if flagship_opt and flagship_opt.metros:
@@ -1907,9 +1901,17 @@ def _add_school_design_section(
 
     _add_list_item(doc, f"Tuition: {tuition_str}.")
     _add_list_item(doc, f"Capacity: {capacity_str}.")
+    if flagship_opt and flagship_opt.total_annual_revenue > 0:
+        backstop_annual = flagship_opt.total_annual_revenue * 0.5 / 1_000_000
+    else:
+        backstop_annual = (
+            fin.get("flagship_students_total", 0)
+            * fin.get("flagship_tuition", 0) * 0.5 / 1_000_000
+        )
     _add_list_item(
         doc,
-        "Country/State provides 50% capacity backstop for 5 years.",
+        f"Country/State provides 50% capacity backstop for 5 years "
+        f"(${backstop_annual:,.0f}M/year).",
     )
 
     # If no metros qualified, note the scholarship requirement
@@ -2051,9 +2053,9 @@ def _add_investment_table(
         "Notes",
     ]
 
-    sep_upfront = "Upfront Development Costs (FIXED — do not scale by country)"
+    sep_upfront = "Upfront Development Costs"
     sep_prepaid = "Prepaid Fees (scale by student commitment)"
-    sep_ongoing = "Ongoing Annual Costs (scale above 100,000 students)"
+    sep_ongoing = "Ongoing Annual Costs (per 100,000 students)"
 
     rows = [
         # --- Separator: Upfront ---
@@ -2108,7 +2110,7 @@ def _add_investment_table(
             "Scholarships / Increased Public Funding",
             "",
             f"${ongoing_scholarship:,.0f}" if ongoing_scholarship > 0 else "TBD",
-            f"${per_student:,} - current public funding/student",
+            f"${per_student:,.0f} - current public funding/student",
         ],
         [
             f"Timeback ({tb_pct}% of funding/tuition)",

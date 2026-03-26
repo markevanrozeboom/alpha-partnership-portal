@@ -98,7 +98,7 @@ universal_rules:
   # ---------------------------------------------------------------------------
   prong_1_flagship:
     description: >
-      Alpha Flagship Schools — premium schools in capital city + 1-2 largest cities. 100% owned by Alpha Holdings, Inc. Sized as 250-, 500-, or 1,000-student schools only.
+      Alpha Flagship Schools — premium schools in capital city + 1-2 largest cities. 100% owned by Alpha Holdings, Inc.
       Tuition optimized for maximum revenue within $40K-$100K range.
     tuition_min: 40000
     tuition_max: 100000

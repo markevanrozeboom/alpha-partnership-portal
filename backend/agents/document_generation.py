@@ -289,6 +289,41 @@ def _check_deck_term_sheet_consistency(
                 f"vs fin=${fin['flagship_tuition']:,.0f}"
             )
 
+    # Flagship schools count
+    fin_flagship_schools = fin.get("flagship_schools", 0)
+    opt = model.flagship_optimization
+    if opt and opt.total_schools and fin_flagship_schools:
+        if opt.total_schools != fin_flagship_schools:
+            issues.append(
+                f"Flagship schools: model={opt.total_schools} "
+                f"vs fin={fin_flagship_schools}"
+            )
+
+    # Backstop value sanity — ensure it's non-zero when flagships exist
+    if fin_flagship_schools > 0:
+        flagship_revenue = (
+            opt.total_annual_revenue if opt and opt.total_annual_revenue > 0
+            else fin.get("flagship_students_total", 0) * fin.get("flagship_tuition", 0)
+        )
+        if flagship_revenue <= 0:
+            issues.append(
+                "Flagship backstop value cannot be computed: "
+                "missing flagship revenue data"
+            )
+
+    # National students — ensure fin dict matches model
+    fin_national = fin.get("national_students", 0)
+    if fin_national <= 0:
+        issues.append("National student commitment is missing or zero")
+
+    # Per-student budget — ensure it's a whole number (no .0 display)
+    per_student = fin.get("per_student", 0)
+    if per_student and per_student != int(per_student):
+        issues.append(
+            f"Per-student budget is not a whole number: {per_student} "
+            "(may display as $25,000.0)"
+        )
+
     if issues:
         logger.warning(
             "DECK ↔ TERM SHEET CONSISTENCY CHECK for %s — %d issue(s):\n  %s",
@@ -1756,11 +1791,20 @@ def _build_pptx(
     _f_tb_pct = fin.get("timeback_pct", 20)
     _f_flagship_schools = fin.get("flagship_schools", 3)
 
+    _f_flagship_opt = fin.get("flagship_optimization")
+    if _f_flagship_opt and getattr(_f_flagship_opt, "total_annual_revenue", 0) > 0:
+        _f_backstop_annual_m = _f_flagship_opt.total_annual_revenue * 0.5 / 1_000_000
+    else:
+        _f_backstop_annual_m = (
+            fin.get("flagship_students_total", 0)
+            * fin.get("flagship_tuition", 0) * 0.5 / 1_000_000
+        )
+
     deal_headers = ["Component", "Details"]
     deal_rows = [
         ["Structure", "Operator & Licensor (Marriott model)"],
         ["Ownership", "100/0 — Counterparty owns 100%, Alpha is exclusive operator & licensor"],
-        ["Flagship", f"{_f_flagship_schools} schools, {flagship_tuition_str} tuition, 50% backstop for 5 years"],
+        ["Flagship", f"{_f_flagship_schools} schools, {flagship_tuition_str} tuition, 50% backstop for 5 years (${_f_backstop_annual_m:,.0f}M/year)"],
         [jv_name, f"${_f_per_student:,.0f}/student FIXED, {_f_national:,} student-year min"],
         ["IP Development", f"${_f_ip_total:,.0f}M FIXED (AlphaCore + EdLLM + EdTech + Life Skills)"],
         ["Total Upfront", f"${_f_upfront_total:,.0f}M (IP development + fee prepayments)"],
@@ -2115,6 +2159,15 @@ def _build_gamma_investor_input(
     _parent_ed = fin.get("parent_education_annual", 50)
     _flagship_schools = fin.get("flagship_schools", 3)
 
+    _flagship_opt = fin.get("flagship_optimization")
+    if _flagship_opt and getattr(_flagship_opt, "total_annual_revenue", 0) > 0:
+        _backstop_annual_m = _flagship_opt.total_annual_revenue * 0.5 / 1_000_000
+    else:
+        _backstop_annual_m = (
+            fin.get("flagship_students_total", 0)
+            * fin.get("flagship_tuition", 0) * 0.5 / 1_000_000
+        )
+
     # Ongoing annual fees at scale (matches term sheet _add_investment_table)
     _ongoing_timeback = round(
         _national_students * _per_student * (_tb_pct / 100) / 1_000_000
@@ -2140,7 +2193,7 @@ def _build_gamma_investor_input(
         f"- 100% {target} owned, 0% Alpha owned. "
         "Alpha operates on behalf of the Country/State.\n"
         f"- Per student funding/tuition: **${_per_student:,.0f}/year**\n"
-        f"- Minimum **{_national_students:,} students per year** commitment\n"
+        f"- Minimum **{_national_students:,} students** commitment\n"
         "- Schools operated as either public or private\n"
         f"- {target} sources real estate; schools pay rent\n\n"
         "**Investment Required:**\n\n"
@@ -2164,7 +2217,8 @@ def _build_gamma_investor_input(
         f"- {_flagship_schools} Alpha Flagship Schools at "
         f"{flagship_tuition_str} tuition serve as the premium "
         f"\"halo brand\" anchoring the entire {jv_name} system\n"
-        f"- {target} provides a **50% capacity backstop for 5 years**, "
+        f"- {target} provides a **50% capacity backstop for 5 years"
+        f" (${_backstop_annual_m:,.0f}M/year)**, "
         f"ensuring each Flagship school opens at scale and quality\n"
         f"- Flagship schools are 100% Alpha-owned and generate "
         f"aspirational demand across the broader {jv_name} national network"

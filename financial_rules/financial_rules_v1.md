@@ -2,7 +2,7 @@
 
 100% owned by Alpha Holdings, Inc. These are the "halo brand" — premium flagship schools that demonstrate the full Alpha experience at the highest level of execution. They establish Alpha's reputation in each market, set the benchmark for academic and life-skills outcomes, and create aspirational demand that drives enrollment across the broader national school network.
 
-We have N Alpha Flagship Schools in the Country or State's top metros, sized as 250-, 500-, or 1,000-student schools, with tuition per year of {min $40,000, max $100,000, scaling in $5,000 increments}. These schools operate at 25% operating margin. 
+We have N Alpha Flagship Schools in the Country or State's top metros, with tuition per year of {min $40,000, max $100,000, scaling in $5,000 increments}. 
 
 N \= \# of K-12 children in families with AGI ≥ 5 times tuition \* 20% (penetration rate) divided by capacity of each Alpha Flagship School; limited to max 3 in the capital city and 1 in each of the other top metros. We are assuming these families will pay up to 20% of AGI for education and we can get 20% of these students. 
 
@@ -28,7 +28,7 @@ We are proposing to implement through a national network of privately-operated, 
 
 The schools can be operated as either a public or private school. 
 
-The Country/State commits to a minimum of 100,000 students per year in these schools. 
+The Country/State commits to a minimum of 100,000 students in these schools. 
 
 Per student funding/tuition should be $25,000/year. This funds the following costs per student:
 
@@ -41,7 +41,7 @@ Per student funding/tuition should be $25,000/year. This funds the following cos
 - Operating Fee: $2,500 (10% of funding/tuition)  
 - Operating Margin/Amortization of IP costs: $2,500
 
-The following investment is required by the Country/State (this is indicative of 100,000 students, upfront costs do not change, but ongoing costs would scale above 100,000 students):
+The following investment is required by the Country/State (this is indicative of 100,000 students, upfront costs do not change, ongoing costs are per 100,000 students):
 
 - Alpha Core License: $250 million, paid upfront  
 - Country/State specific Incept EdLLM: $250 million, paid upfront  
