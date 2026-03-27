@@ -1994,7 +1994,7 @@ async function generateDocuments(target: string): Promise<GenerationResult> {
   let text = "";
   try {
     const message = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 2000,
       system: RESEARCH_PROMPT,
       messages: [
