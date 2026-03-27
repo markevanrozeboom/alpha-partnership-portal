@@ -863,15 +863,70 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
-<!-- Curved divider: white → cream vision -->
+<!-- Curved divider: white → cream national schools -->
 <div class="section-divider" style="background: var(--white);">
   <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill="var(--cream)"/>
   </svg>
 </div>
 
+<!-- ═══════ COUNTRY-OWNED SCHOOLS ═══════ -->
+<section class="section section-cream" id="national-schools">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow">${programName} Schools</span>
+      <h2 class="section-title">${ctx.country} Owned, Alpha Operated</h2>
+      <p class="section-subtitle">100% owned by ${ctx.country}, with Alpha Holdings as the exclusive operating partner. We propose implementation through a national network of privately-operated, government-funded schools — and are equally open to other structures.</p>
+    </div>
+
+    <div class="card-grid card-grid-2 fade-in" style="margin-top: 2rem;">
+      <div class="card">
+        <h4 style="color: var(--blue); font-family: var(--font-display); margin-bottom: 1rem;">Ownership &amp; Operations</h4>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.75rem;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span>
+            <span>100% owned by ${ctx.country}, 0% owned by Alpha. Alpha operates as exclusive operator and licensor on behalf of ${ctx.country}.</span>
+          </li>
+          <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.75rem;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span>
+            <span>Schools can be operated as either <strong>public or private</strong> schools.</span>
+          </li>
+          <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.75rem;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span>
+            <span>${ctx.country} is responsible for sourcing real estate; schools pay rent.</span>
+          </li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4 style="color: var(--blue); font-family: var(--font-display); margin-bottom: 1rem;">Scale &amp; Economics</h4>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.75rem;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span>
+            <span>Per-student budget: <strong>$25,000/year</strong> (fixed).</span>
+          </li>
+          <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.75rem;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span>
+            <span>Minimum commitment to scale to <strong>100,000 students</strong>.</span>
+          </li>
+          <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.75rem;">
+            <span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span>
+            <span>Every ${programName} school runs on Alpha's <strong>Timeback</strong> with <strong>${lifeSkillsName}</strong>.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Curved divider: cream → white vision -->
+<div class="section-divider" style="background: var(--cream);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill="var(--white)"/>
+  </svg>
+</div>
+
 <!-- ═══════ VISION ═══════ -->
-<section class="section section-cream" id="vision">
+<section class="section section-white" id="vision">
   <div class="container">
     <div class="fade-in">
       <span class="section-eyebrow">The Vision</span>
@@ -898,7 +953,7 @@ a { color: inherit; text-decoration: none; }
       <div>
         <div class="card card-blue" style="border-left-width: 4px;">
           <h4 style="color: var(--blue);">Partnership Structure</h4>
-          <p><strong>${programName}</strong> is a ${ctx.country}-owned national education platform, with Alpha as exclusive operating partner.</p>
+          <p><strong>${programName}</strong> is 100% owned by ${ctx.country}, with Alpha Holdings as the exclusive operating partner.</p>
           <p style="margin-top: 0.75rem;">Together we design <strong style="color: var(--blue);">${lifeSkillsName}</strong> — ${ctx.country}'s life-skills engine, the local equivalent to AlphaCore.</p>
           <p style="margin-top: 0.75rem; font-size: 0.875rem; color: var(--text-muted);">${ctx.localLifeSkillsFocus || ''}</p>
         </div>
