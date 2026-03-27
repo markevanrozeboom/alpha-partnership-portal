@@ -68,15 +68,15 @@ const FIXED_ECONOMICS = {
   ],
 
   costStructure: [
-    { item: "Funding/Tuition", alpha: "$50,000", national: "$25,000", notes: "Budget for $25,000 school" },
-    { item: "Teachers / Guides", alpha: "$14,000", national: "$4,500", notes: "Alpha 11:1 ratio; National 25:1 ratio" },
-    { item: "Programs and Life Skills", alpha: "$9,000", national: "$4,250", notes: "" },
-    { item: "Other Headcount", alpha: "$1,750", national: "$1,750", notes: "" },
-    { item: "Facility / CapEx", alpha: "$8,750", national: "$3,000", notes: "" },
-    { item: "Miscellaneous Expenses", alpha: "$1,500", national: "$1,500", notes: "" },
-    { item: "Timeback (Software)", alpha: "$10,000", national: "$5,000", notes: "20% of Budget" },
-    { item: "Operating Fee (10%)", alpha: "-", national: "$2,500", notes: "" },
-    { item: "Operating Margin / IP Amort", alpha: "$5,000", national: "$2,500", notes: "" },
+    { item: "Funding/Tuition", traditional: "$25,000", alpha: "$25,000" },
+    { item: "Teachers / Guides", traditional: "$12,500", alpha: "$4,500" },
+    { item: "Programs and Life Skills", traditional: "$2,000", alpha: "$4,250" },
+    { item: "Other Headcount", traditional: "$3,000", alpha: "$1,750" },
+    { item: "Facility / CapEx", traditional: "$5,000", alpha: "$3,000" },
+    { item: "Miscellaneous Expenses", traditional: "$2,500", alpha: "$1,500" },
+    { item: "Timeback (Software)", traditional: "$0", alpha: "$5,000" },
+    { item: "Operating Fee (10%)", traditional: "$0", alpha: "$2,500" },
+    { item: "Operating Margin / IP Amort", traditional: "$0", alpha: "$2,500" },
   ],
   scaleTargets: {
     yearOne: "2,000 students / 2 communities",
@@ -139,8 +139,10 @@ function generateTermSheetHtml(ctx: CountryContext): string {
     .join("\n");
 
   const costRows = FIXED_ECONOMICS.costStructure
-    .map(r => `<tr><td>${r.item}</td><td class="amt">${r.alpha}</td><td class="amt hl">${r.national}</td><td class="notes">${r.notes}</td></tr>`)
-    .join("\n");
+    .map(r => `<tr><td>${r.item}</td><td class="amt">${r.traditional}</td><td class="amt hl">${r.alpha}</td></tr>`)
+    .join("\n")
+    + `\n<tr class="total-row"><td><strong>Total</strong></td><td class="amt"><strong>$25,000</strong></td><td class="amt hl"><strong>$25,000</strong></td></tr>`
+    + `\n<tr class="outcome-row"><td><strong>Education Outcomes</strong></td><td class="amt">Current Baseline</td><td class="amt hl"><strong>World Class (2x faster, +93 NPS)</strong></td></tr>`;
 
   const strengths = (ctx.keyStrengths || [])
     .map(s => `<li>${s}</li>`)
@@ -1038,26 +1040,21 @@ a { color: inherit; text-decoration: none; }
 <section class="section section-cream" id="costs">
   <div class="container">
     <div class="fade-in">
-      <span class="section-eyebrow">${programName} Cost Structure</span>
+      <span class="section-eyebrow">School Cost Comparison</span>
       <h2 class="section-title">Per-Student Economics at $25K Budget</h2>
-    </div>
-
-    <div class="callout fade-in" style="margin-bottom: 2rem;">
-      <p>We propose implementation through a national network of privately-operated, government-funded schools — and are equally open to other structures.</p>
+      <p class="section-subtitle">Illustrative "cost to educate" per student for ${programName} school vs. traditional school at $25K annual budget.</p>
     </div>
 
     <div class="table-wrap fade-in">
       <table class="data-table">
         <thead>
           <tr>
-            <th>Item (Per Student P&amp;L)</th>
-            <th>Alpha @ $50K Tuition</th>
-            <th class="primary-col">${programName} @ $25K Budget</th>
-            <th>Notes</th>
+            <th>Cost Item (Per Student)</th>
+            <th>Traditional $25K School</th>
+            <th class="primary-col">Alpha/Timeback $25K School</th>
           </tr>
         </thead>
         <tbody>
-          <tr class="section-header"><td colspan="4">FUNDING</td></tr>
           ${costRows}
         </tbody>
       </table>
@@ -1243,8 +1240,10 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 
   // ── Cost structure rows from FIXED_ECONOMICS ──
   const costRows = FIXED_ECONOMICS.costStructure
-    .map(r => `<tr><td>${r.item}</td><td class="amt">${r.alpha}</td><td class="amt highlight">${r.national}</td><td class="notes">${r.notes}</td></tr>`)
-    .join("\n");
+    .map(r => `<tr><td>${r.item}</td><td class="amt">${r.traditional}</td><td class="amt highlight">${r.alpha}</td></tr>`)
+    .join("\n")
+    + `\n<tr class="total-row"><td><strong>Total</strong></td><td class="amt"><strong>$25,000</strong></td><td class="amt highlight"><strong>$25,000</strong></td></tr>`
+    + `\n<tr class="outcome-row"><td><strong>Education Outcomes</strong></td><td class="amt">Current Baseline</td><td class="amt highlight"><strong>World Class (2x faster, +93 NPS)</strong></td></tr>`;
 
   // ── Slide numbering helper ──
   let slideNum = 0;
@@ -2164,24 +2163,23 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 13 — COST STRUCTURE (Fix #3: programName in column header)
+     SLIDE 13 — COST STRUCTURE (School Cost Comparison)
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
-  <div class="label">${programName} Cost Structure</div>
+  <div class="label">School Cost Comparison</div>
   <h2>Per-Student Economics at <span>$25K Budget</span></h2>
+  <p style="font-size:11px; font-style:italic; color:#4a5568; margin:4px 0 0 0;">Illustrative "cost to educate" per student for ${programName} school vs. traditional school at $25K annual budget.</p>
 
   <div style="margin-top:8px;">
     <table class="deck-table">
       <thead>
         <tr>
-          <th>Item (Per Student P&amp;L)</th>
-          <th>Alpha @ $50K Tuition</th>
-          <th class="primary-col">${programName} @ $25K Budget</th>
-          <th>Notes</th>
+          <th>Cost Item (Per Student)</th>
+          <th>Traditional $25K School</th>
+          <th class="primary-col">Alpha/Timeback $25K School</th>
         </tr>
       </thead>
       <tbody>
-        <tr class="section-header"><td colspan="4">FUNDING</td></tr>
         ${costRows}
       </tbody>
     </table>
