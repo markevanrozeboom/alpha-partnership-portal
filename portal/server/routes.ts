@@ -2115,7 +2115,7 @@ const GATE_APPROVALS: Record<string, { endpoint: string; body: object }> = {
   review_education_report: { endpoint: "feedback/education-report", body: { approved: true } },
   review_strategy: { endpoint: "feedback/strategy", body: { approved: true } },
   review_assumptions: { endpoint: "feedback/assumptions", body: { approved: true, adjustments: {} } },
-  review_model: { endpoint: "feedback/model", body: { approved: true } },
+  review_model: { endpoint: "feedback/model", body: { locked: true } },
   review_term_sheet_assumptions: { endpoint: "feedback/term-sheet-assumptions", body: { approved: true, adjustments: {} } },
   review_documents: { endpoint: "feedback/documents", body: { approved: true } },
 };
