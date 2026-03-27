@@ -2394,7 +2394,57 @@ export function registerRoutes(server: Server, app: Express) {
     res.json(run);
   });
 
+  // ─── Term Sheet Generation (for Vercel frontend calling portal backend) ─────
+
+  app.post("/api/generate-term-sheet", async (req, res) => {
+    const { countryContext, financialModel: clientModel } = req.body;
+    if (!countryContext || !countryContext.country) {
+      res.status(400).json({ error: "countryContext is required" });
+      return;
+    }
+
+    try {
+      const ctx = countryContext as CountryContext;
+
+      // Apply guardrails
+      if (ctx.localizedProgramName && /\balpha\b/i.test(ctx.localizedProgramName)) {
+        ctx.localizedProgramName = ctx.localizedProgramName.replace(/\s*\bAlpha\b\s*/gi, " ").trim() || `${ctx.country} Education`;
+      }
+      if (!ctx.localizedLifeSkillsName) {
+        ctx.localizedLifeSkillsName = `${ctx.country}Core`;
+      }
+
+      // Build financial model from context if not provided
+      const financialData = buildFinancialResearchData(ctx);
+      const model = clientModel || computeFinancialModel(financialData, ctx.country);
+
+      // Generate HTML
+      let termSheetHtml = generateTermSheetHtml(ctx);
+      let pitchDeckHtml = generatePitchDeckHtml(ctx, model);
+
+      // Language QA
+      const tsQA = runLanguageQA(termSheetHtml);
+      termSheetHtml = tsQA.text;
+      const pdQA = runLanguageQA(pitchDeckHtml);
+      pitchDeckHtml = pdQA.text;
+
+      // DOCX
+      const docxBuffer = await buildTermSheetDocx(ctx, model);
+      const termSheetDocxBase64 = docxBuffer.toString("base64");
+
+      res.json({
+        context: ctx,
+        termSheetHtml,
+        pitchDeckHtml,
+        termSheetDocxBase64,
+      });
+    } catch (err) {
+      console.error("Term sheet generation error:", err);
+      res.status(500).json({ error: "Failed to generate term sheet" });
+    }
+  });
+
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", version: "3.0.0-pipeline", slides: 14 });
+    res.json({ status: "ok", version: "3.1.0-vercel-ready", slides: 14 });
   });
 }

@@ -1,7 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,18 +9,62 @@ import {
   RefreshCw, ExternalLink, FileDown, Globe,
 } from "lucide-react";
 import { PerplexityAttribution } from "@/components/PerplexityAttribution";
-import type { FullGenerationResult, PipelineStatus } from "@shared/schema";
+import { PIPELINE_API, PORTAL_API } from "@/lib/api-config";
+import type { PipelineStatus, CountryContext } from "@shared/schema";
 
-interface PipelineRunData {
-  id: string;
-  target: string;
-  pipelineRunId: string | null;
-  pipelineStatus: PipelineStatus;
-  pipelineLabel: string;
-  result: FullGenerationResult | null;
-  error: string | null;
-  agentLogs: string[];
+// ─── FastAPI run response shape ──────────────────────────────────────────────
+
+interface BackendRunResponse {
+  status: PipelineStatus;
+  target?: string;
+  gamma_url?: string | null;
+  gamma_export_url?: string | null;
+  country_profile?: CountryContext | null;
+  financial_model?: Record<string, unknown> | null;
+  error_message?: string | null;
+  agent_logs?: string[];
 }
+
+// ─── Local term sheet result (from portal backend, if available) ─────────────
+
+interface TermSheetResult {
+  termSheetHtml: string;
+  pitchDeckHtml: string;
+  termSheetDocxBase64: string;
+  context: CountryContext;
+}
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const STAGE_LABELS: Record<string, string> = {
+  pending: "Initializing...",
+  researching_country: "Researching country profile...",
+  review_country_report: "Processing country research...",
+  researching_education: "Analyzing education system...",
+  review_education_report: "Processing education analysis...",
+  strategizing: "Developing partnership strategy...",
+  review_strategy: "Processing strategy...",
+  presenting_assumptions: "Building financial assumptions...",
+  review_assumptions: "Processing assumptions...",
+  building_model: "Computing financial model...",
+  review_model: "Processing financial model...",
+  presenting_term_sheet_assumptions: "Preparing term sheet...",
+  review_term_sheet_assumptions: "Processing term sheet...",
+  generating_documents: "Generating Gamma deck & documents...",
+  review_documents: "Finalizing documents...",
+  completed: "Complete",
+  error: "Error",
+};
+
+const GATE_APPROVALS: Record<string, { endpoint: string; body: object }> = {
+  review_country_report: { endpoint: "feedback/country-report", body: { approved: true } },
+  review_education_report: { endpoint: "feedback/education-report", body: { approved: true } },
+  review_strategy: { endpoint: "feedback/strategy", body: { approved: true } },
+  review_assumptions: { endpoint: "feedback/assumptions", body: { approved: true, adjustments: {} } },
+  review_model: { endpoint: "feedback/model", body: { locked: true } },
+  review_term_sheet_assumptions: { endpoint: "feedback/term-sheet-assumptions", body: { approved: true, adjustments: {} } },
+  review_documents: { endpoint: "feedback/documents", body: { approved: true } },
+};
 
 const STAGE_ORDER: PipelineStatus[] = [
   "pending",
@@ -51,6 +94,8 @@ const STAGE_MILESTONES: { status: PipelineStatus; label: string }[] = [
   { status: "completed", label: "Complete" },
 ];
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function downloadHtml(html: string, filename: string) {
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
@@ -65,50 +110,114 @@ function openInNewTab(html: string) {
   window.open(URL.createObjectURL(blob), "_blank");
 }
 
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export default function PipelineResultPage() {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
-  const id = params.id;
+  const runId = params.id;
   const [activeTab, setActiveTab] = useState("termsheet");
 
-  const { data, isLoading, error } = useQuery<PipelineRunData>({
-    queryKey: ["/api/pipeline-runs", id],
+  // Track which gates we've already approved so we don't double-fire
+  const approvedGates = useRef(new Set<string>());
+
+  // Local term sheet data (fetched from portal backend when pipeline completes)
+  const [termSheetData, setTermSheetData] = useState<TermSheetResult | null>(null);
+  const [termSheetLoading, setTermSheetLoading] = useState(false);
+  const termSheetRequested = useRef(false);
+
+  // Poll the FastAPI backend directly
+  const { data, isLoading, error } = useQuery<BackendRunResponse>({
+    queryKey: ["pipeline-run", runId],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/pipeline-runs/${id}`);
+      const res = await fetch(`${PIPELINE_API}/api/runs/${runId}`);
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
       return res.json();
     },
     refetchInterval: (query) => {
       const d = query.state.data;
-      if (!d) return 2000;
-      return (d.pipelineStatus === "completed" || d.pipelineStatus === "error") ? false : 3000;
+      if (!d) return 3000;
+      return (d.status === "completed" || d.status === "error") ? false : 3000;
     },
   });
 
-  const isPending = data && data.pipelineStatus !== "completed" && data.pipelineStatus !== "error";
-  const isComplete = data?.pipelineStatus === "completed";
-  const isError = data?.pipelineStatus === "error";
-  const result = data?.result;
+  // Auto-approve gates when we detect a review status
+  useEffect(() => {
+    if (!data || !runId) return;
+    const status = data.status;
+    if (!(status in GATE_APPROVALS)) return;
+    if (approvedGates.current.has(status)) return;
 
-  // Compute progress percentage from stage order
-  const currentStageIndex = data ? STAGE_ORDER.indexOf(data.pipelineStatus) : 0;
+    // Mark as approved immediately to prevent re-fires
+    approvedGates.current.add(status);
+
+    const gate = GATE_APPROVALS[status];
+    fetch(`${PIPELINE_API}/api/runs/${runId}/${gate.endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(gate.body),
+    }).catch((err) => {
+      console.warn(`Failed to approve gate ${status}:`, err);
+      // Remove from set so it can retry on next poll
+      approvedGates.current.delete(status);
+    });
+  }, [data, runId]);
+
+  // When pipeline completes and portal backend is available, fetch term sheet HTML
+  useEffect(() => {
+    if (data?.status !== "completed") return;
+    if (!PORTAL_API || termSheetRequested.current) return;
+    if (!data.country_profile) return;
+
+    termSheetRequested.current = true;
+    setTermSheetLoading(true);
+
+    fetch(`${PORTAL_API}/api/generate-term-sheet`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        countryContext: data.country_profile,
+        financialModel: data.financial_model,
+      }),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json() as Promise<TermSheetResult>;
+      })
+      .then(setTermSheetData)
+      .catch((err) => console.warn("Term sheet generation unavailable:", err))
+      .finally(() => setTermSheetLoading(false));
+  }, [data]);
+
+  const status = data?.status ?? "pending";
+  const stageLabel = STAGE_LABELS[status] || status;
+  const isPending = data && status !== "completed" && status !== "error";
+  const isComplete = status === "completed";
+  const isError = status === "error";
+
+  const currentStageIndex = STAGE_ORDER.indexOf(status as PipelineStatus);
   const progressPct = Math.round((Math.max(0, currentStageIndex) / (STAGE_ORDER.length - 1)) * 100);
 
+  const countryProfile = data?.country_profile;
+  const gammaUrl = data?.gamma_url;
+  const gammaExportUrl = data?.gamma_export_url;
+
   const handleDownloadTermSheet = useCallback(() => {
-    if (!result?.termSheetHtml || !result.context) return;
-    const name = result.context.localizedProgramName || result.context.country;
-    downloadHtml(result.termSheetHtml, `${name}-Interactive-Term-Sheet.html`);
-  }, [result]);
+    if (!termSheetData) return;
+    const name = termSheetData.context.localizedProgramName || termSheetData.context.country;
+    downloadHtml(termSheetData.termSheetHtml, `${name}-Interactive-Term-Sheet.html`);
+  }, [termSheetData]);
 
   const handleDownloadPitchDeck = useCallback(() => {
-    if (!result?.pitchDeckHtml || !result.context) return;
-    const name = result.context.localizedProgramName || result.context.country;
-    downloadHtml(result.pitchDeckHtml, `${name}-Pitch-Deck.html`);
-  }, [result]);
+    if (!termSheetData) return;
+    const name = termSheetData.context.localizedProgramName || termSheetData.context.country;
+    downloadHtml(termSheetData.pitchDeckHtml, `${name}-Pitch-Deck.html`);
+  }, [termSheetData]);
 
   const handleDownloadDocx = useCallback(() => {
-    if (!result?.termSheetDocxBase64 || !result.context) return;
-    const name = result.context.localizedProgramName || result.context.country;
-    const byteChars = atob(result.termSheetDocxBase64);
+    if (!termSheetData?.termSheetDocxBase64) return;
+    const name = termSheetData.context.localizedProgramName || termSheetData.context.country;
+    const byteChars = atob(termSheetData.termSheetDocxBase64);
     const byteNums = new Array(byteChars.length);
     for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
     const blob = new Blob([new Uint8Array(byteNums)], {
@@ -119,12 +228,12 @@ export default function PipelineResultPage() {
     a.href = url; a.download = `${name}-Term-Sheet.docx`;
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
-  }, [result]);
+  }, [termSheetData]);
 
   const handleOpenTermSheetFullScreen = useCallback(() => {
-    if (!result?.termSheetHtml) return;
-    openInNewTab(result.termSheetHtml);
-  }, [result]);
+    if (!termSheetData?.termSheetHtml) return;
+    openInNewTab(termSheetData.termSheetHtml);
+  }, [termSheetData]);
 
   if (isLoading) {
     return (
@@ -137,7 +246,7 @@ export default function PipelineResultPage() {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6" style={{ background: "#f7f9fc" }}>
-        <p className="text-red-600 text-sm">Failed to load.</p>
+        <p className="text-red-600 text-sm">Failed to load pipeline run.</p>
         <Button variant="outline" size="sm" onClick={() => navigate("/")}>
           <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Back
         </Button>
@@ -171,10 +280,10 @@ export default function PipelineResultPage() {
 
               <div className="text-center space-y-1.5">
                 <p className="text-sm font-semibold text-gray-800">
-                  Building documents for {data?.target}
+                  Building documents{data?.target ? ` for ${data.target}` : ""}...
                 </p>
                 <p className="text-sm" style={{ color: "#0000E5" }}>
-                  {data?.pipelineLabel}
+                  {stageLabel}
                 </p>
               </div>
 
@@ -192,7 +301,9 @@ export default function PipelineResultPage() {
                   {STAGE_MILESTONES.map((m) => {
                     const mIdx = STAGE_ORDER.indexOf(m.status);
                     const done = currentStageIndex >= mIdx;
-                    const active = currentStageIndex >= mIdx && currentStageIndex < (STAGE_ORDER.indexOf(STAGE_MILESTONES[STAGE_MILESTONES.indexOf(m) + 1]?.status) ?? STAGE_ORDER.length);
+                    const nextMilestone = STAGE_MILESTONES[STAGE_MILESTONES.indexOf(m) + 1];
+                    const nextIdx = nextMilestone ? STAGE_ORDER.indexOf(nextMilestone.status) : STAGE_ORDER.length;
+                    const active = currentStageIndex >= mIdx && currentStageIndex < nextIdx;
                     return (
                       <div key={m.status} className="flex flex-col items-center gap-1">
                         <div
@@ -212,9 +323,9 @@ export default function PipelineResultPage() {
               </div>
 
               {/* Agent logs (last 3) */}
-              {data?.agentLogs && data.agentLogs.length > 0 && (
+              {data?.agent_logs && data.agent_logs.length > 0 && (
                 <div className="w-full max-w-md mt-4 space-y-1">
-                  {data.agentLogs.slice(-3).map((log, i) => (
+                  {data.agent_logs.slice(-3).map((log, i) => (
                     <p key={i} className="text-[11px] text-gray-400 truncate">{log}</p>
                   ))}
                 </div>
@@ -230,7 +341,7 @@ export default function PipelineResultPage() {
               </div>
               <div className="text-center space-y-2">
                 <p className="text-sm font-semibold text-red-600">Pipeline failed</p>
-                <p className="text-xs text-gray-500 max-w-sm">{data?.error || "An unexpected error occurred."}</p>
+                <p className="text-xs text-gray-500 max-w-sm">{data?.error_message || "An unexpected error occurred."}</p>
               </div>
               <Button variant="outline" size="sm" onClick={() => navigate("/")}>
                 <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Try Again
@@ -239,52 +350,59 @@ export default function PipelineResultPage() {
           )}
 
           {/* Completed State */}
-          {isComplete && result && (
+          {isComplete && (
             <div className="space-y-6 animate-in fade-in duration-500" data-testid="status-completed">
               {/* Header with country info */}
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3">
-                  {result.context && (
+                  {countryProfile && (
                     <>
-                      <span className="text-3xl">{result.context.flagEmoji}</span>
+                      <span className="text-3xl">{countryProfile.flagEmoji}</span>
                       <div>
                         <h1 className="text-lg font-bold tracking-tight text-gray-900" data-testid="text-country">
-                          {result.context.localizedProgramName || result.context.country}
+                          {countryProfile.localizedProgramName || countryProfile.country}
                         </h1>
                         <p className="text-xs text-gray-500">
-                          {result.context.formalName} — {result.context.headOfStateTitle}: {result.context.headOfState}
+                          {countryProfile.formalName} — {countryProfile.headOfStateTitle}: {countryProfile.headOfState}
                         </p>
                       </div>
                     </>
                   )}
-                  {!result.context && (
+                  {!countryProfile && (
                     <div>
-                      <h1 className="text-lg font-bold tracking-tight text-gray-900">{data?.target}</h1>
-                      <p className="text-xs text-gray-500">Documents ready</p>
+                      <h1 className="text-lg font-bold tracking-tight text-gray-900">{data?.target || "Documents"}</h1>
+                      <p className="text-xs text-gray-500">Pipeline complete</p>
                     </div>
                   )}
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                  {result.termSheetDocxBase64 && (
+                  {termSheetData?.termSheetDocxBase64 && (
                     <Button variant="outline" size="sm" onClick={handleDownloadDocx} className="text-xs border-gray-200 text-gray-600">
                       <FileDown className="h-3.5 w-3.5 mr-1.5" /> .docx
                     </Button>
                   )}
-                  {result.termSheetHtml && (
+                  {termSheetData?.termSheetHtml && (
                     <Button variant="outline" size="sm" onClick={handleDownloadTermSheet} className="text-xs border-gray-200 text-gray-600">
                       <Download className="h-3.5 w-3.5 mr-1.5" /> Term Sheet
                     </Button>
                   )}
-                  {result.pitchDeckHtml && (
+                  {termSheetData?.pitchDeckHtml && (
                     <Button variant="outline" size="sm" onClick={handleDownloadPitchDeck} className="text-xs border-gray-200 text-gray-600">
                       <Download className="h-3.5 w-3.5 mr-1.5" /> Pitch Deck
                     </Button>
+                  )}
+                  {gammaExportUrl && (
+                    <a href={gammaExportUrl} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" size="sm" className="text-xs border-gray-200 text-gray-600">
+                        <Download className="h-3.5 w-3.5 mr-1.5" /> Gamma PPTX
+                      </Button>
+                    </a>
                   )}
                 </div>
               </div>
 
               {/* Gamma Deck CTA */}
-              {result.gammaUrl && (
+              {gammaUrl && (
                 <div className="rounded-xl p-4 flex items-center justify-between gap-4"
                   style={{ background: "linear-gradient(135deg, #0000E5 0%, #1a33ff 100%)", boxShadow: "0 4px 20px rgba(0,0,229,0.25)" }}>
                   <div className="flex items-center gap-3">
@@ -296,7 +414,7 @@ export default function PipelineResultPage() {
                       <p className="text-xs text-white/70">AI-generated presentation deck — ready for investor meetings</p>
                     </div>
                   </div>
-                  <a href={result.gammaUrl} target="_blank" rel="noopener noreferrer">
+                  <a href={gammaUrl} target="_blank" rel="noopener noreferrer">
                     <Button size="sm" className="font-semibold bg-white hover:bg-gray-50" style={{ color: "#0000E5" }}>
                       <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open Investor Deck
                     </Button>
@@ -305,7 +423,7 @@ export default function PipelineResultPage() {
               )}
 
               {/* Interactive Term Sheet CTA */}
-              {result.termSheetHtml && (
+              {termSheetData?.termSheetHtml && (
                 <div className="rounded-xl p-4 flex items-center justify-between gap-4"
                   style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a4a 100%)", boxShadow: "0 4px 20px rgba(10,22,40,0.25)" }}>
                   <div className="flex items-center gap-3">
@@ -324,37 +442,45 @@ export default function PipelineResultPage() {
                 </div>
               )}
 
+              {/* Term sheet loading indicator */}
+              {termSheetLoading && (
+                <div className="rounded-xl p-4 flex items-center gap-3 border border-gray-200 bg-white">
+                  <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#0000E5" }} />
+                  <p className="text-sm text-gray-600">Generating interactive term sheet &amp; pitch deck...</p>
+                </div>
+              )}
+
               {/* Tab previews */}
-              {(result.termSheetHtml || result.pitchDeckHtml) && (
+              {(termSheetData?.termSheetHtml || termSheetData?.pitchDeckHtml) && (
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <div className="flex items-center justify-between mb-3">
                     <TabsList className="bg-white border border-gray-200">
-                      {result.termSheetHtml && (
+                      {termSheetData.termSheetHtml && (
                         <TabsTrigger value="termsheet" className="text-xs gap-1.5"><FileText className="h-3.5 w-3.5" /> Term Sheet</TabsTrigger>
                       )}
-                      {result.pitchDeckHtml && (
+                      {termSheetData.pitchDeckHtml && (
                         <TabsTrigger value="pitchdeck" className="text-xs gap-1.5"><Presentation className="h-3.5 w-3.5" /> Pitch Deck</TabsTrigger>
                       )}
                     </TabsList>
                     <Button variant="ghost" size="sm" className="text-xs text-gray-500"
                       onClick={() => {
-                        const html = activeTab === "termsheet" ? result.termSheetHtml : result.pitchDeckHtml;
+                        const html = activeTab === "termsheet" ? termSheetData?.termSheetHtml : termSheetData?.pitchDeckHtml;
                         if (html) openInNewTab(html);
                       }}>
                       <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open in New Tab
                     </Button>
                   </div>
-                  {result.termSheetHtml && (
+                  {termSheetData.termSheetHtml && (
                     <TabsContent value="termsheet">
                       <Card className="overflow-hidden bg-white border-gray-200"><CardContent className="p-0">
-                        <iframe srcDoc={result.termSheetHtml} className="w-full border-0" style={{ height: "800px" }} title="Term Sheet" />
+                        <iframe srcDoc={termSheetData.termSheetHtml} className="w-full border-0" style={{ height: "800px" }} title="Term Sheet" />
                       </CardContent></Card>
                     </TabsContent>
                   )}
-                  {result.pitchDeckHtml && (
+                  {termSheetData.pitchDeckHtml && (
                     <TabsContent value="pitchdeck">
                       <Card className="overflow-hidden bg-white border-gray-200"><CardContent className="p-0">
-                        <iframe srcDoc={result.pitchDeckHtml} className="w-full border-0" style={{ height: "800px" }} title="Pitch Deck" />
+                        <iframe srcDoc={termSheetData.pitchDeckHtml} className="w-full border-0" style={{ height: "800px" }} title="Pitch Deck" />
                       </CardContent></Card>
                     </TabsContent>
                   )}

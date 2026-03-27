@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
+import { PIPELINE_API } from "@/lib/api-config";
 import { Input } from "@/components/ui/input";
 import { Loader2, ArrowRight, Globe, FileText, Presentation, ExternalLink } from "lucide-react";
 import { PerplexityAttribution } from "@/components/PerplexityAttribution";
@@ -17,9 +17,17 @@ export default function HomePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiRequest("POST", "/api/generate-full", { target: trimmed });
+      const res = await fetch(`${PIPELINE_API}/api/runs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: trimmed }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`${res.status}: ${errText}`);
+      }
       const data = await res.json();
-      navigate(`/pipeline/${data.id}`);
+      navigate(`/pipeline/${data.run_id}`);
     } catch (err) {
       setError(String(err));
       setLoading(false);
