@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { PORTAL_API, PIPELINE_API } from "@/lib/api-config";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowRight, Globe, FileText, Presentation, ExternalLink } from "lucide-react";
+import { Loader2, ArrowRight, Globe } from "lucide-react";
 
 export default function HomePage() {
   const [, navigate] = useLocation();
@@ -152,23 +152,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-          {[
-            { icon: ExternalLink, label: "Interactive Website" },
-            { icon: FileText, label: "Term Sheet" },
-            { icon: Presentation, label: "Pitch Deck" },
-            { icon: Globe, label: "Country-specific" },
-          ].map(({ icon: Icon, label }) => (
-            <div
-              key={label}
-              className="flex items-center gap-1.5 text-xs rounded-full px-3 py-1.5"
-              style={{ color: "#0000E5", background: "rgba(0, 0, 229, 0.06)" }}
-            >
-              <Icon className="h-3 w-3" />
-              {label}
-            </div>
-          ))}
-        </div>
+
       </div>
 
       {/* Footer */}
