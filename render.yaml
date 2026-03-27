@@ -23,7 +23,7 @@ services:
     name: alpha-portal
     runtime: node
     rootDir: portal
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_ENV
