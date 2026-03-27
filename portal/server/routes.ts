@@ -542,13 +542,7 @@ a { color: inherit; text-decoration: none; }
 <header class="site-header">
   <div class="header-inner">
     <span class="logo-link" onclick="document.getElementById('hero').scrollIntoView({behavior:'smooth'})">
-      <svg class="logo-bird" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="28,4 18,18 8,32 28,26 48,32 38,18" fill="white" opacity="0.9"/>
-        <polygon points="8,32 28,26 20,40" fill="white" opacity="0.6"/>
-        <polygon points="48,32 28,26 36,40" fill="white" opacity="0.6"/>
-        <polygon points="20,40 28,26 36,40 28,48" fill="white" opacity="0.4"/>
-        <text x="58" y="34" font-family="Montserrat, sans-serif" font-weight="700" font-size="14" fill="white" letter-spacing="3">ALPHA HOLDINGS</text>
-      </svg>
+      <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:32px;object-fit:contain;"/>
     </span>
 
     <button class="nav-toggle" aria-label="Toggle navigation">
@@ -876,12 +870,7 @@ a { color: inherit; text-decoration: none; }
   <div class="container">
     <div class="footer-inner">
       <div class="footer-brand">
-        <svg class="footer-bird" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="24,4 16,16 8,28 24,22 40,28 32,16" fill="#c4cdd9" opacity="0.7"/>
-          <polygon points="8,28 24,22 18,36" fill="#c4cdd9" opacity="0.4"/>
-          <polygon points="40,28 24,22 30,36" fill="#c4cdd9" opacity="0.4"/>
-          <polygon points="18,36 24,22 30,36 24,44" fill="#c4cdd9" opacity="0.25"/>
-        </svg>
+        <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" class="footer-bird" style="height:24px;object-fit:contain;opacity:0.7;"/>
         <div class="footer-brand-text">
           <strong>Alpha Holdings, Inc.</strong>
           <span>&copy; ${year}. Confidential &amp; Proprietary.</span>
@@ -1305,7 +1294,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
   <div class="meta">Confidential &amp; Proprietary · ${dateStr} · Alpha Holdings, Inc.</div>
   <div class="slide-footer" style="color: rgba(255,255,255,0.3);">
-    <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;opacity:0.5;"/>
     <span class="copy" style="color: rgba(255,255,255,0.3);">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num" style="color: rgba(255,255,255,0.3);">${nextSlide()}</span>
   </div>
@@ -1361,7 +1350,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
     <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">${nextSlide()}</span>
   </div>
@@ -1378,7 +1367,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
     <div>
       <div style="text-align:center; padding:12px 0 16px;">
         <div style="font-size:48px; margin-bottom:8px;">${ctx.flagEmoji}</div>
-        <div style="font-family:var(--font-display); font-size:22px; font-weight:800; color:var(--blue); letter-spacing:0.02em;">ALPHA HOLDINGS, INC.</div>
+        <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha Holdings" style="height:40px;object-fit:contain;margin:0 auto;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
         <div style="font-size:12px; font-weight:600; color:#4a5568; margin-top:6px;">The "Stanford of K-12 Education"</div>
       </div>
       <div style="background:var(--cream); border-radius:8px; padding:14px 16px; margin-top:12px;">
@@ -1411,7 +1400,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
     <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">${nextSlide()}</span>
   </div>
@@ -1475,7 +1464,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
     <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">${nextSlide()}</span>
   </div>
@@ -1513,7 +1502,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
     <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">${nextSlide()}</span>
   </div>
@@ -1549,7 +1538,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   <p class="proof-note">The learning science has been proven for 40 years. Alpha has made it work at scale.</p>
 
   <div class="slide-footer" style="color: rgba(255,255,255,0.3);">
-    <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;opacity:0.5;"/>
     <span class="copy" style="color: rgba(255,255,255,0.3);">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num" style="color: rgba(255,255,255,0.3);">${nextSlide()}</span>
   </div>
@@ -1631,7 +1620,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
     <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">${nextSlide()}</span>
   </div>
@@ -1685,7 +1674,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
     <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">${nextSlide()}</span>
   </div>
@@ -1747,7 +1736,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
     <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">${nextSlide()}</span>
   </div>
@@ -1803,7 +1792,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
     <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">${nextSlide()}</span>
   </div>
@@ -1845,7 +1834,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
     <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">${nextSlide()}</span>
   </div>
@@ -1900,7 +1889,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
     <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">${nextSlide()}</span>
   </div>
@@ -1935,7 +1924,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   </div>
 
   <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;filter:brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%);"/>
     <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num">${nextSlide()}</span>
   </div>
@@ -1951,7 +1940,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
     <div style="display:inline-block; border:2px solid var(--blue-light); border-radius:4px; padding:8px 24px; font-family:var(--font-display); font-size:12px; font-weight:700; color:var(--blue-light); letter-spacing:0.1em;">CONFIDENTIAL</div>
   </div>
   <div class="slide-footer" style="color: rgba(255,255,255,0.3);">
-    <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA HOLDINGS, INC.</span>
+    <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" style="height:16px;object-fit:contain;opacity:0.5;"/>
     <span class="copy" style="color: rgba(255,255,255,0.3);">&copy; ${year}. Confidential &amp; Proprietary.</span>
     <span class="slide-num" style="color: rgba(255,255,255,0.3);">${nextSlide()}</span>
   </div>
