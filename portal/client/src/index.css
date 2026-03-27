@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* Alpha Holdings, Inc. Partnership Portal
-   Art direction: dark, prestigious, institutional — teal accent with gold highlights.
+   Art direction: dark, prestigious, institutional — Alpha Blue (#0000E5) accent with gold highlights.
    Target audience: heads of state, royal families, senior ministers. */
 
 /* LIGHT MODE (secondary — dark is default) */
@@ -22,15 +22,15 @@
   --sidebar: 200 15% 95%;
   --sidebar-foreground: 200 25% 10%;
   --sidebar-border: 200 10% 88%;
-  --sidebar-primary: 183 90% 24%;
+  --sidebar-primary: 240 100% 45%;
   --sidebar-primary-foreground: 0 0% 98%;
   --sidebar-accent: 200 10% 92%;
   --sidebar-accent-foreground: 200 25% 10%;
-  --sidebar-ring: 183 90% 24%;
+  --sidebar-ring: 240 100% 45%;
   --popover: 200 15% 96%;
   --popover-foreground: 200 25% 10%;
   --popover-border: 200 10% 88%;
-  --primary: 183 90% 24%;
+  --primary: 240 100% 45%;
   --primary-foreground: 0 0% 98%;
   --secondary: 200 10% 92%;
   --secondary-foreground: 200 25% 10%;
@@ -41,8 +41,8 @@
   --destructive: 0 72% 48%;
   --destructive-foreground: 0 0% 98%;
   --input: 200 10% 78%;
-  --ring: 183 90% 24%;
-  --chart-1: 183 90% 30%;
+  --ring: 240 100% 45%;
+  --chart-1: 240 100% 50%;
   --chart-2: 42 80% 52%;
   --chart-3: 160 50% 40%;
   --chart-4: 220 60% 55%;
@@ -87,15 +87,15 @@
   --sidebar: 210 16% 8%;
   --sidebar-foreground: 200 10% 92%;
   --sidebar-border: 210 10% 14%;
-  --sidebar-primary: 183 55% 42%;
+  --sidebar-primary: 240 100% 55%;
   --sidebar-primary-foreground: 0 0% 98%;
   --sidebar-accent: 210 10% 16%;
   --sidebar-accent-foreground: 200 10% 92%;
-  --sidebar-ring: 183 55% 42%;
+  --sidebar-ring: 240 100% 55%;
   --popover: 210 16% 11%;
   --popover-foreground: 200 10% 92%;
   --popover-border: 210 10% 16%;
-  --primary: 183 55% 42%;
+  --primary: 240 100% 55%;
   --primary-foreground: 0 0% 98%;
   --secondary: 210 10% 16%;
   --secondary-foreground: 200 10% 92%;
@@ -106,8 +106,8 @@
   --destructive: 0 72% 48%;
   --destructive-foreground: 0 0% 98%;
   --input: 210 10% 24%;
-  --ring: 183 55% 42%;
-  --chart-1: 183 55% 50%;
+  --ring: 240 100% 50%;
+  --chart-1: 240 100% 55%;
   --chart-2: 42 70% 58%;
   --chart-3: 160 45% 50%;
   --chart-4: 220 55% 60%;

@@ -86,317 +86,710 @@ const FIXED_ECONOMICS = {
 // ─── Term Sheet HTML Generator ───────────────────────────────────────────────
 
 function generateTermSheetHtml(ctx: CountryContext): string {
+  const programName = ctx.localizedProgramName || ctx.country;
+  const lifeSkillsName = ctx.localizedLifeSkillsName || `${ctx.country}Core`;
+  const year = new Date().getFullYear();
+  const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
   const upfrontRows = FIXED_ECONOMICS.upfront
-    .map(r => `<tr><td>${r.item.replace("EdTech App R&D", `${ctx.country} EdTech App R&D`).replace("Local Life-Skills R&D", `${ctx.localizedLifeSkillsName || ctx.country} Life-Skills R&D`)}</td><td class="amt">${r.amount}</td><td>${r.recipient}</td></tr>`)
+    .map(r => {
+      const item = r.item
+        .replace("EdTech App R&D", `${ctx.country} EdTech App R&D`)
+        .replace("Local Life-Skills R&D", `${lifeSkillsName} Life-Skills R&D`);
+      return `<tr><td>${item}</td><td class="amt">${r.amount}</td><td class="recipient">${r.recipient}</td></tr>`;
+    })
     .join("\n");
 
   const ongoingRows = FIXED_ECONOMICS.ongoing
-    .map(r => `<tr><td>${r.item}</td><td class="amt">${r.amount}</td><td>${r.recipient}</td></tr>`)
+    .map(r => `<tr><td>${r.item}</td><td class="amt">${r.amount}</td><td class="recipient">${r.recipient}</td></tr>`)
     .join("\n");
 
   const costRows = FIXED_ECONOMICS.costStructure
-    .map(r => `<tr><td>${r.item}</td><td class="amt">${r.alpha}</td><td class="amt highlight">${r.national}</td><td class="notes">${r.notes}</td></tr>`)
+    .map(r => `<tr><td>${r.item}</td><td class="amt">${r.alpha}</td><td class="amt hl">${r.national}</td><td class="notes">${r.notes}</td></tr>`)
     .join("\n");
 
-
+  const strengths = (ctx.keyStrengths || [])
+    .map(s => `<li>${s}</li>`)
+    .join("\n");
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${ctx.localizedProgramName || ctx.country} — Term Sheet</title>
+<title>${programName} — Term Sheet | Alpha Holdings, Inc.</title>
+<meta name="description" content="${programName} National Education Transformation Program — Confidential Term Sheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-  
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  
-  @page { 
-    size: A4 landscape; 
-    margin: 0.5in;
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --navy: #0a1628;
+  --navy-mid: #111d30;
+  --navy-light: #1a2b45;
+  --blue: #0000E5;
+  --blue-light: #59BBF9;
+  --gold: #BF9A4A;
+  --gold-light: #d4b06a;
+  --cream: #fdf8f0;
+  --cream-dark: #f5edd8;
+  --white: #ffffff;
+  --text-muted: #8a9ab5;
+  --text-light: #c4cdd9;
+  --text-body: #4a5568;
+  --border-light: rgba(191, 154, 74, 0.15);
+  --border-subtle: rgba(10, 22, 40, 0.08);
+  --font-display: 'Montserrat', -apple-system, sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --max-w: 1200px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body { font-family: var(--font-body); font-size: 16px; line-height: 1.6; color: var(--navy); background: var(--cream); overflow-x: hidden; }
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+
+.container { max-width: var(--max-w); margin: 0 auto; padding: 0 2rem; }
+
+/* ─── HEADER ─── */
+.site-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10, 22, 40, 0.97);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-light);
+  transition: box-shadow 0.3s var(--ease);
+}
+.site-header.scrolled { box-shadow: 0 2px 24px rgba(0,0,0,0.25); }
+.header-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: var(--max-w); margin: 0 auto; padding: 0 2rem; height: 64px;
+}
+.logo-link { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.logo-bird { width: 36px; height: 36px; }
+.logo-text {
+  font-family: var(--font-display); font-size: 0.8125rem; font-weight: 700;
+  color: var(--white); letter-spacing: 0.18em; text-transform: uppercase;
+}
+.main-nav { display: flex; align-items: center; gap: 1.75rem; }
+.main-nav a {
+  font-size: 0.8125rem; font-weight: 500; color: var(--text-light);
+  letter-spacing: 0.02em; padding: 4px 0;
+  border-bottom: 2px solid transparent;
+  transition: color 180ms var(--ease), border-color 180ms var(--ease);
+  cursor: pointer;
+}
+.main-nav a:hover { color: var(--cream); }
+.main-nav a.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+.nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+.nav-toggle span { display: block; width: 24px; height: 2px; background: var(--cream); margin: 5px 0; transition: transform 0.3s var(--ease), opacity 0.3s var(--ease); }
+
+@media (max-width: 768px) {
+  .nav-toggle { display: block; z-index: 200; }
+  .nav-toggle.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+  .nav-toggle.open span:nth-child(2) { opacity: 0; }
+  .nav-toggle.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+  .main-nav {
+    position: fixed; top: 0; right: -100%; width: 280px; height: 100vh;
+    background: var(--navy); flex-direction: column; align-items: flex-start;
+    justify-content: flex-start; padding: 80px 2rem 2rem; gap: 1rem;
+    transition: right 0.3s var(--ease); box-shadow: -4px 0 20px rgba(0,0,0,0.3); z-index: 150;
   }
-  
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page-break { page-break-before: always; }
-  }
-  
-  body {
-    font-family: 'Inter', -apple-system, sans-serif;
-    font-size: 11px;
-    color: #1a1a2e;
-    line-height: 1.5;
-    background: #fff;
-  }
-  
-  .page {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 40px;
-  }
-  
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 32px;
-    padding-bottom: 20px;
-    border-bottom: 3px solid #0a1628;
-  }
-  
-  .header-left h1 {
-    font-size: 24px;
-    font-weight: 700;
-    color: #0a1628;
-    letter-spacing: -0.02em;
-    margin-bottom: 4px;
-  }
-  
-  .header-left .subtitle {
-    font-size: 13px;
-    color: #4a5568;
-    font-weight: 400;
-  }
-  
-  .header-right {
-    text-align: right;
-    font-size: 10px;
-    color: #718096;
-  }
-  
-  .header-right .brand {
-    font-size: 14px;
-    font-weight: 700;
-    color: #1a56db;
-    margin-bottom: 2px;
-  }
-  
-  .section-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #1a56db;
-    margin-bottom: 12px;
-  }
-  
-  .section-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #0a1628;
-    margin-bottom: 16px;
-  }
-  
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 24px;
-  }
-  
-  th {
-    text-align: left;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #4a5568;
-    padding: 8px 12px;
-    border-bottom: 2px solid #e2e8f0;
-    background: #f7fafc;
-  }
-  
-  td {
-    padding: 8px 12px;
-    border-bottom: 1px solid #edf2f7;
-    font-size: 11px;
-    vertical-align: top;
-  }
-  
-  td.amt {
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-  
-  td.highlight {
-    background: linear-gradient(135deg, #1a56db08, #1a56db12);
-    color: #1a56db;
-    font-weight: 700;
-  }
-  
-  td.notes {
-    font-size: 10px;
-    color: #718096;
-    max-width: 280px;
-  }
-  
-  tr.total-row td {
-    font-weight: 700;
-    border-top: 2px solid #0a1628;
-    border-bottom: 2px solid #0a1628;
-    background: #f7fafc;
-  }
-  
-  .two-col {
-    display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 32px;
-    margin-bottom: 32px;
-  }
-  
-  .section-box {
-    margin-bottom: 24px;
-  }
-  
-  .callout {
-    background: #f0f4ff;
-    border-left: 4px solid #1a56db;
-    padding: 14px 18px;
-    margin-bottom: 20px;
-    border-radius: 0 6px 6px 0;
-  }
-  
-  .callout p {
-    font-size: 11px;
-    line-height: 1.6;
-    color: #2d3748;
-  }
-  
-  .footer {
-    margin-top: 32px;
-    padding-top: 16px;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: space-between;
-    font-size: 9px;
-    color: #a0aec0;
-  }
-  
-  .scale-badges {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-  
-  .scale-badge {
-    display: flex;
-    flex-direction: column;
-    padding: 10px 16px;
-    background: #f7fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    min-width: 140px;
-  }
-  
-  .scale-badge .label {
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #718096;
-    margin-bottom: 2px;
-  }
-  
-  .scale-badge .value {
-    font-size: 12px;
-    font-weight: 600;
-    color: #0a1628;
-  }
+  .main-nav.open { right: 0; }
+  .main-nav a { font-size: 1rem; padding: 8px 0; }
+}
+
+/* ─── HERO ─── */
+.hero {
+  background: linear-gradient(160deg, var(--navy) 0%, var(--navy-mid) 50%, #0a1e3d 100%);
+  color: var(--cream); padding: clamp(5rem, 12vw, 8rem) 0 clamp(4rem, 10vw, 6rem);
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; top: -40%; right: -15%; width: 50%; height: 180%;
+  background: radial-gradient(ellipse, rgba(0, 0, 229, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero::after {
+  content: ''; position: absolute; bottom: -20%; left: -10%; width: 40%; height: 120%;
+  background: radial-gradient(ellipse, rgba(191, 154, 74, 0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--gold); border: 1px solid var(--gold); border-radius: 4px;
+  padding: 0.3rem 0.85rem; margin-bottom: 1.5rem;
+}
+.hero-flag { font-size: 1.1rem; line-height: 1; }
+.hero h1 {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(2.25rem, 5vw, 3.25rem); letter-spacing: -0.03em;
+  line-height: 1.1; color: var(--white); margin-bottom: 1rem;
+}
+.hero h1 span { color: var(--blue-light); }
+.hero .subline {
+  font-size: clamp(1rem, 2vw, 1.2rem); color: var(--text-light);
+  max-width: 640px; line-height: 1.65; margin-bottom: 2rem;
+}
+.hero-meta {
+  font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.04em;
+}
+.hero-meta strong { color: var(--text-light); }
+
+/* ─── SECTIONS ─── */
+.section { padding: 5rem 0; }
+.section-lg { padding: 6rem 0; }
+.section-cream { background: var(--cream); }
+.section-white { background: var(--white); }
+.section-navy { background: var(--navy); color: var(--cream); }
+.section-dark { background: var(--navy-mid); color: var(--cream); }
+
+.section-eyebrow {
+  display: block; font-family: var(--font-display);
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--blue); margin-bottom: 0.5rem;
+}
+.section-navy .section-eyebrow,
+.section-dark .section-eyebrow { color: var(--gold); }
+
+.section-title {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem); letter-spacing: -0.02em;
+  line-height: 1.15; margin-bottom: 1rem;
+}
+.section-navy .section-title { color: var(--cream); }
+
+.section-subtitle {
+  font-size: 1.0625rem; color: var(--text-body); line-height: 1.65;
+  max-width: 700px;
+}
+.section-navy .section-subtitle { color: var(--text-light); }
+
+/* ─── METRICS GRID ─── */
+.metrics-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.25rem;
+}
+.metric {
+  text-align: center; padding: 1.5rem 1rem; background: var(--white);
+  border: 1px solid var(--border-subtle); border-radius: 8px;
+  transition: transform 180ms var(--ease), box-shadow 180ms var(--ease);
+}
+.metric:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.metric-value {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(1.25rem, 2vw, 1.5rem); color: var(--gold); margin-bottom: 0.35rem; line-height: 1.2;
+}
+.metric-label { font-size: 0.8125rem; color: var(--text-body); line-height: 1.4; }
+
+/* ─── STATS STRIP ─── */
+.stats-strip { background: var(--navy); padding: 2.5rem 0; }
+.stats-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem; text-align: center;
+}
+.stat-item { color: var(--cream); }
+.stat-number {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem); color: var(--gold); margin-bottom: 0.25rem; line-height: 1.2;
+}
+.stat-label { font-size: 0.8125rem; color: var(--text-light); line-height: 1.4; }
+
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+}
+
+/* ─── CARDS ─── */
+.card-grid { display: grid; gap: 1.5rem; }
+.card-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.card-grid-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 768px) { .card-grid-2, .card-grid-3 { grid-template-columns: 1fr; } }
+@media (min-width: 769px) and (max-width: 1024px) { .card-grid-3 { grid-template-columns: repeat(2, 1fr); } }
+
+.card {
+  background: var(--white); border: 1px solid var(--border-subtle);
+  border-radius: 8px; padding: 2rem;
+  transition: transform 180ms var(--ease), box-shadow 180ms var(--ease), border-color 180ms var(--ease);
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-color: var(--gold); }
+.card-dark {
+  background: var(--navy-light); border-color: var(--border-light);
+}
+.card-dark h4, .card-dark h3 { color: var(--cream); }
+.card-dark p { color: var(--text-light); }
+.card-blue { border-left: 3px solid var(--blue); }
+
+.card-label {
+  display: block; font-family: var(--font-display);
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem;
+}
+.card h3, .card h4 {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 1.125rem; margin-bottom: 0.75rem; line-height: 1.3;
+}
+.card p { color: var(--text-body); font-size: 0.9375rem; line-height: 1.6; }
+
+/* ─── TABLES ─── */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -0.5rem; padding: 0 0.5rem; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.data-table th {
+  text-align: left; font-family: var(--font-display);
+  font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-muted);
+  padding: 0.75rem 1rem; border-bottom: 2px solid var(--navy);
+  background: var(--cream-dark);
+}
+.data-table th.primary-col { background: var(--blue); color: var(--white); }
+.data-table td {
+  padding: 0.65rem 1rem; border-bottom: 1px solid rgba(10,22,40,0.06);
+  vertical-align: top;
+}
+.data-table td.amt { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.data-table td.hl {
+  background: linear-gradient(135deg, rgba(0,0,229,0.04), rgba(0,0,229,0.08));
+  color: var(--blue); font-weight: 700;
+}
+.data-table td.recipient { font-size: 0.8125rem; color: var(--text-body); }
+.data-table td.notes { font-size: 0.75rem; color: var(--text-muted); max-width: 260px; }
+.data-table tr.total-row td {
+  font-weight: 700; border-top: 2px solid var(--navy);
+  border-bottom: 2px solid var(--navy); background: var(--cream-dark);
+}
+.data-table tr.section-header td {
+  font-family: var(--font-display); font-weight: 700; font-size: 0.65rem;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+  padding-top: 1rem; border-bottom: none;
+}
+
+/* ─── TWO COL ─── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; }
+@media (max-width: 768px) { .two-col { grid-template-columns: 1fr; gap: 2rem; } }
+
+/* ─── CONTENT LISTS ─── */
+.content-list { display: flex; flex-direction: column; gap: 1rem; list-style: none; }
+.content-list li {
+  position: relative; padding-left: 1.25rem;
+  font-size: 0.9375rem; color: var(--text-body); line-height: 1.65;
+}
+.content-list li::before {
+  content: ''; position: absolute; left: 0; top: 0.6em;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--blue);
+}
+.content-list li strong { color: var(--navy); }
+
+.numbered-list { display: flex; flex-direction: column; gap: 1.25rem; list-style: none; }
+.numbered-list li {
+  display: flex; align-items: flex-start; gap: 1rem;
+  font-size: 0.9375rem; color: var(--text-body); line-height: 1.6;
+}
+.num-circle {
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(0,0,229,0.08); display: flex; align-items: center;
+  justify-content: center; font-family: var(--font-display);
+  font-size: 0.875rem; font-weight: 700; color: var(--blue);
+}
+
+/* ─── CALLOUT ─── */
+.callout {
+  background: rgba(0,0,229,0.04); border-left: 4px solid var(--blue);
+  padding: 1.25rem 1.5rem; border-radius: 0 8px 8px 0; margin-top: 1.5rem;
+}
+.callout p { font-size: 0.9375rem; line-height: 1.65; color: var(--navy); max-width: none; }
+.callout strong { color: var(--blue); }
+
+/* ─── DIVIDER ─── */
+.divider { height: 1px; background: var(--border-subtle); margin: 0; }
+.divider-gold { width: 60px; height: 2px; background: var(--gold); margin-bottom: 1.5rem; }
+
+/* ─── CTA ─── */
+.cta-section { background: var(--navy); padding: 4rem 0; text-align: center; }
+.cta-section h2 {
+  font-family: var(--font-display); font-weight: 700; color: var(--cream);
+  font-size: clamp(1.5rem, 3vw, 2rem); margin-bottom: 1rem;
+}
+.cta-section p { color: var(--text-light); margin: 0 auto 2rem; max-width: 50ch; }
+.cta-btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: var(--gold); color: var(--navy); font-family: var(--font-display);
+  font-weight: 700; font-size: 0.875rem; padding: 0.75rem 1.75rem; border-radius: 6px;
+  letter-spacing: 0.02em;
+  transition: background 180ms var(--ease), transform 180ms var(--ease);
+}
+.cta-btn:hover { background: var(--gold-light); transform: translateY(-1px); }
+
+/* ─── FOOTER ─── */
+.site-footer {
+  background: #070e19; color: var(--text-light); padding: 2rem 0;
+  border-top: 1px solid var(--border-light);
+}
+.footer-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 1rem;
+}
+.footer-brand { display: flex; flex-direction: column; gap: 2px; }
+.footer-brand strong {
+  font-family: var(--font-display); font-size: 0.875rem;
+  color: var(--cream); letter-spacing: 0.04em;
+}
+.footer-brand span { font-size: 0.75rem; color: var(--text-muted); }
+.footer-links { display: flex; gap: 2rem; font-size: 0.75rem; }
+.footer-links a { color: var(--text-muted); transition: color 180ms var(--ease); }
+.footer-links a:hover { color: var(--cream); }
+
+@media (max-width: 600px) {
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+}
+
+/* ─── ANIMATIONS ─── */
+.fade-in { opacity: 0; transform: translateY(16px); transition: opacity 0.8s var(--ease), transform 0.8s var(--ease); }
+.fade-in.visible { opacity: 1; transform: translateY(0); }
+
+/* ─── PRINT ─── */
+@media print {
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .site-header, .nav-toggle { display: none; }
+  .hero { padding: 2rem 0; }
+  .section, .section-lg { padding: 2rem 0; }
+  .fade-in { opacity: 1; transform: none; }
+}
+
+/* ─── RESPONSIVE UTILS ─── */
+@media (max-width: 768px) {
+  .section { padding: 3rem 0; }
+  .section-lg { padding: 4rem 0; }
+  .container { padding: 0 1rem; }
+  .card { padding: 1.5rem; }
+}
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="header">
-    <div class="header-left">
-      <h1>${ctx.flagEmoji} ${ctx.localizedProgramName || ctx.country} — Term Sheet</h1>
-      <div class="subtitle">${ctx.formalName} National Education Transformation Program</div>
-    </div>
-    <div class="header-right">
-      <div class="brand">ALPHA HOLDINGS, INC.</div>
-      <div>Confidential & Proprietary</div>
-      <div>${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long" })}</div>
-    </div>
-  </div>
 
-  <div class="callout">
-    <p><strong>${ctx.headOfStateTitle}:</strong> ${ctx.headOfState} · <strong>Population:</strong> ${ctx.population} · <strong>GDP per Capita:</strong> ${ctx.gdpPerCapita} · <strong>School-Age Population:</strong> ${ctx.schoolAgePopulation}${ctx.addressableStudentPopulation ? ` · <strong>Addressable Market (AGI &gt; $250k):</strong> ${ctx.addressableStudentPopulation}` : ''}</p>
-  </div>
+<!-- ═══════ HEADER ═══════ -->
+<header class="site-header">
+  <div class="header-inner">
+    <span class="logo-link" onclick="document.getElementById('hero').scrollIntoView({behavior:'smooth'})">
+      <svg class="logo-bird" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="28,4 18,18 8,32 28,26 48,32 38,18" fill="white" opacity="0.9"/>
+        <polygon points="8,32 28,26 20,40" fill="white" opacity="0.6"/>
+        <polygon points="48,32 28,26 36,40" fill="white" opacity="0.6"/>
+        <polygon points="20,40 28,26 36,40 28,48" fill="white" opacity="0.4"/>
+        <text x="58" y="34" font-family="Montserrat, sans-serif" font-weight="700" font-size="14" fill="white" letter-spacing="3">ALPHA HOLDINGS</text>
+      </svg>
+    </span>
 
-  <div class="scale-badges">
-    <div class="scale-badge">
-      <span class="label">Year One</span>
-      <span class="value">${FIXED_ECONOMICS.scaleTargets.yearOne}</span>
-    </div>
-    <div class="scale-badge">
-      <span class="label">5-Year Plan</span>
-      <span class="value">${FIXED_ECONOMICS.scaleTargets.fiveYear}</span>
-    </div>
-    <div class="scale-badge">
-      <span class="label">Per-Student Budget</span>
-      <span class="value">$25,000 / year</span>
-    </div>
-    <div class="scale-badge">
-      <span class="label">Up-Front Investment</span>
-      <span class="value">$1.5B</span>
-    </div>
-  </div>
+    <button class="nav-toggle" aria-label="Toggle navigation">
+      <span></span><span></span><span></span>
+    </button>
 
-  <div class="section-label">Commercial Structure</div>
-  <div class="two-col">
-    <div>
-      <div class="section-box">
-        <div class="section-title">Upfront</div>
-        <table>
-          <thead><tr><th>Item</th><th>Amount</th><th>Recipient</th></tr></thead>
-          <tbody>
-            ${upfrontRows}
-            <tr class="total-row"><td>Total</td><td class="amt">${FIXED_ECONOMICS.upfrontTotal}</td><td></td></tr>
-          </tbody>
-        </table>
+    <nav class="main-nav">
+      <a onclick="document.getElementById('profile').scrollIntoView({behavior:'smooth'})">Profile</a>
+      <a onclick="document.getElementById('vision').scrollIntoView({behavior:'smooth'})">Vision</a>
+      <a onclick="document.getElementById('commercial').scrollIntoView({behavior:'smooth'})">Commercial</a>
+      <a onclick="document.getElementById('costs').scrollIntoView({behavior:'smooth'})">Cost Structure</a>
+      <a onclick="document.getElementById('program').scrollIntoView({behavior:'smooth'})">Program</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ═══════ HERO ═══════ -->
+<section class="hero" id="hero">
+  <div class="container">
+    <div class="hero-badge">
+      <span class="hero-flag">${ctx.flagEmoji}</span>
+      ${ctx.formalName}
+    </div>
+    <h1>${programName}<br><span>National Education Transformation</span></h1>
+    <p class="subline">${ctx.culturalNarrative}</p>
+    <p class="hero-meta"><strong>Confidential &amp; Proprietary</strong> · ${dateStr} · Alpha Holdings, Inc.</p>
+  </div>
+</section>
+
+<!-- ═══════ COUNTRY PROFILE ═══════ -->
+<section class="section section-cream" id="profile">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow">Country Profile</span>
+      <h2 class="section-title">${ctx.formalName}</h2>
+      <p class="section-subtitle">${ctx.headOfStateTitle}: ${ctx.headOfState}</p>
+    </div>
+
+    <div class="metrics-grid fade-in" style="margin-top: 2.5rem;">
+      <div class="metric">
+        <div class="metric-value">${ctx.population}</div>
+        <div class="metric-label">Population</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">${ctx.gdpPerCapita}</div>
+        <div class="metric-label">GDP per Capita</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">${ctx.schoolAgePopulation}</div>
+        <div class="metric-label">School-Age Population</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">${ctx.currentEdSpendPerStudent}</div>
+        <div class="metric-label">Current Ed. Spend / Student</div>
+      </div>
+      ${ctx.addressableStudentPopulation ? `<div class="metric">
+        <div class="metric-value">${ctx.addressableStudentPopulation}</div>
+        <div class="metric-label">Addressable Market (AGI &gt; $250K)</div>
+      </div>` : ''}
+    </div>
+
+    <div class="two-col fade-in" style="margin-top: 3rem;">
+      <div>
+        <span class="section-eyebrow">National Education Vision</span>
+        <p style="font-size: 1.0625rem; line-height: 1.7; color: var(--text-body); margin-top: 0.5rem;">${ctx.nationalEdVision}</p>
+      </div>
+      <div>
+        <span class="section-eyebrow">Key Strengths for Partnership</span>
+        <ul class="content-list" style="margin-top: 0.5rem;">
+          ${strengths}
+        </ul>
       </div>
     </div>
 
-    <div>
-      <div class="section-box">
-        <div class="section-title">Ongoing</div>
-        <table>
-          <thead><tr><th>Item</th><th>Amount</th><th>Recipient</th></tr></thead>
-          <tbody>${ongoingRows}
-            <tr class="total-row"><td>Total</td><td class="amt">Scale dependent</td><td></td></tr>
-          </tbody>
-        </table>
+    ${ctx.addressableMethodology ? `<div class="callout fade-in" style="margin-top: 2rem;">
+      <p><strong>Addressable Market Methodology:</strong> ${ctx.addressableMethodology}</p>
+    </div>` : ''}
+  </div>
+</section>
+
+<!-- ═══════ VISION ═══════ -->
+<section class="section section-white" id="vision">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow">The Vision</span>
+      <h2 class="section-title">'Educated in ${ctx.country}' as a Global Credential</h2>
+    </div>
+
+    <div class="two-col fade-in" style="margin-top: 2rem;">
+      <div>
+        <ol class="numbered-list">
+          <li>
+            <span class="num-circle">1</span>
+            <span>The only <strong>AI-native education system</strong>, purposefully designed for national scale — merging cutting-edge technology with proven learning science.</span>
+          </li>
+          <li>
+            <span class="num-circle">2</span>
+            <span>Students <strong>master academics in 2 hours per day</strong>, freeing the remaining time for life skills, creativity, and real-world application — learning 2× faster.</span>
+          </li>
+          <li>
+            <span class="num-circle">3</span>
+            <span>Creating the next generation of <strong>global leaders</strong> through ${lifeSkillsName} — the life-skills engine for the AI age.</span>
+          </li>
+        </ol>
+      </div>
+      <div>
+        <div class="card card-blue" style="border-left-width: 4px;">
+          <h4 style="color: var(--blue);">Partnership Structure</h4>
+          <p><strong>${programName}</strong> is a ${ctx.country}-owned national education platform, with Alpha as exclusive operating partner.</p>
+          <p style="margin-top: 0.75rem;">Together we design <strong style="color: var(--blue);">${lifeSkillsName}</strong> — ${ctx.country}'s life-skills engine, the local equivalent to AlphaCore.</p>
+          <p style="margin-top: 0.75rem; font-size: 0.875rem; color: var(--text-muted);">${ctx.localLifeSkillsFocus || ''}</p>
+        </div>
       </div>
     </div>
   </div>
+</section>
 
-  <!-- Page 8 Cost Structure — Country-Owned Schools -->
-  <div class="section-box page-break">
-    <div class="section-label">${ctx.localizedProgramName || ctx.country} Cost Structure</div>
-    <div class="callout" style="margin-bottom: 16px;">
-      <p><em>We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.</em></p>
+<!-- ═══════ SCALE TARGETS ═══════ -->
+<section class="stats-strip fade-in">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-number">${FIXED_ECONOMICS.scaleTargets.yearOne}</div>
+        <div class="stat-label">Year One Target</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">${FIXED_ECONOMICS.scaleTargets.fiveYear}</div>
+        <div class="stat-label">5-Year Plan</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">$25,000</div>
+        <div class="stat-label">Per-Student Annual Budget</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">${FIXED_ECONOMICS.upfrontTotal}</div>
+        <div class="stat-label">Up-Front Investment</div>
+      </div>
     </div>
-    <div class="section-title">Per-Student Cost Structure at $25K Budget</div>
-    <table>
-      <thead>
-        <tr>
-          <th>Item (per student P&L)</th>
-          <th>Alpha @ $50k Tuition</th>
-          <th style="background: #1a56db; color: #fff;">${ctx.localizedProgramName || ctx.country} @ $25k Budget</th>
-          <th>Notes</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="4" style="font-weight:700; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:#718096; padding-top:14px;">FUNDING</td></tr>
-        ${costRows}
-      </tbody>
-    </table>
   </div>
+</section>
 
-  <div class="footer">
-    <span>© ${new Date().getFullYear()} Alpha Holdings, Inc. Confidential & Proprietary.</span>
-    <span>${ctx.localizedProgramName || ctx.country} Term Sheet — ${ctx.formalName}</span>
+<!-- ═══════ COMMERCIAL STRUCTURE ═══════ -->
+<section class="section-lg section-cream" id="commercial">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow">Commercial Structure</span>
+      <h2 class="section-title">Investment Framework</h2>
+      <p class="section-subtitle">The ${programName} program requires an upfront investment of ${FIXED_ECONOMICS.upfrontTotal} alongside ongoing operational commitments.</p>
+    </div>
+
+    <div class="two-col fade-in" style="margin-top: 2.5rem;">
+      <!-- Upfront -->
+      <div>
+        <h3 style="font-family: var(--font-display); font-weight: 700; font-size: 1.125rem; margin-bottom: 1.25rem;">Upfront Investment</h3>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Item</th><th>Amount</th><th>Recipient</th></tr></thead>
+            <tbody>
+              ${upfrontRows}
+              <tr class="total-row"><td>Total</td><td class="amt">${FIXED_ECONOMICS.upfrontTotal}</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Ongoing -->
+      <div>
+        <h3 style="font-family: var(--font-display); font-weight: 700; font-size: 1.125rem; margin-bottom: 1.25rem;">Ongoing Annual Investment</h3>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Item</th><th>Amount</th><th>Recipient</th></tr></thead>
+            <tbody>
+              ${ongoingRows}
+              <tr class="total-row"><td>Total</td><td class="amt">Scale-dependent</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
+</section>
+
+<!-- ═══════ COST STRUCTURE ═══════ -->
+<section class="section section-white" id="costs">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow">${programName} Cost Structure</span>
+      <h2 class="section-title">Per-Student Economics at $25K Budget</h2>
+    </div>
+
+    <div class="callout fade-in" style="margin-bottom: 2rem;">
+      <p>We propose implementation through a national network of privately-operated, government-funded schools — and are equally open to other structures.</p>
+    </div>
+
+    <div class="table-wrap fade-in">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Item (Per Student P&amp;L)</th>
+            <th>Alpha @ $50K Tuition</th>
+            <th class="primary-col">${programName} @ $25K Budget</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="section-header"><td colspan="4">FUNDING</td></tr>
+          ${costRows}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ PROGRAM ═══════ -->
+<section class="section section-dark" id="program">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow">The ${lifeSkillsName} Engine</span>
+      <h2 class="section-title" style="color: var(--cream);">Purpose-built for ${ctx.country}</h2>
+    </div>
+
+    <div class="card-grid card-grid-3 fade-in" style="margin-top: 2rem;">
+      <div class="card card-dark">
+        <span class="card-label">Life Skills</span>
+        <h4>${lifeSkillsName}</h4>
+        <p>${ctx.localLifeSkillsFocus || ctx.country + "'s equivalent to AlphaCore — the life-skills engine tailored for local culture and values."}</p>
+      </div>
+      <div class="card card-dark">
+        <span class="card-label">Localized AI</span>
+        <h4>Language &amp; Culture</h4>
+        <p>${ctx.languageApps || 'Localized AI-powered educational apps built specifically for ' + ctx.country + "'s linguistic and cultural context."}</p>
+      </div>
+      <div class="card card-dark">
+        <span class="card-label">National Scale</span>
+        <h4>From 2 to 50+ Communities</h4>
+        <p>Beginning with ${FIXED_ECONOMICS.scaleTargets.yearOne} in Year 1, scaling to ${FIXED_ECONOMICS.scaleTargets.fiveYear} — building a credential recognized worldwide.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ CTA ═══════ -->
+<section class="cta-section">
+  <div class="container">
+    <h2>Start the Conversation</h2>
+    <p>${programName} represents a generational opportunity to build ${ctx.country}'s education legacy. We welcome the opportunity to discuss this partnership.</p>
+    <a href="mailto:joe.liemandt@alpha.school" class="cta-btn" target="_blank" rel="noopener noreferrer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+      joe.liemandt@alpha.school
+    </a>
+  </div>
+</section>
+
+<!-- ═══════ FOOTER ═══════ -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <strong>Alpha Holdings, Inc.</strong>
+        <span>&copy; ${year}. Confidential &amp; Proprietary.</span>
+      </div>
+      <div class="footer-links">
+        <a href="mailto:joe.liemandt@alpha.school" target="_blank" rel="noopener noreferrer">joe.liemandt@alpha.school</a>
+        <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer">Created with Perplexity Computer</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Mobile nav toggle
+  var toggle = document.querySelector('.nav-toggle');
+  var nav = document.querySelector('.main-nav');
+  if (toggle && nav) {
+    toggle.addEventListener('click', function() {
+      toggle.classList.toggle('open');
+      nav.classList.toggle('open');
+    });
+    nav.querySelectorAll('a').forEach(function(link) {
+      link.addEventListener('click', function() {
+        toggle.classList.remove('open');
+        nav.classList.remove('open');
+      });
+    });
+  }
+
+  // Header scroll shadow
+  var header = document.querySelector('.site-header');
+  if (header) {
+    window.addEventListener('scroll', function() {
+      if (window.scrollY > 10) header.classList.add('scrolled');
+      else header.classList.remove('scrolled');
+    }, { passive: true });
+  }
+
+  // Scroll reveal
+  var fadeEls = document.querySelectorAll('.fade-in');
+  if (fadeEls.length > 0 && 'IntersectionObserver' in window) {
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px -20px 0px' });
+    fadeEls.forEach(function(el) { observer.observe(el); });
+  } else {
+    fadeEls.forEach(function(el) { el.classList.add('visible'); });
+  }
+});
+</script>
 </body>
 </html>`;
 }
@@ -1453,4 +1846,5 @@ export function registerRoutes(server: Server, app: Express) {
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", version: "2.4.0-term-sheet-fixes", slides: 12 });
   });
+
 }

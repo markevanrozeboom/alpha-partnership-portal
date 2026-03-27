@@ -14,6 +14,7 @@ import {
   RefreshCw,
   ExternalLink,
   FileDown,
+  Globe,
 } from "lucide-react";
 import { PerplexityAttribution } from "@/components/PerplexityAttribution";
 import type { GenerationResult } from "@shared/schema";
@@ -72,7 +73,7 @@ export default function ResultPage() {
   const handleDownloadTermSheet = useCallback(() => {
     if (!result) return;
     const name = result.context.localizedProgramName || result.context.country;
-    downloadHtml(result.termSheetHtml, `${name}-Term-Sheet.html`);
+    downloadHtml(result.termSheetHtml, `${name}-Interactive-Term-Sheet.html`);
   }, [result]);
 
   const handleDownloadPitchDeck = useCallback(() => {
@@ -103,6 +104,11 @@ export default function ResultPage() {
     URL.revokeObjectURL(url);
   }, [result]);
 
+  const handleOpenTermSheetFullScreen = useCallback(() => {
+    if (!result) return;
+    openInNewTab(result.termSheetHtml);
+  }, [result]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -126,7 +132,7 @@ export default function ResultPage() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="border-b px-6 py-3 bg-card">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
@@ -137,14 +143,22 @@ export default function ResultPage() {
             <ArrowLeft className="h-3.5 w-3.5 mr-1" />
             New Country
           </Button>
-          <span className="text-xs text-muted-foreground font-medium tracking-wide">
-            Alpha Holdings, Inc. — National Partnership Portal
-          </span>
+          <div className="flex items-center gap-2">
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-primary">
+              <polygon points="16,3 10,11 4,19 16,15 28,19 22,11" fill="currentColor" opacity="0.85"/>
+              <polygon points="4,19 16,15 11,25" fill="currentColor" opacity="0.5"/>
+              <polygon points="28,19 16,15 21,25" fill="currentColor" opacity="0.5"/>
+              <polygon points="11,25 16,15 21,25 16,30" fill="currentColor" opacity="0.3"/>
+            </svg>
+            <span className="text-xs text-muted-foreground font-semibold tracking-widest uppercase">
+              Alpha Holdings
+            </span>
+          </div>
         </div>
       </header>
 
       <main className="flex-1 px-6 py-8">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           {/* Generating state */}
           {isGenerating && (
             <div className="flex flex-col items-center justify-center py-24 gap-5" data-testid="status-generating">
@@ -156,7 +170,7 @@ export default function ResultPage() {
               </div>
               <div className="text-center space-y-1.5">
                 <p className="text-sm font-medium">Generating documents for {data?.target}...</p>
-                <p className="text-xs text-muted-foreground">Researching country context and building term sheet & pitch deck</p>
+                <p className="text-xs text-muted-foreground">Researching country context and building interactive term sheet & pitch deck</p>
               </div>
             </div>
           )}
@@ -183,11 +197,11 @@ export default function ResultPage() {
           {isComplete && result && (
             <div className="space-y-6 animate-in fade-in duration-500" data-testid="status-completed">
               {/* Country header */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">{result.context.flagEmoji}</span>
                   <div>
-                    <h1 className="text-lg font-semibold tracking-tight" data-testid="text-country">
+                    <h1 className="text-lg font-bold tracking-tight" data-testid="text-country">
                       {result.context.localizedProgramName || result.context.country}
                     </h1>
                     <p className="text-xs text-muted-foreground">
@@ -195,7 +209,7 @@ export default function ResultPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"
@@ -203,7 +217,7 @@ export default function ResultPage() {
                     data-testid="button-download-docx"
                   >
                     <FileDown className="h-3.5 w-3.5 mr-1.5" />
-                    Term Sheet (.docx)
+                    .docx
                   </Button>
                   <Button
                     variant="outline"
@@ -212,9 +226,10 @@ export default function ResultPage() {
                     data-testid="button-download-termsheet"
                   >
                     <Download className="h-3.5 w-3.5 mr-1.5" />
-                    Term Sheet (.html)
+                    Term Sheet
                   </Button>
                   <Button
+                    variant="outline"
                     size="sm"
                     onClick={handleDownloadPitchDeck}
                     data-testid="button-download-pitchdeck"
@@ -224,6 +239,30 @@ export default function ResultPage() {
                   </Button>
                 </div>
               </div>
+
+              {/* Primary CTA — Open Interactive Term Sheet */}
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                      <Globe className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Interactive Term Sheet</p>
+                      <p className="text-xs text-muted-foreground">Full-screen website experience — ready for sovereign presentation</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleOpenTermSheetFullScreen}
+                    data-testid="button-open-interactive"
+                    className="font-semibold"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                    Open in New Tab
+                  </Button>
+                </CardContent>
+              </Card>
 
               {/* Tabs: Preview */}
               <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -259,8 +298,8 @@ export default function ResultPage() {
                       <iframe
                         srcDoc={result.termSheetHtml}
                         className="w-full border-0"
-                        style={{ height: "700px" }}
-                        title="Term Sheet Preview"
+                        style={{ height: "800px" }}
+                        title="Interactive Term Sheet Preview"
                         data-testid="iframe-termsheet"
                       />
                     </CardContent>
@@ -273,7 +312,7 @@ export default function ResultPage() {
                       <iframe
                         srcDoc={result.pitchDeckHtml}
                         className="w-full border-0"
-                        style={{ height: "700px" }}
+                        style={{ height: "800px" }}
                         title="Pitch Deck Preview"
                         data-testid="iframe-pitchdeck"
                       />
