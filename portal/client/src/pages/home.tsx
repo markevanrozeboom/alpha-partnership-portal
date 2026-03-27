@@ -17,9 +17,9 @@ export default function HomePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiRequest("POST", "/api/generate", { target: trimmed });
+      const res = await apiRequest("POST", "/api/generate-full", { target: trimmed });
       const data = await res.json();
-      navigate(`/result/${data.id}`);
+      navigate(`/pipeline/${data.id}`);
     } catch (err) {
       setError(String(err));
       setLoading(false);

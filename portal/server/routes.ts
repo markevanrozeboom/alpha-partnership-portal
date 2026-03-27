@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import { buildTermSheetDocx } from "./docx-builder";
 import { computeFinancialModel, fmtCompact, fmtUsd, fmtNum } from "./financial-engine";
 import { runLanguageQA } from "./language-qa";
-import type { CountryContext, GenerationResult, FinancialResearchData, FinancialModel } from "@shared/schema";
+import type { CountryContext, GenerationResult, FullGenerationResult, FinancialResearchData, FinancialModel, PipelineStatus } from "@shared/schema";
 
 const client = new Anthropic({
   defaultHeaders: { "anthropic-version": "2023-06-01" },
@@ -2045,6 +2045,265 @@ async function generateDocuments(target: string): Promise<GenerationResult> {
   return { context: ctx, termSheetHtml, pitchDeckHtml, termSheetDocxBase64 };
 }
 
+// ─── FastAPI Pipeline Integration ────────────────────────────────────────────
+
+const BACKEND_URL = process.env.BACKEND_URL || "https://alpha-pipeline-api.onrender.com";
+
+// ─── Map FastAPI CountryProfile → Portal CountryContext ──────────────────────
+function mapBackendProfile(profile: any): CountryContext {
+  const t = profile?.target || {};
+  const d = profile?.demographics || {};
+  const e = profile?.economy || {};
+  const ed = profile?.education || {};
+  const p = profile?.political_context || {};
+  const fmkt = profile?.flagship_market_data || {};
+
+  const fmtPop = (n: number | null) => {
+    if (!n) return "Unknown";
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} million`;
+    return n.toLocaleString();
+  };
+  const fmtCurrency = (n: number | null) => {
+    if (!n) return "Unknown";
+    return `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  };
+
+  return {
+    country: t.name || "Unknown",
+    formalName: t.name || "Unknown",
+    headOfState: p.head_of_state || "Unknown",
+    headOfStateTitle: p.government_type || "Head of State",
+    flagEmoji: "",
+    population: fmtPop(d.total_population),
+    gdpPerCapita: fmtCurrency(e.gdp_per_capita),
+    schoolAgePopulation: d.population_0_18 ? `${fmtPop(d.population_0_18)} children aged 0–18` : "Unknown",
+    currentEdSpendPerStudent: ed.avg_public_spend_per_student ? `${fmtCurrency(ed.avg_public_spend_per_student)} per student annually` : "Unknown",
+    nationalEdVision: [p.national_vision_plan, p.education_reform_priority, p.reform_themes].filter(Boolean).join(". ") || "National education reform underway.",
+    culturalNarrative: "",  // Will be populated from strategy report if available
+    keyStrengths: [],
+    localizedProgramName: "",
+    localizedLifeSkillsName: "",
+    localLifeSkillsFocus: "",
+    languageApps: "",
+    addressableStudentPopulation: fmkt.addressable_students ? `${fmtPop(fmkt.addressable_students)} students` : (d.population_0_18 ? `${fmtPop(Math.round(d.population_0_18 * 0.05))} students` : "Unknown"),
+    addressableMethodology: fmkt.addressable_methodology || "",
+  };
+}
+
+const STAGE_LABELS: Record<string, string> = {
+  pending: "Initializing...",
+  researching_country: "Researching country profile...",
+  review_country_report: "Processing country research...",
+  researching_education: "Analyzing education system...",
+  review_education_report: "Processing education analysis...",
+  strategizing: "Developing partnership strategy...",
+  review_strategy: "Processing strategy...",
+  presenting_assumptions: "Building financial assumptions...",
+  review_assumptions: "Processing assumptions...",
+  building_model: "Computing financial model...",
+  review_model: "Processing financial model...",
+  presenting_term_sheet_assumptions: "Preparing term sheet...",
+  review_term_sheet_assumptions: "Processing term sheet...",
+  generating_documents: "Generating Gamma deck & documents...",
+  review_documents: "Finalizing documents...",
+  completed: "Complete",
+  error: "Error",
+};
+
+const GATE_APPROVALS: Record<string, { endpoint: string; body: object }> = {
+  review_country_report: { endpoint: "feedback/country-report", body: { approved: true } },
+  review_education_report: { endpoint: "feedback/education-report", body: { approved: true } },
+  review_strategy: { endpoint: "feedback/strategy", body: { approved: true } },
+  review_assumptions: { endpoint: "feedback/assumptions", body: { approved: true, adjustments: {} } },
+  review_model: { endpoint: "feedback/model", body: { approved: true } },
+  review_term_sheet_assumptions: { endpoint: "feedback/term-sheet-assumptions", body: { approved: true, adjustments: {} } },
+  review_documents: { endpoint: "feedback/documents", body: { approved: true } },
+};
+
+async function orchestratePipeline(localRunId: string, target: string): Promise<void> {
+  try {
+    // Step 1: Create the run on the FastAPI backend
+    const createRes = await fetch(`${BACKEND_URL}/api/runs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target }),
+    });
+    if (!createRes.ok) {
+      const errText = await createRes.text();
+      throw new Error(`Failed to create pipeline run: ${createRes.status} ${errText}`);
+    }
+    const { run_id } = await createRes.json() as { run_id: string };
+
+    storage.updatePipelineRun(localRunId, {
+      pipelineRunId: run_id,
+      pipelineStatus: "pending",
+      pipelineLabel: STAGE_LABELS.pending,
+    });
+
+    // Step 2: Poll and auto-approve gates until completed or error
+    const approvedGates = new Set<string>();
+    const maxAttempts = 600; // 30 minutes at 3s intervals
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      const statusRes = await fetch(`${BACKEND_URL}/api/runs/${run_id}`);
+      if (!statusRes.ok) {
+        console.error(`Pipeline poll failed: ${statusRes.status}`);
+        continue;
+      }
+
+      const data = await statusRes.json() as {
+        status: PipelineStatus;
+        gamma_url?: string | null;
+        gamma_export_url?: string | null;
+        country_profile?: any | null;
+        financial_model?: any | null;
+        strategy?: any | null;
+        financial_assumptions?: any | null;
+        error_message?: string | null;
+        agent_logs?: string[];
+        country_report?: string | null;
+        strategy_report?: string | null;
+      };
+
+      const status = data.status;
+      const label = STAGE_LABELS[status] || status;
+
+      storage.updatePipelineRun(localRunId, {
+        pipelineStatus: status,
+        pipelineLabel: label,
+        agentLogs: data.agent_logs || [],
+      });
+
+      // Auto-approve gates
+      if (status in GATE_APPROVALS && !approvedGates.has(status)) {
+        const gate = GATE_APPROVALS[status];
+        try {
+          const approveRes = await fetch(`${BACKEND_URL}/api/runs/${run_id}/${gate.endpoint}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(gate.body),
+          });
+          if (approveRes.ok) {
+            approvedGates.add(status);
+            console.log(`Auto-approved gate: ${status} for run ${run_id}`);
+          } else {
+            console.warn(`Failed to approve gate ${status}: ${approveRes.status}`);
+          }
+        } catch (gateErr) {
+          console.warn(`Gate approval error for ${status}:`, gateErr);
+        }
+        continue;
+      }
+
+      if (status === "error") {
+        storage.updatePipelineRun(localRunId, {
+          pipelineStatus: "error",
+          pipelineLabel: "Error",
+          error: data.error_message || "Pipeline failed with unknown error",
+        });
+        return;
+      }
+
+      if (status === "completed") {
+        // Build the result — map backend CountryProfile to portal CountryContext
+        let ctx: CountryContext | null = data.country_profile ? mapBackendProfile(data.country_profile) : null;
+
+        // Enrich with strategy data if available
+        if (ctx && data.strategy) {
+          const s = data.strategy;
+          // Brand names from strategy.brand
+          if (s.brand?.jv_name_suggestion) ctx.localizedProgramName = s.brand.jv_name_suggestion;
+          if (s.brand?.positioning) ctx.culturalNarrative = s.brand.positioning;
+          // Value propositions as key strengths
+          if (s.value_propositions && Array.isArray(s.value_propositions)) {
+            ctx.keyStrengths = s.value_propositions.map((vp: any) => 
+              vp.pillar + (vp.proof_points?.length ? `: ${vp.proof_points[0]}` : "")
+            ).filter(Boolean);
+          }
+          // Pitch angle as cultural narrative if brand positioning is empty
+          if (!ctx.culturalNarrative && s.pitch_angle) ctx.culturalNarrative = s.pitch_angle;
+        }
+
+        // Enrich from strategy report (markdown) — extract cultural narrative
+        if (ctx && !ctx.culturalNarrative && data.strategy_report) {
+          // Take the first paragraph as the narrative
+          const paragraphs = data.strategy_report.split("\n\n").filter((p: string) => p.trim() && !p.startsWith("#"));
+          if (paragraphs.length > 0) ctx.culturalNarrative = paragraphs[0].trim().substring(0, 500);
+        }
+        let termSheetHtml: string | null = null;
+        let pitchDeckHtml: string | null = null;
+        let termSheetDocxBase64: string | null = null;
+
+        // If we got a country profile, generate the local HTML docs
+        if (ctx) {
+          // Apply the same guardrails as local generation
+          if (ctx.localizedProgramName && /\balpha\b/i.test(ctx.localizedProgramName)) {
+            ctx.localizedProgramName = ctx.localizedProgramName.replace(/\s*\bAlpha\b\s*/gi, " ").trim() || `${ctx.country} Education`;
+          }
+          if (!ctx.localizedLifeSkillsName) {
+            ctx.localizedLifeSkillsName = `${ctx.country}Core`;
+          }
+
+          try {
+            termSheetHtml = generateTermSheetHtml(ctx);
+            const financialData = buildFinancialResearchData(ctx);
+            const financialModel = data.financial_model || computeFinancialModel(financialData, ctx.country);
+            pitchDeckHtml = generatePitchDeckHtml(ctx, financialModel);
+
+            // Language QA
+            const tsQA = runLanguageQA(termSheetHtml);
+            termSheetHtml = tsQA.text;
+            const pdQA = runLanguageQA(pitchDeckHtml);
+            pitchDeckHtml = pdQA.text;
+
+            // DOCX
+            const docxBuffer = await buildTermSheetDocx(ctx, financialModel);
+            termSheetDocxBase64 = docxBuffer.toString("base64");
+          } catch (genErr) {
+            console.error("Error generating local documents from pipeline data:", genErr);
+          }
+        }
+
+        const fullResult: FullGenerationResult = {
+          context: ctx,
+          termSheetHtml,
+          pitchDeckHtml,
+          termSheetDocxBase64,
+          gammaUrl: data.gamma_url || null,
+          gammaExportUrl: data.gamma_export_url || null,
+          pipelineRunId: run_id,
+          pipelineStatus: "completed",
+          pipelineLabel: "Complete",
+          agentLogs: data.agent_logs || [],
+          errorMessage: null,
+        };
+
+        storage.updatePipelineRun(localRunId, {
+          pipelineStatus: "completed",
+          pipelineLabel: "Complete",
+          result: fullResult,
+        });
+        return;
+      }
+    }
+
+    // Timed out
+    storage.updatePipelineRun(localRunId, {
+      pipelineStatus: "error",
+      pipelineLabel: "Error",
+      error: "Pipeline timed out after 30 minutes",
+    });
+  } catch (err) {
+    console.error("Pipeline orchestration error:", err);
+    storage.updatePipelineRun(localRunId, {
+      pipelineStatus: "error",
+      pipelineLabel: "Error",
+      error: String(err),
+    });
+  }
+}
+
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
 export function registerRoutes(server: Server, app: Express) {
@@ -2107,9 +2366,35 @@ export function registerRoutes(server: Server, app: Express) {
     }
   });
 
-  app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", version: "2.5.0-world-class", slides: 14 });
+  // ─── Pipeline Routes (FastAPI backend) ──────────────────────────────────────
+
+  app.post("/api/generate-full", async (req, res) => {
+    const { target } = req.body;
+    if (!target || typeof target !== "string" || !target.trim()) {
+      res.status(400).json({ error: "Target country or state is required" });
+      return;
+    }
+
+    const run = storage.createPipelineRun(target.trim());
+
+    // Start pipeline orchestration in background
+    orchestratePipeline(run.id, target.trim()).catch((err) => {
+      console.error("Pipeline orchestration failed:", err);
+    });
+
+    res.json({ id: run.id });
   });
 
+  app.get("/api/pipeline-runs/:id", (req, res) => {
+    const run = storage.getPipelineRun(req.params.id);
+    if (!run) {
+      res.status(404).json({ error: "Pipeline run not found" });
+      return;
+    }
+    res.json(run);
+  });
 
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", version: "3.0.0-pipeline", slides: 14 });
+  });
 }

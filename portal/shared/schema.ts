@@ -102,12 +102,38 @@ export interface FinancialModel {
   scholarshipGap: ScholarshipGap;
 }
 
-// The full generation result
+// The full generation result (legacy local-only generation)
 export interface GenerationResult {
   context: CountryContext;
   termSheetHtml: string;
   pitchDeckHtml: string;
   termSheetDocxBase64: string; // base64-encoded DOCX file
+}
+
+// Pipeline run status from FastAPI backend
+export type PipelineStatus =
+  | "pending" | "researching_country" | "review_country_report"
+  | "researching_education" | "review_education_report"
+  | "strategizing" | "review_strategy"
+  | "presenting_assumptions" | "review_assumptions"
+  | "building_model" | "review_model"
+  | "presenting_term_sheet_assumptions" | "review_term_sheet_assumptions"
+  | "generating_documents" | "review_documents"
+  | "completed" | "error";
+
+// Combined result from FastAPI pipeline + local term sheet generation
+export interface FullGenerationResult {
+  context: CountryContext | null;
+  termSheetHtml: string | null;
+  pitchDeckHtml: string | null;
+  termSheetDocxBase64: string | null;
+  gammaUrl: string | null;
+  gammaExportUrl: string | null;
+  pipelineRunId: string | null;
+  pipelineStatus: PipelineStatus;
+  pipelineLabel: string;
+  agentLogs: string[];
+  errorMessage: string | null;
 }
 
 // In-memory only — no DB needed

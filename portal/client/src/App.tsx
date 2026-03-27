@@ -5,6 +5,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import HomePage from "./pages/home";
 import ResultPage from "./pages/result";
+import PipelineResultPage from "./pages/pipeline-result";
 import NotFound from "./pages/not-found";
 
 function AppRoutes() {
@@ -12,6 +13,7 @@ function AppRoutes() {
     <Switch>
       <Route path="/" component={HomePage} />
       <Route path="/result/:id" component={ResultPage} />
+      <Route path="/pipeline/:id" component={PipelineResultPage} />
       <Route component={NotFound} />
     </Switch>
   );
