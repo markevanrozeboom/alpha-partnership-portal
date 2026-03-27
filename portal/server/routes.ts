@@ -1994,7 +1994,7 @@ async function generateDocuments(target: string): Promise<GenerationResult> {
   let text = "";
   try {
     const message = await client.messages.create({
-      model: "claude_sonnet_4_6",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 2000,
       system: RESEARCH_PROMPT,
       messages: [
@@ -2005,7 +2005,7 @@ async function generateDocuments(target: string): Promise<GenerationResult> {
   } catch (e: any) {
     console.error("Claude failed, trying OpenAI:", e.message);
     const response = await openai.responses.create({
-      model: "gpt_5_1",
+      model: "gpt-5.4",
       input: `${RESEARCH_PROMPT}\n\nGenerate the country context profile for: ${target}`,
     });
     text = typeof response.output_text === "string" ? response.output_text : "";
