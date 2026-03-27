@@ -77,7 +77,7 @@ export default function RunPage() {
 
   const [data, setData] = useState<RunStatus | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
 
   // Navigation: which stage the user is viewing (null = current active stage)
   const [viewingStageKey, setViewingStageKey] = useState<string | null>(null);

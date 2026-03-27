@@ -2027,7 +2027,6 @@ def _build_gamma_investor_input(
     launch_year = ready_by.year
     if ready_by.month > 9:
         launch_year += 1
-    phase0_label = f"Now \u2013 Summer {launch_year}"
     phase1_sy = f"SY{str(launch_year)[-2:]}-{str(launch_year + 1)[-2:]}"
 
     # --- Slide 1: Title ---
@@ -2171,8 +2170,6 @@ def _build_gamma_investor_input(
     _tb_prepay_m = fin.get("upfront_timeback", 500)
     _mgmt_prepay_m = fin.get("upfront_mgmt", 250)
     _upfront_total = fin.get("upfront_total", 1_750)
-    _ip_dev_total = fin.get("ip_development_total", 1_000)
-    _fee_prepays = fin.get("fee_prepays_total", 750)
     _mgmt_pct = fin.get("mgmt_pct", 10)
     _tb_pct = fin.get("timeback_pct", 20)
     _parent_ed = fin.get("parent_education_annual", 50)
