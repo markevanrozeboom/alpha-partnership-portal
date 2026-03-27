@@ -105,8 +105,8 @@ export default function HomePage() {
               GENERATE DOCUMENTS
             </p>
             <p className="text-sm text-gray-500">
-              Enter a country or US state to build a Partnership Proposal
-              and Interactive Term Sheet.
+              Enter a country or US state to generate an interactive
+              Term Sheet for a strategic education partnership.
             </p>
           </div>
 
@@ -138,7 +138,7 @@ export default function HomePage() {
                 </>
               ) : (
                 <>
-                  Generate Partnership Proposal
+                  Generate Term Sheet
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </>
               )}

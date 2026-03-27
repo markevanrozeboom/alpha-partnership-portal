@@ -2208,7 +2208,11 @@ async function orchestratePipeline(localRunId: string, target: string): Promise<
         return;
       }
 
-      if (status === "completed") {
+      // Generate term sheet as soon as we have a financial model (don't wait for Gamma docs)
+      const canGenerate = (status === "generating_documents" || status === "review_documents" || status === "completed")
+        && data.country_profile && data.financial_model;
+
+      if (canGenerate) {
         // Build the result — map backend CountryProfile to portal CountryContext
         let ctx: CountryContext | null = data.country_profile ? mapBackendProfile(data.country_profile) : null;
 

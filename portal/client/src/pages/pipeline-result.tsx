@@ -44,8 +44,8 @@ const STAGE_LABELS: Record<string, string> = {
   review_model: "Validating financial model...",
   presenting_term_sheet_assumptions: "Structuring term sheet...",
   review_term_sheet_assumptions: "Finalizing term sheet structure...",
-  generating_documents: "Generating partnership proposal & term sheet...",
-  review_documents: "Preparing final documents...",
+  generating_documents: "Finalizing term sheet...",
+  review_documents: "Completing...",
   completed: "Complete",
   error: "Error",
 };
@@ -74,7 +74,6 @@ const STAGE_MILESTONES: { status: PipelineStatus; label: string }[] = [
   { status: "researching_country", label: "Research" },
   { status: "strategizing", label: "Strategy" },
   { status: "building_model", label: "Financials" },
-  { status: "generating_documents", label: "Documents" },
   { status: "completed", label: "Complete" },
 ];
 
@@ -355,108 +354,42 @@ export default function PipelineResultPage() {
                   {target} — Documents Ready
                 </h1>
                 <p className="text-sm text-gray-500">
-                  Your partnership proposal and interactive term sheet are ready.
+                  Your interactive term sheet is ready.
                 </p>
               </div>
 
-              {/* Primary CTAs — Two equal cards side by side */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Interactive Term Sheet — LEFT */}
-                {termSheetData?.termSheetHtml ? (
-                  <div className="rounded-xl p-6 flex flex-col items-center text-center gap-4"
-                    style={{ background: "linear-gradient(135deg, #0000E5 0%, #1a33ff 100%)", boxShadow: "0 4px 20px rgba(0,0,229,0.25)" }}>
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
+              {/* Primary CTA — Interactive Term Sheet */}
+              {termSheetData?.termSheetHtml ? (
+                <div className="rounded-xl p-6 flex items-center justify-between gap-4"
+                  style={{ background: "linear-gradient(135deg, #0000E5 0%, #1a33ff 100%)", boxShadow: "0 4px 20px rgba(0,0,229,0.25)" }}>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.15)" }}>
                       <Globe className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <p className="text-base font-semibold text-white">Interactive Term Sheet</p>
-                      <p className="text-xs text-white/60 mt-1">Full-screen presentation ready to share</p>
-                    </div>
-                    <Button size="sm" onClick={handleOpenTermSheetFullScreen} className="w-full font-semibold bg-white hover:bg-gray-50" style={{ color: "#0000E5" }}>
-                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open Term Sheet
-                    </Button>
-                  </div>
-                ) : termSheetLoading ? (
-                  <div className="rounded-xl p-6 flex flex-col items-center text-center gap-4"
-                    style={{ background: "linear-gradient(135deg, #0000E5 0%, #1a33ff 100%)", boxShadow: "0 4px 20px rgba(0,0,229,0.25)" }}>
-                    <Loader2 className="h-6 w-6 animate-spin text-white" />
-                    <p className="text-sm text-white/80">Preparing interactive term sheet...</p>
-                  </div>
-                ) : (
-                  <div className="rounded-xl p-6 flex flex-col items-center text-center gap-4"
-                    style={{ background: "linear-gradient(135deg, #0000E5 0%, #1a33ff 100%)", boxShadow: "0 4px 20px rgba(0,0,229,0.25)" }}>
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
-                      <Globe className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold text-white">Interactive Term Sheet</p>
-                      <p className="text-xs text-white/60 mt-1">Generating...</p>
+                      <p className="text-xs text-white/60 mt-1">Full-screen strategic partnership proposal ready to present</p>
                     </div>
                   </div>
-                )}
-
-                {/* Partnership Proposal — RIGHT */}
-                {gammaExportUrl && (
-                  <div className="rounded-xl p-6 flex flex-col items-center text-center gap-4"
-                    style={{ background: "linear-gradient(135deg, #0000E5 0%, #1a33ff 100%)", boxShadow: "0 4px 20px rgba(0,0,229,0.25)" }}>
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
-                      <Presentation className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold text-white">Partnership Proposal</p>
-                      <p className="text-xs text-white/60 mt-1">Partnership proposal ready for download</p>
-                    </div>
-                    <a href={gammaExportUrl} target="_blank" rel="noopener noreferrer" className="w-full">
-                      <Button size="sm" className="w-full font-semibold bg-white hover:bg-gray-50" style={{ color: "#0000E5" }}>
-                        <Download className="h-3.5 w-3.5 mr-1.5" /> Download Proposal
-                      </Button>
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* Additional downloads */}
-              <div className="flex justify-center gap-3 flex-wrap">
-                {termSheetData?.termSheetDocxBase64 && (
-                  <Button variant="outline" size="sm" onClick={handleDownloadDocx} className="text-xs border-gray-200 text-gray-600">
-                    <FileDown className="h-3.5 w-3.5 mr-1.5" /> Term Sheet (.docx)
+                  <Button size="sm" onClick={handleOpenTermSheetFullScreen} className="font-semibold bg-white hover:bg-gray-50 shrink-0" style={{ color: "#0000E5" }}>
+                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open Term Sheet
                   </Button>
-                )}
+                </div>
+              ) : (
+                <div className="rounded-xl p-6 flex items-center gap-4"
+                  style={{ background: "linear-gradient(135deg, #0000E5 0%, #1a33ff 100%)", boxShadow: "0 4px 20px rgba(0,0,229,0.25)" }}>
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  <p className="text-sm text-white/80">Preparing interactive term sheet...</p>
+                </div>
+              )}
 
-              </div>
-
-              {/* Tab previews */}
-              {(termSheetData?.termSheetHtml || termSheetData?.pitchDeckHtml) && (
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <div className="flex items-center justify-between mb-3">
-                    <TabsList className="bg-white border border-gray-200">
-                      {termSheetData.termSheetHtml && (
-                        <TabsTrigger value="termsheet" className="text-xs gap-1.5"><FileText className="h-3.5 w-3.5" /> Term Sheet</TabsTrigger>
-                      )}
-                      {termSheetData.pitchDeckHtml && (
-                        <TabsTrigger value="pitchdeck" className="text-xs gap-1.5"><Presentation className="h-3.5 w-3.5" /> Pitch Deck</TabsTrigger>
-                      )}
-                    </TabsList>
-                    <Button variant="ghost" size="sm" className="text-xs text-gray-500"
-                      onClick={() => { const html = activeTab === "termsheet" ? termSheetData?.termSheetHtml : termSheetData?.pitchDeckHtml; if (html) openInNewTab(html); }}>
-                      <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open in New Tab
-                    </Button>
-                  </div>
-                  {termSheetData.termSheetHtml && (
-                    <TabsContent value="termsheet">
-                      <Card className="overflow-hidden bg-white border-gray-200"><CardContent className="p-0">
-                        <iframe srcDoc={termSheetData.termSheetHtml} className="w-full border-0" style={{ height: "800px" }} title="Term Sheet" />
-                      </CardContent></Card>
-                    </TabsContent>
-                  )}
-                  {termSheetData.pitchDeckHtml && (
-                    <TabsContent value="pitchdeck">
-                      <Card className="overflow-hidden bg-white border-gray-200"><CardContent className="p-0">
-                        <iframe srcDoc={termSheetData.pitchDeckHtml} className="w-full border-0" style={{ height: "800px" }} title="Pitch Deck" />
-                      </CardContent></Card>
-                    </TabsContent>
-                  )}
-                </Tabs>
+              {/* Term Sheet Preview */}
+              {termSheetData?.termSheetHtml && (
+                <Card className="overflow-hidden bg-white border-gray-200">
+                  <CardContent className="p-0">
+                    <iframe srcDoc={termSheetData.termSheetHtml} className="w-full border-0" style={{ height: "800px" }} title="Interactive Term Sheet" />
+                  </CardContent>
+                </Card>
               )}
 
               <div className="text-center py-2">
