@@ -88,9 +88,19 @@ const FIXED_ECONOMICS = {
 
 function generateTermSheetHtml(ctx: CountryContext): string {
   const programName = ctx.localizedProgramName || ctx.country;
-  const lifeSkillsName = ctx.localizedLifeSkillsName || `${ctx.country}Core`;
+  let lifeSkillsName = ctx.localizedLifeSkillsName || `${ctx.country}Core`;
   const year = new Date().getFullYear();
   const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+  // Fix: If the life skills name contains the raw country name, generate a culturally appropriate name
+  if (lifeSkillsName.includes(ctx.country) || lifeSkillsName === `${ctx.country}Core`) {
+    // Use the program name if it's a proper brand, otherwise use a generic
+    if (programName !== ctx.country && !programName.includes(ctx.country)) {
+      lifeSkillsName = `${programName}Skills`;
+    } else {
+      lifeSkillsName = "NationalCore";
+    }
+  }
 
   // ── Fix #1: Dynamic scale targets based on addressable population ──
   function computeScaleTargets(addressable: string): { y1Students: string; y1Communities: string; y5Students: string; y5Communities: string } {
@@ -262,6 +272,16 @@ a { color: inherit; text-decoration: none; }
   font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.04em;
 }
 .hero-meta strong { color: var(--text-light); }
+.hero-subtitle {
+  font-family: var(--font-display); font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 400; color: rgba(255,255,255,0.7); letter-spacing: 0.04em;
+  margin-bottom: 1.5rem;
+}
+.hero-confidential {
+  display: inline-block; font-size: 0.6875rem; font-weight: 600;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: rgba(255,255,255,0.5); margin-top: 1rem;
+}
 
 /* ─── SECTION DIVIDERS (Fix #3) ─── */
 .section-divider { position: relative; height: 80px; margin-top: -1px; overflow: hidden; }
@@ -514,6 +534,49 @@ a { color: inherit; text-decoration: none; }
   .footer-inner { flex-direction: column; align-items: flex-start; }
 }
 
+/* ─── OVERVIEW ─── */
+.overview-text { max-width: 800px; }
+.overview-text p { font-size: 15px; line-height: 1.8; color: #2d3748; margin-bottom: 1.25rem; }
+
+/* ─── TRANSFORMATION / THREE TRUTHS ─── */
+.three-truths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 1.5rem; }
+.truth-card { background: white; border-radius: 8px; padding: 1.5rem; border-left: 4px solid var(--blue); }
+.truth-card h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; color: #1a1a2e; }
+.truth-card p { font-size: 0.875rem; color: #4a5568; line-height: 1.6; }
+
+.capability-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; margin-top: 1rem; }
+.capability { background: white; border-radius: 8px; padding: 1.25rem; border: 1px solid #e2e8f0; }
+.capability strong { display: block; font-family: var(--font-display); color: var(--blue); margin-bottom: 0.25rem; }
+.capability p { font-size: 0.8125rem; color: #4a5568; line-height: 1.5; margin: 0; }
+
+/* ─── LIFE-SKILLS PROGRAM ─── */
+.asset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin: 1.5rem 0; }
+.asset-card { background: white; border-radius: 8px; padding: 1.25rem; border: 1px solid #e2e8f0; }
+.asset-card strong { display: block; font-family: var(--font-display); color: var(--blue); margin-bottom: 0.5rem; }
+.asset-card p { font-size: 0.8125rem; color: #4a5568; line-height: 1.5; margin: 0; }
+
+.sovereignty-note { font-size: 15px; color: #2d3748; line-height: 1.7; margin-top: 1rem; padding: 1rem 1.25rem; background: #eef2ff; border-radius: 8px; border-left: 4px solid var(--blue); }
+
+/* ─── FLAGSHIP SCHOOLS ─── */
+.flagship-points { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin: 1.5rem 0; }
+.flagship-point { text-align: center; }
+.flagship-point strong { display: block; font-family: var(--font-display); color: #1a1a2e; margin-bottom: 0.5rem; }
+.flagship-point p { font-size: 0.8125rem; color: #4a5568; line-height: 1.5; }
+
+.flagship-metrics { display: flex; gap: 2rem; justify-content: center; margin-top: 1.5rem; padding: 1rem; background: #f8f9fc; border-radius: 8px; font-size: 0.875rem; color: #2d3748; }
+
+/* ─── PHASED ROLLOUT TIMELINE ─── */
+.rollout-timeline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 2rem; }
+.rollout-phase { background: white; border-radius: 8px; padding: 1.5rem; border-top: 4px solid var(--blue); text-align: center; }
+.rollout-phase .phase-label { font-family: var(--font-display); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue); margin-bottom: 0.5rem; }
+.rollout-phase h4 { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: #1a1a2e; margin-bottom: 0.5rem; }
+.rollout-phase p { font-size: 0.8125rem; color: #4a5568; line-height: 1.5; }
+
+@media (max-width: 768px) {
+  .three-truths, .capability-grid, .asset-grid, .flagship-points, .rollout-timeline { grid-template-columns: 1fr; }
+  .flagship-metrics { flex-direction: column; gap: 0.5rem; }
+}
+
 /* ─── ANIMATIONS ─── */
 .fade-in { opacity: 0; transform: translateY(16px); transition: opacity 0.8s var(--ease), transform 0.8s var(--ease); }
 .fade-in.visible { opacity: 1; transform: translateY(0); }
@@ -554,10 +617,12 @@ a { color: inherit; text-decoration: none; }
 
     <nav class="main-nav">
       <a onclick="document.getElementById('profile').scrollIntoView({behavior:'smooth'})">Profile</a>
+      <a onclick="document.getElementById('overview').scrollIntoView({behavior:'smooth'})">Overview</a>
+      <a onclick="document.getElementById('transformation').scrollIntoView({behavior:'smooth'})">Capabilities</a>
       <a onclick="document.getElementById('vision').scrollIntoView({behavior:'smooth'})">Vision</a>
+      <a onclick="document.getElementById('flagship').scrollIntoView({behavior:'smooth'})">Flagship</a>
       <a onclick="document.getElementById('scale').scrollIntoView({behavior:'smooth'})">Scale</a>
       <a onclick="document.getElementById('commercial').scrollIntoView({behavior:'smooth'})">Commercial</a>
-      <a onclick="document.getElementById('costs').scrollIntoView({behavior:'smooth'})">Cost Structure</a>
       <a onclick="document.getElementById('program').scrollIntoView({behavior:'smooth'})">Program</a>
     </nav>
   </div>
@@ -571,8 +636,10 @@ a { color: inherit; text-decoration: none; }
       ${ctx.formalName}
     </div>
     <h1>${programName}<br><span>National Education Transformation</span></h1>
+    <p class="hero-subtitle">Strategic Education Partnership</p>
     <p class="subline">${ctx.culturalNarrative}</p>
-    <p class="hero-meta"><strong>Confidential &amp; Proprietary</strong> · ${dateStr} · Alpha Holdings, Inc.</p>
+    <p class="hero-meta"><strong>Indicative Term Sheet</strong> · ${dateStr} · Alpha Holdings, Inc.</p>
+    <span class="hero-confidential">Confidential &amp; Non-Binding</span>
   </div>
 </section>
 
@@ -635,7 +702,30 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
-<!-- ═══════ FIX #5: PULL QUOTE — Why This Country ═══════ -->
+<!-- ═══════ OVERVIEW — Rich narrative from Qatar term sheet ═══════ -->
+<section class="section section-cream" id="overview">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow">Overview</span>
+      <h2 class="section-title">Why This Partnership</h2>
+    </div>
+    <div class="overview-text fade-in" style="margin-top: 1.5rem;">
+      <p>The AI world that is coming requires us to reinvent the educational system if we want to prepare our children and society to thrive. Alpha is the only company in the world building a national-scale system that will transform every aspect of a student's educational journey from the ground up — including the student day, the teachers, the curriculum, and all of the technology.</p>
+
+      <p>The same way that Alpha has become known as the "Stanford of K-12", via our partnership, we are dedicated to making <strong>"Educated in ${ctx.country}"</strong> the most valuable credential for the next generation of global leaders.</p>
+
+      <p><strong>${programName}</strong> is a multi-billion-dollar partnership between ${ctx.country} and Alpha Holdings to build the world's first AI-native K-12 system at national scale. Our promise is clear and proven: <strong>students will love school, learn 2× faster, and develop life skills for the AI age.</strong></p>
+
+      <p>Together we will design <strong>${lifeSkillsName}</strong>, the life-skills engine that ensures every student loves school and thrives in the AI age. ${lifeSkillsName} is intended to be ${ctx.country}'s most valuable education asset, designed as ${ctx.country}'s equivalent to AlphaCore.</p>
+
+      <p>The ${programName} architecture is implemented through a national network of privately-operated, government-funded schools on the Alpha education system, with Alpha as exclusive initial operating partner.</p>
+
+      <p>${programName} launches immediately. Superior outcomes create unstoppable parent demand, and ${ctx.country} inherits a proven model for national transformation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ PULL QUOTE — Why This Country ═══════ -->
 <section class="pull-quote fade-in">
   <div class="pull-quote-inner">
     <blockquote>${ctx.culturalNarrative}</blockquote>
@@ -643,15 +733,144 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
-<!-- Curved divider: cream → white vision -->
+<!-- Curved divider: cream → white transformation -->
 <div class="section-divider" style="background: var(--cream);">
   <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M0,0 C480,80 960,80 1440,0 L1440,80 L0,80 Z" fill="var(--white)"/>
   </svg>
 </div>
 
+<!-- ═══════ TRANSFORMATION STEPS & ALPHA'S PROVEN CAPABILITIES ═══════ -->
+<section class="section section-white" id="transformation">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow">Alpha's Proven Capabilities</span>
+      <h2 class="section-title">Transformation Starts with Three Core Truths</h2>
+    </div>
+
+    <div class="three-truths fade-in">
+      <div class="truth-card">
+        <h3>Children Should Love School</h3>
+        <p>More than vacation. More than weekends. A school day designed to inspire, not endure.</p>
+      </div>
+      <div class="truth-card">
+        <h3>Academic Mastery in 2 Hours</h3>
+        <p>Children can master the full academic curriculum in just 2 hours per day — freeing 4 hours for life-skills development.</p>
+      </div>
+      <div class="truth-card">
+        <h3>High Standards = Happiness</h3>
+        <p>The key to children's happiness is not lower expectations — it is high standards, delivered with love and the right tools.</p>
+      </div>
+    </div>
+
+    <p class="section-subtitle fade-in" style="margin-top: 2rem;">Alpha brings a complete, already-operating capability stack:</p>
+
+    <div class="capability-grid fade-in" style="margin-top: 0.5rem;">
+      <div class="capability">
+        <strong>Timeback</strong>
+        <p>The AI and learning-science platform that delivers academic mastery 10× faster than conventional classrooms.</p>
+      </div>
+      <div class="capability">
+        <strong>AlphaCore</strong>
+        <p>An AI-age life-skills curriculum — leadership, teamwork, communication, resilience. Alpha students love school with a +93 NPS.</p>
+      </div>
+      <div class="capability">
+        <strong>Guide School</strong>
+        <p>The talent academy that converts traditional teachers into Guides — coaches and mentors focused on mindset, not lecturing.</p>
+      </div>
+      <div class="capability">
+        <strong>Incept eduLLM</strong>
+        <p>A custom large language model adapted to local curriculum, language, and cultural context — ensuring the AI layer is authentically ${ctx.country}.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Curved divider: white → cream life-skills -->
+<div class="section-divider" style="background: var(--white);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill="var(--cream)"/>
+  </svg>
+</div>
+
+<!-- ═══════ LIFE-SKILLS PROGRAM ═══════ -->
+<section class="section section-cream" id="lifeskills">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow">${lifeSkillsName}</span>
+      <h2 class="section-title">${ctx.country}'s Most Valuable Education Asset</h2>
+      <p class="section-subtitle">A country's most valuable educational asset is its K-12 life-skills program; whoever designs it is effectively writing the operating system for the next generation of leaders.</p>
+    </div>
+
+    <div class="asset-grid fade-in" style="margin-top: 1.5rem;">
+      <div class="asset-card">
+        <strong>${lifeSkillsName} Design</strong>
+        <p>Starting from the AlphaCore base, we co-create ${lifeSkillsName} — the life-skills system fully under ${ctx.country}'s control, encoding local values, traditions, and aspirations.</p>
+      </div>
+      <div class="asset-card">
+        <strong>${ctx.country}-Specific EdTech Apps</strong>
+        <p>Applications that integrate into Timeback: ${ctx.languageApps || 'language, cultural studies, and locally relevant curriculum'}.</p>
+      </div>
+      <div class="asset-card">
+        <strong>${ctx.country} eduLLM</strong>
+        <p>A specialized configuration trained on ${ctx.country}'s language, laws, customs, culture, and values — built on top of Incept's base eduLLM.</p>
+      </div>
+    </div>
+
+    <div class="sovereignty-note fade-in">
+      With ${lifeSkillsName}, ${ctx.country}-specific apps, and the specialized eduLLM layered on top, <strong>${ctx.country} gains true educational sovereignty</strong> over what students learn.
+    </div>
+  </div>
+</section>
+
+<!-- Curved divider: cream → white flagship -->
+<div class="section-divider" style="background: var(--cream);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C480,80 960,80 1440,0 L1440,80 L0,80 Z" fill="var(--white)"/>
+  </svg>
+</div>
+
+<!-- ═══════ ALPHA FLAGSHIP SCHOOLS ═══════ -->
+<section class="section section-white" id="flagship">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow">Alpha Flagship Schools</span>
+      <h2 class="section-title">The Premium "Halo Brand"</h2>
+      <p class="section-subtitle">Alpha Flagship Schools are 100% owned by Alpha Holdings and serve as the premium benchmark — demonstrating the full Alpha experience at the highest level of execution.</p>
+    </div>
+
+    <div class="flagship-points fade-in" style="margin-top: 1.5rem;">
+      <div class="flagship-point">
+        <strong>Marketing &amp; Validation Engine</strong>
+        <p>These schools establish an unassailable benchmark for excellence, legitimizing the brand's entire presence in ${ctx.country}.</p>
+      </div>
+      <div class="flagship-point">
+        <strong>Premium Positioning</strong>
+        <p>The flagship schools create a brand halo that justifies premium positioning across the entire portfolio.</p>
+      </div>
+      <div class="flagship-point">
+        <strong>Strategic Anchor</strong>
+        <p>Essential to the entire proposal's success — anchoring the system and providing the proof of concept for national-scale transformation.</p>
+      </div>
+    </div>
+
+    <div class="flagship-metrics fade-in">
+      <div><strong>Tuition:</strong> $40,000 – $45,000/year</div>
+      <div><strong>Capacity:</strong> 500 – 1,000 students per school</div>
+      <div><strong>Backstop:</strong> ${ctx.country} provides 50% capacity backstop for 5 years</div>
+    </div>
+  </div>
+</section>
+
+<!-- Curved divider: white → cream vision -->
+<div class="section-divider" style="background: var(--white);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill="var(--cream)"/>
+  </svg>
+</div>
+
 <!-- ═══════ VISION ═══════ -->
-<section class="section section-white" id="vision">
+<section class="section section-cream" id="vision">
   <div class="container">
     <div class="fade-in">
       <span class="section-eyebrow">The Vision</span>
@@ -687,8 +906,8 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
-<!-- Curved divider: white → navy stats -->
-<div class="section-divider" style="background: var(--white);">
+<!-- Curved divider: cream → navy stats -->
+<div class="section-divider" style="background: var(--cream);">
   <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill="var(--navy)"/>
   </svg>
@@ -726,15 +945,51 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
-<!-- Curved divider: navy → cream commercial -->
+<!-- Curved divider: navy → cream rollout -->
 <div class="section-divider" style="background: var(--navy);">
   <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M0,0 C480,80 960,80 1440,0 L1440,80 L0,80 Z" fill="var(--cream)"/>
   </svg>
 </div>
 
+<!-- ═══════ PHASED ROLLOUT ═══════ -->
+<section class="section section-cream" id="rollout">
+  <div class="container">
+    <div class="fade-in">
+      <span class="section-eyebrow">Phased Deployment</span>
+      <h2 class="section-title">${programName} School Network Rollout</h2>
+      <p class="section-subtitle">${ctx.country}-owned platform with Alpha as exclusive operating partner. Staged scaling plan designed for sustainable, high-quality growth.</p>
+    </div>
+
+    <div class="rollout-timeline fade-in">
+      <div class="rollout-phase">
+        <div class="phase-label">Phase 0 — Foundation</div>
+        <h4>Year 1 – 2</h4>
+        <p>Launch Alpha Flagship Schools and first ${programName} communities. Establish ${lifeSkillsName}, deploy Incept eduLLM, begin Guide School training pipeline.</p>
+      </div>
+      <div class="rollout-phase">
+        <div class="phase-label">Phase 1 — Expansion</div>
+        <h4>Year 3 – 4</h4>
+        <p>Scale to additional communities. Refine curriculum based on outcomes data. Expand Guide School capacity. Build parent demand through proven results.</p>
+      </div>
+      <div class="rollout-phase">
+        <div class="phase-label">Phase 2 — National Scale</div>
+        <h4>Year 5+</h4>
+        <p>Full national deployment across ${scale.y5Communities}+ communities with ${scale.y5Students} students. "Educated in ${ctx.country}" becomes a globally recognized credential.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Curved divider: cream → cream commercial -->
+<div class="section-divider" style="background: var(--cream);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C480,80 960,80 1440,0 L1440,80 L0,80 Z" fill="var(--white)"/>
+  </svg>
+</div>
+
 <!-- ═══════ COMMERCIAL STRUCTURE ═══════ -->
-<section class="section-lg section-cream" id="commercial">
+<section class="section-lg section-white" id="commercial">
   <div class="container">
     <div class="fade-in">
       <span class="section-eyebrow">Commercial Structure</span>
@@ -773,15 +1028,15 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
-<!-- Curved divider: cream → white costs -->
-<div class="section-divider" style="background: var(--cream);">
+<!-- Curved divider: white → cream costs -->
+<div class="section-divider" style="background: var(--white);">
   <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill="var(--white)"/>
+    <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill="var(--cream)"/>
   </svg>
 </div>
 
 <!-- ═══════ COST STRUCTURE ═══════ -->
-<section class="section section-white" id="costs">
+<section class="section section-cream" id="costs">
   <div class="container">
     <div class="fade-in">
       <span class="section-eyebrow">${programName} Cost Structure</span>
@@ -868,7 +1123,7 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
-<!-- ═══════ FOOTER (Fix #6: Logo + 3-column) ═══════ -->
+<!-- ═══════ FOOTER ═══════ -->
 <footer class="site-footer">
   <div class="container">
     <div class="footer-inner">
@@ -876,14 +1131,15 @@ a { color: inherit; text-decoration: none; }
         <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" class="footer-bird" style="height:24px;object-fit:contain;opacity:0.7;"/>
         <div class="footer-brand-text">
           <strong>Alpha Holdings, Inc.</strong>
-          <span>&copy; ${year}. Confidential &amp; Proprietary.</span>
+          <span style="font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7;">Confidential &amp; Non-Binding</span>
+          <span>&copy; ${year}. All rights reserved.</span>
         </div>
       </div>
       <div class="footer-center">
         <a href="mailto:joe.liemandt@alpha.school" target="_blank" rel="noopener noreferrer">joe.liemandt@alpha.school</a>
       </div>
       <div class="footer-links">
-        <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer">Created with Perplexity Computer</a>
+        <a href="https://alpha.school" target="_blank" rel="noopener noreferrer">alpha.school</a>
       </div>
     </div>
   </div>
@@ -936,6 +1192,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </body>
 </html>`;
 }
+
 
 // ─── Pitch Deck HTML Generator ───────────────────────────────────────────────
 // Modelled after the Ed71 Proposal Deck (first 8 slides)
