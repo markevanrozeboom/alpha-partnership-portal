@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { PIPELINE_API } from "@/lib/api-config";
 import { Input } from "@/components/ui/input";
 import { Loader2, ArrowRight, Globe, FileText, Presentation, ExternalLink } from "lucide-react";
-import { PerplexityAttribution } from "@/components/PerplexityAttribution";
 
 export default function HomePage() {
   const [, navigate] = useLocation();
@@ -170,14 +169,11 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="py-5 px-6" style={{ borderTop: "1px solid #e8ecf1" }}>
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-          <img src="/assets/alpha-logo-blue.jpg" alt="Alpha" className="h-6 object-contain shrink-0" />
-          <p className="text-[11px] text-gray-400 whitespace-nowrap">
+        <div className="max-w-4xl mx-auto flex items-center justify-center gap-4">
+          <img src="/assets/alpha-logo-blue.jpg" alt="Alpha" className="h-5 object-contain" />
+          <p className="text-[11px] text-gray-400">
             © 2026. Confidential &amp; Proprietary.
           </p>
-          <div className="shrink-0">
-            <PerplexityAttribution />
-          </div>
         </div>
       </footer>
     </div>

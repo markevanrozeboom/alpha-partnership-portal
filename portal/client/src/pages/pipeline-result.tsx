@@ -8,11 +8,8 @@ import {
   ArrowLeft, Loader2, FileText, Presentation, Download,
   RefreshCw, ExternalLink, FileDown, Globe,
 } from "lucide-react";
-import { PerplexityAttribution } from "@/components/PerplexityAttribution";
 import { PIPELINE_API, PORTAL_API } from "@/lib/api-config";
 import type { PipelineStatus, CountryContext } from "@shared/schema";
-
-// ─── FastAPI run response shape ──────────────────────────────────────────────
 
 interface BackendRunResponse {
   status: PipelineStatus;
@@ -25,8 +22,6 @@ interface BackendRunResponse {
   agent_logs?: string[];
 }
 
-// ─── Local term sheet result (from portal backend, if available) ─────────────
-
 interface TermSheetResult {
   termSheetHtml: string;
   pitchDeckHtml: string;
@@ -34,24 +29,23 @@ interface TermSheetResult {
   context: CountryContext;
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
+// ─── Stage labels — NO internal jargon, NO tool names ─────────────────────
 const STAGE_LABELS: Record<string, string> = {
-  pending: "Initializing...",
+  pending: "Preparing your request...",
   researching_country: "Researching country profile...",
-  review_country_report: "Processing country research...",
-  researching_education: "Analyzing education system...",
-  review_education_report: "Processing education analysis...",
-  strategizing: "Developing partnership strategy...",
-  review_strategy: "Processing strategy...",
-  presenting_assumptions: "Building financial assumptions...",
-  review_assumptions: "Processing assumptions...",
-  building_model: "Computing financial model...",
-  review_model: "Processing financial model...",
-  presenting_term_sheet_assumptions: "Preparing term sheet...",
-  review_term_sheet_assumptions: "Processing term sheet...",
-  generating_documents: "Generating Gamma deck & documents...",
-  review_documents: "Finalizing documents...",
+  review_country_report: "Compiling research findings...",
+  researching_education: "Analyzing education landscape...",
+  review_education_report: "Synthesizing education data...",
+  strategizing: "Crafting partnership strategy...",
+  review_strategy: "Refining strategic approach...",
+  presenting_assumptions: "Modeling financial framework...",
+  review_assumptions: "Optimizing financial parameters...",
+  building_model: "Building financial projections...",
+  review_model: "Validating financial model...",
+  presenting_term_sheet_assumptions: "Structuring term sheet...",
+  review_term_sheet_assumptions: "Finalizing term sheet structure...",
+  generating_documents: "Generating pitch deck & term sheet...",
+  review_documents: "Preparing final documents...",
   completed: "Complete",
   error: "Error",
 };
@@ -67,34 +61,47 @@ const GATE_APPROVALS: Record<string, { endpoint: string; body: object }> = {
 };
 
 const STAGE_ORDER: PipelineStatus[] = [
-  "pending",
-  "researching_country",
-  "review_country_report",
-  "researching_education",
-  "review_education_report",
-  "strategizing",
-  "review_strategy",
-  "presenting_assumptions",
-  "review_assumptions",
-  "building_model",
-  "review_model",
-  "presenting_term_sheet_assumptions",
-  "review_term_sheet_assumptions",
-  "generating_documents",
-  "review_documents",
-  "completed",
+  "pending", "researching_country", "review_country_report",
+  "researching_education", "review_education_report",
+  "strategizing", "review_strategy",
+  "presenting_assumptions", "review_assumptions",
+  "building_model", "review_model",
+  "presenting_term_sheet_assumptions", "review_term_sheet_assumptions",
+  "generating_documents", "review_documents", "completed",
 ];
 
 const STAGE_MILESTONES: { status: PipelineStatus; label: string }[] = [
-  { status: "researching_country", label: "Country Research" },
-  { status: "researching_education", label: "Education Analysis" },
+  { status: "researching_country", label: "Research" },
   { status: "strategizing", label: "Strategy" },
-  { status: "presenting_assumptions", label: "Financial Model" },
+  { status: "building_model", label: "Financials" },
   { status: "generating_documents", label: "Documents" },
   { status: "completed", label: "Complete" },
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Clean agent logs: strip timestamps, filter out internal messages ─────
+function cleanLog(raw: string): string | null {
+  // Strip ISO timestamp prefix
+  let cleaned = raw.replace(/^\[[\d\-T:.]+\]\s*/, "");
+  // Filter out internal messages that shouldn't be shown to users
+  const blacklist = [
+    /user approved/i,
+    /moving to \w+/i,
+    /type:\s*sovereign/i,
+    /type:\s*us_state/i,
+    /no tiers/i,
+    /unified model/i,
+    /gamma/i,
+    /pipeline started/i,
+    /starting combined/i,
+    /re-running/i,
+    /feedback/i,
+    /gate/i,
+  ];
+  for (const pattern of blacklist) {
+    if (pattern.test(cleaned)) return null;
+  }
+  return cleaned;
+}
 
 function downloadHtml(html: string, filename: string) {
   const blob = new Blob([html], { type: "text/html" });
@@ -110,23 +117,16 @@ function openInNewTab(html: string) {
   window.open(URL.createObjectURL(blob), "_blank");
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
-
 export default function PipelineResultPage() {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const runId = params.id;
   const [activeTab, setActiveTab] = useState("termsheet");
-
-  // Track which gates we've already approved so we don't double-fire
   const approvedGates = useRef(new Set<string>());
-
-  // Local term sheet data (fetched from portal backend when pipeline completes)
   const [termSheetData, setTermSheetData] = useState<TermSheetResult | null>(null);
   const [termSheetLoading, setTermSheetLoading] = useState(false);
   const termSheetRequested = useRef(false);
 
-  // Poll the FastAPI backend directly
   const { data, isLoading, error } = useQuery<BackendRunResponse>({
     queryKey: ["pipeline-run", runId],
     queryFn: async () => {
@@ -141,66 +141,51 @@ export default function PipelineResultPage() {
     },
   });
 
-  // Auto-approve gates when we detect a review status
+  // Auto-approve gates
   useEffect(() => {
     if (!data || !runId) return;
     const status = data.status;
     if (!(status in GATE_APPROVALS)) return;
     if (approvedGates.current.has(status)) return;
-
-    // Mark as approved immediately to prevent re-fires
     approvedGates.current.add(status);
-
     const gate = GATE_APPROVALS[status];
     fetch(`${PIPELINE_API}/api/runs/${runId}/${gate.endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(gate.body),
-    }).catch((err) => {
-      console.warn(`Failed to approve gate ${status}:`, err);
-      // Remove from set so it can retry on next poll
-      approvedGates.current.delete(status);
-    });
+    }).catch(() => { approvedGates.current.delete(status); });
   }, [data, runId]);
 
-  // When pipeline completes and portal backend is available, fetch term sheet HTML
+  // Fetch term sheet from portal backend when pipeline completes
   useEffect(() => {
     if (data?.status !== "completed") return;
     if (!PORTAL_API || termSheetRequested.current) return;
     if (!data.country_profile) return;
-
     termSheetRequested.current = true;
     setTermSheetLoading(true);
-
     fetch(`${PORTAL_API}/api/generate-term-sheet`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        countryContext: data.country_profile,
-        financialModel: data.financial_model,
-      }),
+      body: JSON.stringify({ countryContext: data.country_profile, financialModel: data.financial_model }),
     })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`${res.status}`);
-        return res.json() as Promise<TermSheetResult>;
-      })
+      .then(async (res) => { if (!res.ok) throw new Error(`${res.status}`); return res.json() as Promise<TermSheetResult>; })
       .then(setTermSheetData)
-      .catch((err) => console.warn("Term sheet generation unavailable:", err))
+      .catch(() => {})
       .finally(() => setTermSheetLoading(false));
   }, [data]);
 
   const status = data?.status ?? "pending";
-  const stageLabel = STAGE_LABELS[status] || status;
+  const stageLabel = STAGE_LABELS[status] || "Processing...";
   const isPending = data && status !== "completed" && status !== "error";
   const isComplete = status === "completed";
   const isError = status === "error";
-
   const currentStageIndex = STAGE_ORDER.indexOf(status as PipelineStatus);
   const progressPct = Math.round((Math.max(0, currentStageIndex) / (STAGE_ORDER.length - 1)) * 100);
-
-  const countryProfile = data?.country_profile;
-  const gammaUrl = data?.gamma_url;
   const gammaExportUrl = data?.gamma_export_url;
+  const target = data?.target || "";
+
+  // Clean logs for display
+  const cleanedLogs = (data?.agent_logs || []).map(cleanLog).filter(Boolean) as string[];
 
   const handleDownloadTermSheet = useCallback(() => {
     if (!termSheetData) return;
@@ -220,14 +205,10 @@ export default function PipelineResultPage() {
     const byteChars = atob(termSheetData.termSheetDocxBase64);
     const byteNums = new Array(byteChars.length);
     for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
-    const blob = new Blob([new Uint8Array(byteNums)], {
-      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    });
+    const blob = new Blob([new Uint8Array(byteNums)], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `${name}-Term-Sheet.docx`;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
+    const a = document.createElement("a"); a.href = url; a.download = `${name}-Term-Sheet.docx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   }, [termSheetData]);
 
   const handleOpenTermSheetFullScreen = useCallback(() => {
@@ -246,7 +227,7 @@ export default function PipelineResultPage() {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6" style={{ background: "#f7f9fc" }}>
-        <p className="text-red-600 text-sm">Failed to load pipeline run.</p>
+        <p className="text-red-600 text-sm">Something went wrong. Please try again.</p>
         <Button variant="outline" size="sm" onClick={() => navigate("/")}>
           <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Back
         </Button>
@@ -259,7 +240,7 @@ export default function PipelineResultPage() {
       {/* Header */}
       <header className="px-6 py-3" style={{ background: "white", borderBottom: "1px solid #e8ecf1", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Button variant="ghost" size="sm" className="text-xs text-gray-500 hover:text-gray-700" onClick={() => navigate("/")} data-testid="button-back">
+          <Button variant="ghost" size="sm" className="text-xs text-gray-500 hover:text-gray-700" onClick={() => navigate("/")}>
             <ArrowLeft className="h-3.5 w-3.5 mr-1" /> New Country
           </Button>
           <img src="/assets/alpha-logo-blue.jpg" alt="Alpha Holdings" className="h-7 object-contain" />
@@ -270,7 +251,7 @@ export default function PipelineResultPage() {
         <div className="max-w-6xl mx-auto">
           {/* Pipeline Progress */}
           {isPending && (
-            <div className="flex flex-col items-center justify-center py-16 gap-6" data-testid="status-pipeline">
+            <div className="flex flex-col items-center justify-center py-16 gap-6">
               <div className="relative">
                 <div className="absolute inset-0 rounded-full animate-ping" style={{ background: "rgba(0,0,229,0.15)" }} />
                 <div className="relative w-14 h-14 rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,229,0.08)", border: "1px solid rgba(0,0,229,0.15)" }}>
@@ -280,7 +261,7 @@ export default function PipelineResultPage() {
 
               <div className="text-center space-y-1.5">
                 <p className="text-sm font-semibold text-gray-800">
-                  Building documents{data?.target ? ` for ${data.target}` : ""}...
+                  Preparing documents for {target}
                 </p>
                 <p className="text-sm" style={{ color: "#0000E5" }}>
                   {stageLabel}
@@ -295,24 +276,17 @@ export default function PipelineResultPage() {
                     style={{ width: `${progressPct}%`, background: "linear-gradient(90deg, #0000E5, #59BBF9)" }}
                   />
                 </div>
-
-                {/* Milestone dots */}
                 <div className="flex justify-between px-1">
                   {STAGE_MILESTONES.map((m) => {
                     const mIdx = STAGE_ORDER.indexOf(m.status);
                     const done = currentStageIndex >= mIdx;
-                    const nextMilestone = STAGE_MILESTONES[STAGE_MILESTONES.indexOf(m) + 1];
-                    const nextIdx = nextMilestone ? STAGE_ORDER.indexOf(nextMilestone.status) : STAGE_ORDER.length;
+                    const nextM = STAGE_MILESTONES[STAGE_MILESTONES.indexOf(m) + 1];
+                    const nextIdx = nextM ? STAGE_ORDER.indexOf(nextM.status) : STAGE_ORDER.length;
                     const active = currentStageIndex >= mIdx && currentStageIndex < nextIdx;
                     return (
                       <div key={m.status} className="flex flex-col items-center gap-1">
-                        <div
-                          className="w-3 h-3 rounded-full border-2 transition-colors"
-                          style={{
-                            borderColor: done ? "#0000E5" : "#d1d5db",
-                            background: done ? "#0000E5" : "white",
-                          }}
-                        />
+                        <div className="w-3 h-3 rounded-full border-2 transition-colors"
+                          style={{ borderColor: done ? "#0000E5" : "#d1d5db", background: done ? "#0000E5" : "white" }} />
                         <span className={`text-[10px] ${active ? "font-semibold text-gray-800" : done ? "text-gray-600" : "text-gray-400"}`}>
                           {m.label}
                         </span>
@@ -322,10 +296,10 @@ export default function PipelineResultPage() {
                 </div>
               </div>
 
-              {/* Agent logs (last 3) */}
-              {data?.agent_logs && data.agent_logs.length > 0 && (
+              {/* Cleaned agent logs — only show meaningful, user-friendly messages */}
+              {cleanedLogs.length > 0 && (
                 <div className="w-full max-w-md mt-4 space-y-1">
-                  {data.agent_logs.slice(-3).map((log, i) => (
+                  {cleanedLogs.slice(-3).map((log, i) => (
                     <p key={i} className="text-[11px] text-gray-400 truncate">{log}</p>
                   ))}
                 </div>
@@ -335,13 +309,13 @@ export default function PipelineResultPage() {
 
           {/* Error State */}
           {isError && (
-            <div className="flex flex-col items-center justify-center py-24 gap-5" data-testid="status-error">
+            <div className="flex flex-col items-center justify-center py-24 gap-5">
               <div className="w-14 h-14 rounded-full bg-red-50 border border-red-200 flex items-center justify-center">
                 <RefreshCw className="h-6 w-6 text-red-600" />
               </div>
               <div className="text-center space-y-2">
-                <p className="text-sm font-semibold text-red-600">Pipeline failed</p>
-                <p className="text-xs text-gray-500 max-w-sm">{data?.error_message || "An unexpected error occurred."}</p>
+                <p className="text-sm font-semibold text-red-600">Something went wrong</p>
+                <p className="text-xs text-gray-500 max-w-sm">We encountered an issue preparing your documents. Please try again.</p>
               </div>
               <Button variant="outline" size="sm" onClick={() => navigate("/")}>
                 <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Try Again
@@ -351,104 +325,95 @@ export default function PipelineResultPage() {
 
           {/* Completed State */}
           {isComplete && (
-            <div className="space-y-6 animate-in fade-in duration-500" data-testid="status-completed">
-              {/* Header with country info */}
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3">
-                  {countryProfile && (
-                    <>
-                      <span className="text-3xl">{countryProfile.flagEmoji}</span>
-                      <div>
-                        <h1 className="text-lg font-bold tracking-tight text-gray-900" data-testid="text-country">
-                          {countryProfile.localizedProgramName || countryProfile.country}
-                        </h1>
-                        <p className="text-xs text-gray-500">
-                          {countryProfile.formalName} — {countryProfile.headOfStateTitle}: {countryProfile.headOfState}
-                        </p>
-                      </div>
-                    </>
-                  )}
-                  {!countryProfile && (
-                    <div>
-                      <h1 className="text-lg font-bold tracking-tight text-gray-900">{data?.target || "Documents"}</h1>
-                      <p className="text-xs text-gray-500">Pipeline complete</p>
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {termSheetData?.termSheetDocxBase64 && (
-                    <Button variant="outline" size="sm" onClick={handleDownloadDocx} className="text-xs border-gray-200 text-gray-600">
-                      <FileDown className="h-3.5 w-3.5 mr-1.5" /> .docx
-                    </Button>
-                  )}
-                  {termSheetData?.termSheetHtml && (
-                    <Button variant="outline" size="sm" onClick={handleDownloadTermSheet} className="text-xs border-gray-200 text-gray-600">
-                      <Download className="h-3.5 w-3.5 mr-1.5" /> Term Sheet
-                    </Button>
-                  )}
-                  {termSheetData?.pitchDeckHtml && (
-                    <Button variant="outline" size="sm" onClick={handleDownloadPitchDeck} className="text-xs border-gray-200 text-gray-600">
-                      <Download className="h-3.5 w-3.5 mr-1.5" /> Pitch Deck
-                    </Button>
-                  )}
-                  {gammaExportUrl && (
-                    <a href={gammaExportUrl} target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm" className="text-xs border-gray-200 text-gray-600">
-                        <Download className="h-3.5 w-3.5 mr-1.5" /> Gamma PPTX
-                      </Button>
-                    </a>
-                  )}
-                </div>
+            <div className="space-y-6 animate-in fade-in duration-500">
+              {/* Header */}
+              <div className="text-center space-y-2 py-4">
+                <h1 className="text-xl font-bold tracking-tight text-gray-900">
+                  {target} — Documents Ready
+                </h1>
+                <p className="text-sm text-gray-500">
+                  Your investor pitch deck and interactive term sheet have been generated.
+                </p>
               </div>
 
-              {/* Gamma Deck CTA */}
-              {gammaUrl && (
-                <div className="rounded-xl p-4 flex items-center justify-between gap-4"
-                  style={{ background: "linear-gradient(135deg, #0000E5 0%, #1a33ff 100%)", boxShadow: "0 4px 20px rgba(0,0,229,0.25)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
-                      <Presentation className="h-5 w-5 text-white" />
+              {/* Primary CTAs — Two equal cards side by side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Investor Pitch Deck */}
+                {gammaExportUrl && (
+                  <div className="rounded-xl p-6 flex flex-col items-center text-center gap-4"
+                    style={{ background: "linear-gradient(135deg, #0000E5 0%, #1a33ff 100%)", boxShadow: "0 4px 20px rgba(0,0,229,0.25)" }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
+                      <Presentation className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">Investor Deck (Gamma)</p>
-                      <p className="text-xs text-white/70">AI-generated presentation deck — ready for investor meetings</p>
+                      <p className="text-base font-semibold text-white">Investor Pitch Deck</p>
+                      <p className="text-xs text-white/60 mt-1">PowerPoint presentation ready for download</p>
                     </div>
+                    <a href={gammaExportUrl} target="_blank" rel="noopener noreferrer" className="w-full">
+                      <Button size="sm" className="w-full font-semibold bg-white hover:bg-gray-50" style={{ color: "#0000E5" }}>
+                        <Download className="h-3.5 w-3.5 mr-1.5" /> Download Pitch Deck
+                      </Button>
+                    </a>
                   </div>
-                  <a href={gammaUrl} target="_blank" rel="noopener noreferrer">
-                    <Button size="sm" className="font-semibold bg-white hover:bg-gray-50" style={{ color: "#0000E5" }}>
-                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open Investor Deck
+                )}
+
+                {/* Interactive Term Sheet */}
+                {termSheetData?.termSheetHtml ? (
+                  <div className="rounded-xl p-6 flex flex-col items-center text-center gap-4"
+                    style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a4a 100%)", boxShadow: "0 4px 20px rgba(10,22,40,0.25)" }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.1)" }}>
+                      <Globe className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-white">Interactive Term Sheet</p>
+                      <p className="text-xs text-white/50 mt-1">Full-screen website for sovereign presentation</p>
+                    </div>
+                    <Button size="sm" onClick={handleOpenTermSheetFullScreen} className="w-full font-semibold bg-white hover:bg-gray-50" style={{ color: "#0a1628" }}>
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open Term Sheet
                     </Button>
-                  </a>
-                </div>
-              )}
-
-              {/* Interactive Term Sheet CTA */}
-              {termSheetData?.termSheetHtml && (
-                <div className="rounded-xl p-4 flex items-center justify-between gap-4"
-                  style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a4a 100%)", boxShadow: "0 4px 20px rgba(10,22,40,0.25)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.1)" }}>
-                      <Globe className="h-5 w-5 text-white" />
+                  </div>
+                ) : termSheetLoading ? (
+                  <div className="rounded-xl p-6 flex flex-col items-center text-center gap-4 border border-gray-200 bg-white">
+                    <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#0000E5" }} />
+                    <p className="text-sm text-gray-600">Preparing interactive term sheet...</p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl p-6 flex flex-col items-center text-center gap-4"
+                    style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2a4a 100%)", boxShadow: "0 4px 20px rgba(10,22,40,0.25)" }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.1)" }}>
+                      <Globe className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">Interactive Term Sheet</p>
-                      <p className="text-xs text-white/60">Full-screen website experience — ready for sovereign presentation</p>
+                      <p className="text-base font-semibold text-white">Interactive Term Sheet</p>
+                      <p className="text-xs text-white/50 mt-1">Available on the full portal</p>
                     </div>
+                    <a href={`https://alpha-portal-am9a.onrender.com`} target="_blank" rel="noopener noreferrer" className="w-full">
+                      <Button size="sm" className="w-full font-semibold bg-white hover:bg-gray-50" style={{ color: "#0a1628" }}>
+                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open Full Portal
+                      </Button>
+                    </a>
                   </div>
-                  <Button size="sm" onClick={handleOpenTermSheetFullScreen}
-                    className="font-semibold bg-white hover:bg-gray-50" style={{ color: "#0a1628" }}>
-                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open in New Tab
-                  </Button>
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* Term sheet loading indicator */}
-              {termSheetLoading && (
-                <div className="rounded-xl p-4 flex items-center gap-3 border border-gray-200 bg-white">
-                  <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#0000E5" }} />
-                  <p className="text-sm text-gray-600">Generating interactive term sheet &amp; pitch deck...</p>
-                </div>
-              )}
+              {/* Additional downloads */}
+              <div className="flex justify-center gap-3 flex-wrap">
+                {termSheetData?.termSheetDocxBase64 && (
+                  <Button variant="outline" size="sm" onClick={handleDownloadDocx} className="text-xs border-gray-200 text-gray-600">
+                    <FileDown className="h-3.5 w-3.5 mr-1.5" /> Term Sheet (.docx)
+                  </Button>
+                )}
+                {termSheetData?.termSheetHtml && (
+                  <Button variant="outline" size="sm" onClick={handleDownloadTermSheet} className="text-xs border-gray-200 text-gray-600">
+                    <Download className="h-3.5 w-3.5 mr-1.5" /> Term Sheet (.html)
+                  </Button>
+                )}
+                {termSheetData?.pitchDeckHtml && (
+                  <Button variant="outline" size="sm" onClick={handleDownloadPitchDeck} className="text-xs border-gray-200 text-gray-600">
+                    <Download className="h-3.5 w-3.5 mr-1.5" /> Pitch Deck (.html)
+                  </Button>
+                )}
+              </div>
 
               {/* Tab previews */}
               {(termSheetData?.termSheetHtml || termSheetData?.pitchDeckHtml) && (
@@ -463,10 +428,7 @@ export default function PipelineResultPage() {
                       )}
                     </TabsList>
                     <Button variant="ghost" size="sm" className="text-xs text-gray-500"
-                      onClick={() => {
-                        const html = activeTab === "termsheet" ? termSheetData?.termSheetHtml : termSheetData?.pitchDeckHtml;
-                        if (html) openInNewTab(html);
-                      }}>
+                      onClick={() => { const html = activeTab === "termsheet" ? termSheetData?.termSheetHtml : termSheetData?.pitchDeckHtml; if (html) openInNewTab(html); }}>
                       <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open in New Tab
                     </Button>
                   </div>
@@ -498,10 +460,9 @@ export default function PipelineResultPage() {
       </main>
 
       <footer className="py-5 px-6" style={{ borderTop: "1px solid #e8ecf1" }}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <img src="/assets/alpha-logo-blue.jpg" alt="Alpha" className="h-5 object-contain shrink-0" />
-          <p className="text-[11px] text-gray-400 whitespace-nowrap">&copy; 2026. Confidential &amp; Proprietary.</p>
-          <div className="shrink-0"><PerplexityAttribution /></div>
+        <div className="max-w-6xl mx-auto flex items-center justify-center gap-4">
+          <img src="/assets/alpha-logo-blue.jpg" alt="Alpha" className="h-5 object-contain" />
+          <p className="text-[11px] text-gray-400">&copy; 2026. Confidential &amp; Proprietary.</p>
         </div>
       </footer>
     </div>
