@@ -857,7 +857,7 @@ a { color: inherit; text-decoration: none; }
 
     <div class="flagship-metrics fade-in">
       <div><strong>Tuition:</strong> $40,000 – $45,000/year</div>
-      <div><strong>Capacity:</strong> 500 – 1,000 students per school</div>
+      <div><strong>Capacity:</strong> 250-, 500-, and 1,000-student schools</div>
       <div><strong>Backstop:</strong> ${ctx.country} provides 50% capacity backstop for 5 years</div>
     </div>
   </div>
