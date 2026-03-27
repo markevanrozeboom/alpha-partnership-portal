@@ -735,10 +735,11 @@ async def generate_documents(
     }
 
     # --- Get deck content from LLM ---
+    _adj = target.split()[-1] if " " in target else target
     _jv_name_for_prompt = (
         jv_program_name
         or (strategy.brand.jv_name_suggestion if strategy else None)
-        or f"{target} Education"
+        or f"{_adj} Futures"
     )
     deck_outline = await call_llm_plain(
         system_prompt=DECK_OUTLINE_PROMPT.format(
@@ -1434,12 +1435,13 @@ def _build_pptx(
     """
     from pptx.oxml.ns import qn
 
+    _adj = target.split()[-1] if " " in target else target
     jv_name = (
         jv_program_name
         or strategy.brand.jv_name_suggestion
-        or f"{target} Education"
+        or f"{_adj} Futures"
     )
-    culture_name = cultural_program_name or f"{target}Core"
+    culture_name = cultural_program_name or f"{_adj}Vita"
     if fin is None:
         fin = {}
     flagship_tuition_str = fin.get("flagship_tuition_display") or _get_flagship_tuition_display(model)
@@ -2006,12 +2008,13 @@ def _build_gamma_investor_input(
     Uses the shared ``fin`` dict from ``extract_financial_values``
     to ensure every number matches the term sheet.
     """
+    _adj = target.split()[-1] if " " in target else target
     jv_name = (
         jv_program_name
         or strategy.brand.jv_name_suggestion
-        or f"{target} Education"
+        or f"{_adj} Futures"
     )
-    culture_name = cultural_program_name or f"{target}Core"
+    culture_name = cultural_program_name or f"{_adj}Vita"
     if fin is None:
         fin = {}
     flagship_tuition_str = fin.get("flagship_tuition_display") or _get_flagship_tuition_display(model)

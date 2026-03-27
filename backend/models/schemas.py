@@ -237,7 +237,16 @@ class PartnershipStructure(BaseModel):
 
 
 class Brand(BaseModel):
-    jv_name_suggestion: Optional[str] = None
+    jv_name_suggestion: Optional[str] = Field(
+        default=None,
+        description=(
+            "An exciting, aspirational brand name for the country-owned "
+            "school network. Must be culturally rooted, short (1-3 words), "
+            "and MUST NOT contain 'Alpha' or be generic like "
+            "'[Country] Education'. Draw from local language or national "
+            "vision. Examples: 'Ed71', 'Savoir France', 'Ru'ya 2030'."
+        ),
+    )
     positioning: Optional[str] = None
     tagline: Optional[str] = None
 

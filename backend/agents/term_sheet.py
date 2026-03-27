@@ -454,30 +454,48 @@ class CountryVariables(BaseModel):
     )
     jv_program_name: str = Field(
         description=(
-            "Name of the country-owned, Alpha-operated school network "
-            "(equivalent of 'Ed71' for UAE). "
-            "Short, memorable, 2-4 words max. MUST use only plain "
+            "An EXCITING, ASPIRATIONAL brand name for the country-owned, "
+            "Alpha-operated school network. This name will be seen by "
+            "heads of state — it must feel prestigious and visionary. "
+            "Short, memorable, 1-3 words max. MUST use only plain "
             "ASCII characters (no accents, no diacritics). "
             "MUST NOT contain the word 'Alpha' — these are country-owned "
             "schools and cannot carry the Alpha brand. "
+            "MUST NOT be generic like '[Country] Education' or "
+            "'[Country] Education Company' or '[Country] Learning'. "
             "MUST be a DIFFERENT name from cultural_program_name. "
-            "Good examples: 'Ed71' (UAE), 'Savoir France' (France), "
-            "'Vision2030 Learning' (Saudi). "
-            "Bad examples: 'Alpha France', 'Alpha Education'."
+            "Draw from national vision plans, cultural heritage, or "
+            "aspirational concepts in the local language. "
+            "Good examples: 'Ed71' (UAE — references founding year), "
+            "'Savoir France' (France — local word for knowledge), "
+            "'Ru'ya 2030' (Saudi — 'vision' in Arabic), "
+            "'Ilm Singapore' (Singapore — 'knowledge' in Malay), "
+            "'Lumina Brasil' (Brazil — 'light' in Portuguese). "
+            "Bad examples: 'Saudi Education', 'France Education Company', "
+            "'Alpha France', 'National Learning Program'."
         ),
     )
     cultural_program_name: str = Field(
         description=(
-            "Country's life-skills curriculum program name "
-            "(equivalent of 'AsasCore' for UAE). 1-2 words, "
-            "culturally resonant. MUST use only plain ASCII "
+            "An EXCITING, ASPIRATIONAL brand name for the country-specific "
+            "LIFE-SKILLS CURRICULUM program. This is the country's "
+            "equivalent to AlphaCore — the life-skills engine. "
+            "1-2 words, culturally resonant. MUST use only plain ASCII "
             "characters (no accents, no diacritics). "
             "MUST be a COMPLETELY DIFFERENT name from jv_program_name — "
             "these are two distinct products: the school network vs. "
             "the life-skills curriculum. "
-            "Good examples: 'AsasCore' (UAE), 'VivreCore' (France), "
-            "'IqraSkills' (Saudi). "
-            "Bad examples: 'Savoir' if jv_program_name is 'Savoir France'."
+            "MUST NOT be generic like '[Country]Core' or "
+            "'[Country]Skills' or '[ProgramName]Skills'. "
+            "Draw from local words for 'foundation', 'roots', 'core', "
+            "'spirit', 'path', or similar aspirational concepts. "
+            "Good examples: 'AsasCore' (UAE — 'asas' means foundation), "
+            "'VivreCore' (France — 'vivre' means to live), "
+            "'HayatSkills' (Saudi — 'hayat' means life), "
+            "'AkarCore' (Singapore — 'akar' means roots). "
+            "Bad examples: 'Saudi Education CompanySkills', "
+            "'Savoir Skills' (if jv_program_name is 'Savoir France'), "
+            "'NationalCore', '[Country]Core'."
         ),
     )
     credential_phrase: str = Field(
@@ -565,20 +583,34 @@ inserted into a standardized proposal template (modelled on the UAE
 Ed71 deal structure).
 
 Every value must be culturally appropriate, factually accurate, and
-diplomatically calibrated for a head-of-state audience. The program
-names should sound local, prestigious, and aspirational.
+diplomatically calibrated for a head-of-state audience.
 
-IMPORTANT NAMING RULES:
-1. The jv_program_name MUST NOT contain the word "Alpha".
-   These are country-owned schools and cannot carry the Alpha brand.
-   Use a culturally resonant name instead (e.g. "Ed71", "Savoir France").
-2. The jv_program_name and cultural_program_name MUST be COMPLETELY DIFFERENT
-   names. They refer to two distinct things:
-   - jv_program_name = the country-owned, Alpha-operated SCHOOL NETWORK
-     (e.g. "Ed71" for UAE, "Savoir France" for France)
-   - cultural_program_name = the country-specific LIFE-SKILLS CURRICULUM
-     (e.g. "AsasCore" for UAE, "VivreCore" for France)
-   The names must not overlap or be derived from each other.
+CRITICAL NAMING RULES — READ CAREFULLY:
+The two brand names (jv_program_name and cultural_program_name) are the
+most important outputs. They will appear on every slide, every document,
+and will be spoken aloud by heads of state. They MUST be:
+  - EXCITING and ASPIRATIONAL — think startup brand, not government agency
+  - CULTURALLY ROOTED — draw from the local language, national vision,
+    heritage, or aspirational concepts specific to this country
+  - SHORT and MEMORABLE — 1-3 words for the school network, 1-2 words
+    for the life-skills programme
+
+RULES:
+1. jv_program_name (SCHOOL NETWORK brand):
+   - MUST NOT contain the word "Alpha"
+   - MUST NOT be generic (NO "[Country] Education", "[Country] Education Company",
+     "[Country] Learning", "National Program", "[Adjective] Education")
+   - USE a word or phrase from the local language or national vision
+   - Examples: "Ed71" (UAE — founding year), "Savoir France" (knowledge in French),
+     "Ru'ya 2030" (Saudi — vision in Arabic), "Ilm Singapore" (knowledge in Malay)
+
+2. cultural_program_name (LIFE-SKILLS CURRICULUM brand):
+   - MUST be COMPLETELY DIFFERENT from jv_program_name (different root word)
+   - MUST NOT be derived from jv_program_name (NO "[ProgramName]Skills")
+   - MUST NOT be generic (NO "[Country]Core", "[Country]Skills", "NationalCore")
+   - USE a different local-language word tied to life, growth, foundation, spirit, path
+   - Examples: "AsasCore" (UAE — asas = foundation), "VivreCore" (France — vivre = to live),
+     "HayatSkills" (Saudi — hayat = life), "AkarCore" (Singapore — akar = roots)
 
 Country Context:
 - Population: {population}
@@ -619,19 +651,47 @@ def _sanitize_country_variables(cv: CountryVariables) -> CountryVariables:
     import re
     if re.search(r"\balpha\b", cv.jv_program_name, re.IGNORECASE):
         cleaned = re.sub(r"\s*\bAlpha\b\s*", " ", cv.jv_program_name).strip()
-        cv.jv_program_name = cleaned if cleaned else f"{cv.country_adjective} Education"
+        cv.jv_program_name = cleaned if cleaned else f"{cv.country_adjective} Futures"
         logger.warning(
             "Stripped 'Alpha' from jv_program_name -> %s",
             cv.jv_program_name,
         )
 
+    generic_patterns = [
+        r"^.+\s+education(\s+company)?$",
+        r"^.+\s+learning$",
+        r"^national\s+(program|school|learning)$",
+    ]
+    jv_lower = cv.jv_program_name.lower().strip()
+    for pat in generic_patterns:
+        if re.match(pat, jv_lower, re.IGNORECASE):
+            cv.jv_program_name = f"{cv.country_adjective} Futures"
+            logger.warning(
+                "jv_program_name was generic; reset -> %s",
+                cv.jv_program_name,
+            )
+            break
+
     jv_norm = cv.jv_program_name.lower().strip()
     cult_norm = cv.cultural_program_name.lower().strip()
-    if jv_norm == cult_norm or jv_norm.startswith(cult_norm) or cult_norm.startswith(jv_norm):
-        cv.cultural_program_name = f"{cv.country_adjective}Core"
+
+    generic_life_skills = [
+        r"^.+core$",
+        r"^.+skills$",
+        r"^national\s*core$",
+    ]
+    cult_is_generic = any(
+        re.match(p, cult_norm) for p in generic_life_skills
+    ) and (
+        cult_norm.replace("core", "").replace("skills", "").strip()
+        in (cv.country_adjective.lower(), jv_norm.split()[0] if jv_norm else "")
+    )
+
+    if jv_norm == cult_norm or jv_norm.startswith(cult_norm) or cult_norm.startswith(jv_norm) or cult_is_generic:
+        cv.cultural_program_name = f"{cv.country_adjective}Vita"
         logger.warning(
-            "jv_program_name and cultural_program_name overlapped; "
-            "reset cultural_program_name -> %s",
+            "cultural_program_name was generic or overlapped with "
+            "jv_program_name; reset -> %s",
             cv.cultural_program_name,
         )
 
@@ -752,8 +812,8 @@ async def _generate_country_variables(
         adj = target.split()[-1] if " " in target else target
         return CountryVariables(
             country_adjective=adj,
-            jv_program_name=f"{target} Education",
-            cultural_program_name=f"{target}Core",
+            jv_program_name=f"{adj} Futures",
+            cultural_program_name=f"{adj}Vita",
             credential_phrase=f"Educated in {target}",
             first_launch_city="the capital",
             second_city="major cities",

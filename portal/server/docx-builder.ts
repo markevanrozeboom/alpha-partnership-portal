@@ -664,7 +664,7 @@ export function buildTermSheetDocx(ctx: CountryContext, model: FinancialModel): 
             const phases: Array<{ bold: string; rest: string }> = [
               {
                 bold: `Phase 0 (Now – Summer ${launchYear}): `,
-                rest: `IP Transfer, ${ctx.localizedLifeSkillsName || ctx.country + 'Core'} design, and eduLLM model training.`,
+                rest: `IP Transfer, ${ctx.localizedLifeSkillsName || ctx.country + 'Vita'} design, and eduLLM model training.`,
               },
               {
                 bold: `Phase 1 (${phase1SY}): `,

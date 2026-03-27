@@ -38,8 +38,8 @@ Return valid JSON matching this exact structure:
   "nationalEdVision": "1-2 sentence summary of the country's stated education reform goals",
   "culturalNarrative": "2-3 compelling sentences about why THIS country is uniquely positioned for AI-powered education transformation. Reference specific cultural values, national ambitions, or recent initiatives. This should feel like a senior advisor explaining the opportunity to their leadership.",
   "keyStrengths": ["Strength 1 for partnership", "Strength 2", "Strength 3"],
-  "localizedProgramName": "A SHORT brand name for the country-owned, Alpha-operated SCHOOL NETWORK (2-4 words max, like 'Ed71' for UAE or 'Savoir France' for France). Must be concise enough for a slide title. Reference something culturally meaningful. NEVER include explanations or descriptions — just the brand name itself. MUST NOT contain the word 'Alpha' — these are country-owned schools and cannot carry the Alpha brand. MUST be a COMPLETELY DIFFERENT name from localizedLifeSkillsName.",
-  "localizedLifeSkillsName": "A SHORT brand name for the country-specific LIFE-SKILLS CURRICULUM program (1-2 words, like 'AsasCore' for UAE or 'VivreCore' for France). This is the country's equivalent to AlphaCore — the life-skills engine. MUST be a COMPLETELY DIFFERENT name from localizedProgramName — these are two distinct products: the school network vs. the life-skills curriculum. Do NOT reuse or derive from the school network name.",
+  "localizedProgramName": "An EXCITING, ASPIRATIONAL brand name for the country-owned, Alpha-operated SCHOOL NETWORK (1-3 words max, like 'Ed71' for UAE or 'Savoir France' for France). Must be concise enough for a slide title. Draw from the local language, national vision, cultural heritage, or aspirational concepts — NOT generic English. NEVER include explanations or descriptions — just the brand name itself. MUST NOT contain the word 'Alpha'. MUST NOT be generic like '[Country] Education', '[Country] Education Company', or '[Country] Learning'. MUST be a COMPLETELY DIFFERENT name from localizedLifeSkillsName. Examples: 'Ed71' (UAE — founding year), 'Savoir France' (knowledge in French), 'Ru'ya 2030' (Saudi — vision in Arabic), 'Ilm Singapore' (knowledge in Malay).",
+  "localizedLifeSkillsName": "An EXCITING, ASPIRATIONAL brand name for the country-specific LIFE-SKILLS CURRICULUM program (1-2 words, like 'AsasCore' for UAE or 'VivreCore' for France). This is the country's equivalent to AlphaCore — the life-skills engine. MUST be a COMPLETELY DIFFERENT name from localizedProgramName — these are two distinct products. MUST NOT be derived from localizedProgramName (NO '[ProgramName]Skills'). MUST NOT be generic like '[Country]Core', '[Country]Skills', or 'NationalCore'. Use a different local-language word tied to life, growth, foundation, spirit, or path. Examples: 'AsasCore' (UAE — asas = foundation), 'VivreCore' (France — vivre = to live), 'HayatSkills' (Saudi — hayat = life).",
   "localLifeSkillsFocus": "What life skills matter most in this culture (e.g. entrepreneurship, civic leadership, environmental stewardship). 1-2 sentences.",
   "languageApps": "What localized AI apps would be needed (languages, religious education, cultural studies, ESL). Brief list.",
   "addressableStudentPopulation": "Estimated number of school-age children (5-18) in households with annual income > $250,000 USD (or PPP equivalent). This is the realistic addressable market for a $25,000/student program. Use known data: HNWI counts, wealth reports (Knight Frank, Henley & Partners, Credit Suisse), income distribution data, and international/premium private school enrollment as proxies. For wealthy nations (GDP per capita > $40k), this could be millions. For developing nations, it may be tens of thousands. Give a specific number like '15,000-25,000 students' or '2.1 million students'. Be realistic, not aspirational.",
@@ -88,18 +88,17 @@ const FIXED_ECONOMICS = {
 
 function generateTermSheetHtml(ctx: CountryContext): string {
   const programName = ctx.localizedProgramName || ctx.country;
-  let lifeSkillsName = ctx.localizedLifeSkillsName || `${ctx.country}Core`;
+  let lifeSkillsName = ctx.localizedLifeSkillsName || `${ctx.country}Vita`;
   const year = new Date().getFullYear();
   const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
-  // Fix: If the life skills name contains the raw country name, generate a culturally appropriate name
-  if (lifeSkillsName.includes(ctx.country) || lifeSkillsName === `${ctx.country}Core`) {
-    // Use the program name if it's a proper brand, otherwise use a generic
-    if (programName !== ctx.country && !programName.includes(ctx.country)) {
-      lifeSkillsName = `${programName}Skills`;
-    } else {
-      lifeSkillsName = "NationalCore";
-    }
+  const genericPatterns = [
+    new RegExp(`^${ctx.country}\\s*(Core|Skills)$`, 'i'),
+    new RegExp(`^${programName}\\s*Skills$`, 'i'),
+    /^National\s*Core$/i,
+  ];
+  if (genericPatterns.some(p => p.test(lifeSkillsName))) {
+    lifeSkillsName = `${ctx.country}Vita`;
   }
 
   // ── Fix #1: Dynamic scale targets based on addressable population ──
@@ -1200,9 +1199,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): string {
   const programName = ctx.localizedProgramName || ctx.country;
-  const lifeSkillsName = ctx.localizedLifeSkillsName || `${ctx.country}Core`;
+  let lifeSkillsName = ctx.localizedLifeSkillsName || `${ctx.country}Vita`;
   const year = new Date().getFullYear();
   const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long" });
+
+  const genericPatterns = [
+    new RegExp(`^${ctx.country}\\s*(Core|Skills)$`, 'i'),
+    new RegExp(`^${programName}\\s*Skills$`, 'i'),
+    /^National\s*Core$/i,
+  ];
+  if (genericPatterns.some(p => p.test(lifeSkillsName))) {
+    lifeSkillsName = `${ctx.country}Vita`;
+  }
 
   const strengths = (ctx.keyStrengths || [])
     .map(s => `<li>${s}</li>`)
@@ -2265,19 +2273,19 @@ async function generateDocuments(target: string): Promise<GenerationResult> {
 
   // Guardrail: country-owned school program name must not contain "Alpha"
   if (ctx.localizedProgramName && /\balpha\b/i.test(ctx.localizedProgramName)) {
-    ctx.localizedProgramName = ctx.localizedProgramName.replace(/\s*\bAlpha\b\s*/gi, " ").trim() || `${ctx.country} Education`;
+    ctx.localizedProgramName = ctx.localizedProgramName.replace(/\s*\bAlpha\b\s*/gi, " ").trim() || `${ctx.country} Futures`;
     console.warn(`Stripped 'Alpha' from localizedProgramName -> ${ctx.localizedProgramName}`);
   }
 
   // Guardrail: ensure localizedLifeSkillsName exists and differs from localizedProgramName
   if (!ctx.localizedLifeSkillsName) {
-    ctx.localizedLifeSkillsName = `${ctx.country}Core`;
+    ctx.localizedLifeSkillsName = `${ctx.country}Vita`;
     console.warn(`localizedLifeSkillsName missing, defaulting to ${ctx.localizedLifeSkillsName}`);
   }
   const schoolNorm = (ctx.localizedProgramName || "").toLowerCase().trim();
   const lifeSkillsNorm = ctx.localizedLifeSkillsName.toLowerCase().trim();
   if (schoolNorm === lifeSkillsNorm || schoolNorm.startsWith(lifeSkillsNorm) || lifeSkillsNorm.startsWith(schoolNorm)) {
-    ctx.localizedLifeSkillsName = `${ctx.country}Core`;
+    ctx.localizedLifeSkillsName = `${ctx.country}Vita`;
     console.warn(`School network and life-skills names overlapped; reset localizedLifeSkillsName -> ${ctx.localizedLifeSkillsName}`);
   }
 
@@ -2503,10 +2511,10 @@ async function orchestratePipeline(localRunId: string, target: string): Promise<
         if (ctx) {
           // Apply the same guardrails as local generation
           if (ctx.localizedProgramName && /\balpha\b/i.test(ctx.localizedProgramName)) {
-            ctx.localizedProgramName = ctx.localizedProgramName.replace(/\s*\bAlpha\b\s*/gi, " ").trim() || `${ctx.country} Education`;
+            ctx.localizedProgramName = ctx.localizedProgramName.replace(/\s*\bAlpha\b\s*/gi, " ").trim() || `${ctx.country} Futures`;
           }
           if (!ctx.localizedLifeSkillsName) {
-            ctx.localizedLifeSkillsName = `${ctx.country}Core`;
+            ctx.localizedLifeSkillsName = `${ctx.country}Vita`;
           }
 
           try {
@@ -2672,10 +2680,10 @@ export function registerRoutes(server: Server, app: Express) {
 
       // Apply guardrails
       if (ctx.localizedProgramName && /\balpha\b/i.test(ctx.localizedProgramName)) {
-        ctx.localizedProgramName = ctx.localizedProgramName.replace(/\s*\bAlpha\b\s*/gi, " ").trim() || `${ctx.country} Education`;
+        ctx.localizedProgramName = ctx.localizedProgramName.replace(/\s*\bAlpha\b\s*/gi, " ").trim() || `${ctx.country} Futures`;
       }
       if (!ctx.localizedLifeSkillsName) {
-        ctx.localizedLifeSkillsName = `${ctx.country}Core`;
+        ctx.localizedLifeSkillsName = `${ctx.country}Vita`;
       }
 
       // Build financial model from context if not provided
