@@ -124,7 +124,7 @@ async def _run_country_research(state: dict) -> None:
     # --- Language QA on country report ---
     report_md, qa_report = run_language_qa(report_md)
     if qa_report["total_issues"] > 0:
-        _log(state, f"Language QA (country report): {qa_report['total_issues']} issue(s) auto-fixed")
+        logger.info("Language QA (country report): %d issue(s) auto-fixed", qa_report['total_issues'])
 
     state["country_report"] = report_md
     state["country_report_docx_path"] = docx_path
@@ -147,7 +147,7 @@ async def _run_country_research(state: dict) -> None:
     # --- Language QA on education report ---
     edu_report_md, edu_qa = run_language_qa(edu_report_md)
     if edu_qa["total_issues"] > 0:
-        _log(state, f"Language QA (education report): {edu_qa['total_issues']} issue(s) auto-fixed")
+        logger.info("Language QA (education report): %d issue(s) auto-fixed", edu_qa['total_issues'])
 
     state["education_report"] = edu_report_md
     state["education_report_docx_path"] = edu_docx_path
@@ -215,7 +215,7 @@ async def _run_strategy(state: dict) -> None:
     # --- Language QA on strategy report ---
     report_md, strat_qa = run_language_qa(report_md)
     if strat_qa["total_issues"] > 0:
-        _log(state, f"Language QA (strategy report): {strat_qa['total_issues']} issue(s) auto-fixed")
+        logger.info("Language QA (strategy report): %d issue(s) auto-fixed", strat_qa['total_issues'])
 
     state["strategy_report"] = report_md
     state["strategy_report_docx_path"] = docx_path
