@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { PIPELINE_API } from "@/lib/api-config";
+import { PORTAL_API, PIPELINE_API } from "@/lib/api-config";
 import { Input } from "@/components/ui/input";
 import { Loader2, ArrowRight, Globe, FileText, Presentation, ExternalLink } from "lucide-react";
 
@@ -16,7 +16,10 @@ export default function HomePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${PIPELINE_API}/api/runs`, {
+      // Use Render portal backend for full orchestration (includes term sheet generation)
+      const backendUrl = PORTAL_API || PIPELINE_API;
+      const endpoint = PORTAL_API ? `${PORTAL_API}/api/generate-full` : `${PIPELINE_API}/api/runs`;
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target: trimmed }),
@@ -26,7 +29,9 @@ export default function HomePage() {
         throw new Error(`${res.status}: ${errText}`);
       }
       const data = await res.json();
-      navigate(`/pipeline/${data.run_id}`);
+      // Portal returns { id }, FastAPI returns { run_id }
+      const runId = data.id || data.run_id;
+      navigate(`/pipeline/${runId}`);
     } catch (err) {
       setError(String(err));
       setLoading(false);
@@ -61,12 +66,11 @@ export default function HomePage() {
         />
 
         <div className="relative z-10 flex flex-col items-center justify-center px-6 py-16">
-          {/* Real Alpha logo - white version on blue */}
+          {/* Real Alpha logo - white SVG version on blue */}
           <img
-            src="/assets/alpha-logo-white.jpg"
+            src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg"
             alt="Alpha Holdings"
-            className="h-20 mb-6 object-contain"
-            style={{ filter: "brightness(1.1)" }}
+            className="h-16 mb-6 object-contain"
           />
 
           <div className="w-24 h-px bg-white/30 mb-8" />
@@ -101,8 +105,8 @@ export default function HomePage() {
               GENERATE DOCUMENTS
             </p>
             <p className="text-sm text-gray-500">
-              Enter a country or US state to build an interactive Term Sheet
-              website and Pitch Deck.
+              Enter a country or US state to build a Partnership Proposal
+              and Interactive Term Sheet.
             </p>
           </div>
 
@@ -134,7 +138,7 @@ export default function HomePage() {
                 </>
               ) : (
                 <>
-                  Generate Term Sheet &amp; Pitch Deck
+                  Generate Partnership Proposal
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </>
               )}
@@ -170,7 +174,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="py-5 px-6" style={{ borderTop: "1px solid #e8ecf1" }}>
         <div className="max-w-4xl mx-auto flex items-center justify-center gap-4">
-          <img src="/assets/alpha-logo-blue.jpg" alt="Alpha" className="h-5 object-contain" />
+          <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" className="h-5 object-contain" style={{filter:"brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%)"}} />
           <p className="text-[11px] text-gray-400">
             © 2026. Confidential &amp; Proprietary.
           </p>

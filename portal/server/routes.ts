@@ -1650,7 +1650,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="scale-row">
         <div class="scale-box"><div class="period">This Year</div><div class="figure">2,500 students · 22 campuses</div></div>
         <div class="scale-arrow">→</div>
-        <div class="scale-box"><div class="period">3-Year Plan</div><div class="figure">100k students · 100 campuses</div></div>
+        <div class="scale-box"><div class="period">3-Year Plan</div><div class="figure">100k student-years · 100+ campuses</div></div>
       </div>
     </div>
 
@@ -1702,7 +1702,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="scale-row">
         <div class="scale-box"><div class="period">This Year</div><div class="figure">2,500 students · 22 campuses</div></div>
         <div class="scale-arrow">→</div>
-        <div class="scale-box"><div class="period">3-Year Target</div><div class="figure">100k students · 100 campuses</div></div>
+        <div class="scale-box"><div class="period">3-Year Target</div><div class="figure">100k student-years · 100+ campuses</div></div>
       </div>
     </div>
 

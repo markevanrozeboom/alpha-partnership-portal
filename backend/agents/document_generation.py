@@ -2209,7 +2209,7 @@ def _build_gamma_investor_input(
         f"- 100% {target} owned, 0% Alpha owned. "
         "Alpha operates on behalf of the Country/State.\n"
         f"- Per student funding/tuition: **${_per_student:,.0f}/year**\n"
-        f"- Minimum **{_national_students:,} students** commitment\n"
+        f"- Minimum **{_national_students:,} student-years** commitment\n"
         "- Schools operated as either public or private\n"
         f"- {target} sources real estate; schools pay rent\n\n"
         "**Investment Required:**\n\n"

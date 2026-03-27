@@ -44,7 +44,7 @@ const STAGE_LABELS: Record<string, string> = {
   review_model: "Validating financial model...",
   presenting_term_sheet_assumptions: "Structuring term sheet...",
   review_term_sheet_assumptions: "Finalizing term sheet structure...",
-  generating_documents: "Generating pitch deck & term sheet...",
+  generating_documents: "Generating partnership proposal & term sheet...",
   review_documents: "Preparing final documents...",
   completed: "Complete",
   error: "Error",
@@ -96,6 +96,11 @@ function cleanLog(raw: string): string | null {
     /re-running/i,
     /feedback/i,
     /gate/i,
+    /revenue:/i,
+    /IRR:/i,
+    /financial model built/i,
+    /Y\d+ revenue/i,
+    /margin/i,
   ];
   for (const pattern of blacklist) {
     if (pattern.test(cleaned)) return null;
@@ -127,19 +132,49 @@ export default function PipelineResultPage() {
   const [termSheetLoading, setTermSheetLoading] = useState(false);
   const termSheetRequested = useRef(false);
 
-  const { data, isLoading, error } = useQuery<BackendRunResponse>({
+  // Use Render portal if available (returns term sheet HTML), else FastAPI directly
+  const usePortal = !!PORTAL_API;
+  const pollUrl = usePortal
+    ? `${PORTAL_API}/api/pipeline-runs/${runId}`
+    : `${PIPELINE_API}/api/runs/${runId}`;
+
+  const { data: rawData, isLoading, error } = useQuery<any>({
     queryKey: ["pipeline-run", runId],
     queryFn: async () => {
-      const res = await fetch(`${PIPELINE_API}/api/runs/${runId}`);
+      const res = await fetch(pollUrl);
       if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
       return res.json();
     },
     refetchInterval: (query) => {
       const d = query.state.data;
       if (!d) return 3000;
-      return (d.status === "completed" || d.status === "error") ? false : 3000;
+      const s = d.pipelineStatus || d.status;
+      return (s === "completed" || s === "error") ? false : 3000;
     },
   });
+
+  // Normalize data shape between Render portal and FastAPI responses
+  const data: BackendRunResponse | null = rawData ? (rawData.pipelineStatus ? {
+    status: rawData.pipelineStatus,
+    target: rawData.target,
+    gamma_url: rawData.result?.gammaUrl || null,
+    gamma_export_url: rawData.result?.gammaExportUrl || null,
+    country_profile: rawData.result?.context || null,
+    financial_model: null,
+    error_message: rawData.error || null,
+    agent_logs: rawData.agentLogs || [],
+  } : rawData) : null;
+
+  // If using Render portal and pipeline completed, grab term sheet from result
+  useEffect(() => {
+    if (!usePortal || !rawData?.pipelineStatus || rawData.pipelineStatus !== "completed") return;
+    if (!rawData.result || termSheetRequested.current) return;
+    termSheetRequested.current = true;
+    const r = rawData.result;
+    if (r.termSheetHtml) {
+      setTermSheetData({ termSheetHtml: r.termSheetHtml, pitchDeckHtml: r.pitchDeckHtml || "", termSheetDocxBase64: r.termSheetDocxBase64 || "", context: r.context });
+    }
+  }, [rawData, usePortal]);
 
   // Auto-approve gates
   useEffect(() => {
@@ -156,23 +191,7 @@ export default function PipelineResultPage() {
     }).catch(() => { approvedGates.current.delete(status); });
   }, [data, runId]);
 
-  // Fetch term sheet from portal backend when pipeline completes
-  useEffect(() => {
-    if (data?.status !== "completed") return;
-    if (!PORTAL_API || termSheetRequested.current) return;
-    if (!data.country_profile) return;
-    termSheetRequested.current = true;
-    setTermSheetLoading(true);
-    fetch(`${PORTAL_API}/api/generate-term-sheet`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ countryContext: data.country_profile, financialModel: data.financial_model }),
-    })
-      .then(async (res) => { if (!res.ok) throw new Error(`${res.status}`); return res.json() as Promise<TermSheetResult>; })
-      .then(setTermSheetData)
-      .catch(() => {})
-      .finally(() => setTermSheetLoading(false));
-  }, [data]);
+  // (Term sheet data is now extracted from the Render portal pipeline result above)
 
   const status = data?.status ?? "pending";
   const stageLabel = STAGE_LABELS[status] || "Processing...";
@@ -243,7 +262,7 @@ export default function PipelineResultPage() {
           <Button variant="ghost" size="sm" className="text-xs text-gray-500 hover:text-gray-700" onClick={() => navigate("/")}>
             <ArrowLeft className="h-3.5 w-3.5 mr-1" /> New Country
           </Button>
-          <img src="/assets/alpha-logo-blue.jpg" alt="Alpha Holdings" className="h-7 object-contain" />
+          <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha Holdings" className="h-7 object-contain" style={{filter:"brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%)"}} />
         </div>
       </header>
 
@@ -332,7 +351,7 @@ export default function PipelineResultPage() {
                   {target} — Documents Ready
                 </h1>
                 <p className="text-sm text-gray-500">
-                  Your investor pitch deck and interactive term sheet have been generated.
+                  Your partnership proposal and interactive term sheet are ready.
                 </p>
               </div>
 
@@ -346,12 +365,12 @@ export default function PipelineResultPage() {
                       <Presentation className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <p className="text-base font-semibold text-white">Investor Pitch Deck</p>
-                      <p className="text-xs text-white/60 mt-1">PowerPoint presentation ready for download</p>
+                      <p className="text-base font-semibold text-white">Partnership Proposal</p>
+                      <p className="text-xs text-white/60 mt-1">Presentation deck ready for download</p>
                     </div>
                     <a href={gammaExportUrl} target="_blank" rel="noopener noreferrer" className="w-full">
                       <Button size="sm" className="w-full font-semibold bg-white hover:bg-gray-50" style={{ color: "#0000E5" }}>
-                        <Download className="h-3.5 w-3.5 mr-1.5" /> Download Pitch Deck
+                        <Download className="h-3.5 w-3.5 mr-1.5" /> Download Proposal
                       </Button>
                     </a>
                   </div>
@@ -461,7 +480,7 @@ export default function PipelineResultPage() {
 
       <footer className="py-5 px-6" style={{ borderTop: "1px solid #e8ecf1" }}>
         <div className="max-w-6xl mx-auto flex items-center justify-center gap-4">
-          <img src="/assets/alpha-logo-blue.jpg" alt="Alpha" className="h-5 object-contain" />
+          <img src="https://alpha.school/wp-content/uploads/2024/03/logowhite-2.svg" alt="Alpha" className="h-5 object-contain" style={{filter:"brightness(0) saturate(100%) invert(9%) sepia(100%) saturate(7487%) hue-rotate(247deg) brightness(89%) contrast(146%)"}} />
           <p className="text-[11px] text-gray-400">&copy; 2026. Confidential &amp; Proprietary.</p>
         </div>
       </footer>
