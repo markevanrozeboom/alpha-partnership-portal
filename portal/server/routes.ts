@@ -53,29 +53,30 @@ Be specific with numbers. Return ONLY the JSON object, no markdown fences.`;
 const FIXED_ECONOMICS = {
   upfront: [
     { item: "AlphaCore License", amount: "$250M", recipient: "Alpha Holdings, Inc." },
-    { item: "EdTech App R&D", amount: "$250M", recipient: "Local expense" },
-    { item: "Local Life-Skills R&D", amount: "$250M", recipient: "Local expense" },
-    { item: "Management Fee Prepay", amount: "$250M", recipient: "Prepaid OpEx for 100k student-years" },
-    { item: "TimeBack License Fee Prepay", amount: "$500M", recipient: "Prepaid OpEx for 100k student-years" },
+    { item: "Country-Specific Incept EdLLM", amount: "$250M", recipient: "Local expense" },
+    { item: "Country-Specific Programs & Life Skills", amount: "$250M", recipient: "Local expense" },
+    { item: "Country-Specific EdTech Apps", amount: "$250M", recipient: "Local expense" },
+    { item: "Timeback License Prepay", amount: "$500M", recipient: "100,000 student-years x $5,000" },
+    { item: "Operating Fee Prepay", amount: "$250M", recipient: "100,000 student-years x $2,500" },
   ],
-  upfrontTotal: "$1.5B",
+  upfrontTotal: "$1.75B",
   ongoing: [
-    { item: "Parent Edu / Launch / Guides", amount: "$25-50M / yr", recipient: "Local expense" },
-    { item: "Additional School Funding", amount: "$1B / yr*", recipient: "Local expense" },
-    { item: "Management Fee", amount: "10% budget", recipient: "OpEx to Alpha Holdings, Inc." },
-    { item: "TimeBack License Fee", amount: "20% budget", recipient: "OpEx to Alpha Holdings, Inc." },
+    { item: "Parent Education / Launch / Guides", amount: "$50M / yr", recipient: "Per year, ongoing" },
+    { item: "Scholarships / Increased Public Funding", amount: "$1B / yr", recipient: "Assumed public funding/student of $25,000" },
+    { item: "Timeback (20% of funding/tuition)", amount: "$500M / yr", recipient: "Min $5,000/student/year, ongoing" },
+    { item: "Operating Fee (10% of funding/tuition)", amount: "$250M / yr", recipient: "Min $2,500/student/year, ongoing" },
   ],
 
   costStructure: [
-    { item: "Tuition", alpha: "$50,000", national: "$25,000", notes: "Budget for $25,000 school" },
-    { item: "Guides", alpha: "$14,000", national: "$4,500", notes: "Alpha 11:1 ratio & higher comp; Country-owned 25:1 ratio & lower comp" },
-    { item: "Timeback / Software", alpha: "$10,000", national: "$5,000", notes: "20% of Budget" },
-    { item: "Programs and Life Skills", alpha: "$9,000", national: "$4,250", notes: "Alpha is 2x country-owned" },
-    { item: "Other HC", alpha: "$1,750", national: "$1,750", notes: "-" },
-    { item: "Facility / CapEx", alpha: "$8,750", national: "$3,000", notes: "Includes depreciated capex to convert locations" },
-    { item: "Misc Expense", alpha: "$1,500", national: "$1,500", notes: "-" },
-    { item: "Management Fee", alpha: "-", national: "$2,500", notes: "10% of Budget" },
-    { item: "IP Amortization", alpha: "", national: "$2,072", notes: "Full amortization of IP costs over 5 year target" },
+    { item: "Funding/Tuition", alpha: "$50,000", national: "$25,000", notes: "Budget for $25,000 school" },
+    { item: "Teachers / Guides", alpha: "$14,000", national: "$4,500", notes: "Alpha 11:1 ratio; National 25:1 ratio" },
+    { item: "Programs and Life Skills", alpha: "$9,000", national: "$4,250", notes: "" },
+    { item: "Other Headcount", alpha: "$1,750", national: "$1,750", notes: "" },
+    { item: "Facility / CapEx", alpha: "$8,750", national: "$3,000", notes: "" },
+    { item: "Miscellaneous Expenses", alpha: "$1,500", national: "$1,500", notes: "" },
+    { item: "Timeback (Software)", alpha: "$10,000", national: "$5,000", notes: "20% of Budget" },
+    { item: "Operating Fee (10%)", alpha: "-", national: "$2,500", notes: "" },
+    { item: "Operating Margin / IP Amort", alpha: "$5,000", national: "$2,500", notes: "" },
   ],
   scaleTargets: {
     yearOne: "2,000 students / 2 communities",
@@ -117,8 +118,9 @@ function generateTermSheetHtml(ctx: CountryContext): string {
   const upfrontRows = FIXED_ECONOMICS.upfront
     .map(r => {
       const item = r.item
-        .replace("EdTech App R&D", `${ctx.country} EdTech App R&D`)
-        .replace("Local Life-Skills R&D", `${lifeSkillsName} Life-Skills R&D`);
+        .replace("Country-Specific Incept EdLLM", `${ctx.country}-Specific Incept EdLLM`)
+        .replace("Country-Specific Programs & Life Skills", `${ctx.country}-Specific Programs & Life Skills (${lifeSkillsName})`)
+        .replace("Country-Specific EdTech Apps", `${ctx.country}-Specific EdTech Apps`);
       return `<tr><td>${item}</td><td class="amt">${r.amount}</td><td class="recipient">${r.recipient}</td></tr>`;
     })
     .join("\n");
