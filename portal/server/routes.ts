@@ -963,21 +963,30 @@ a { color: inherit; text-decoration: none; }
     </div>
 
     <div class="rollout-timeline fade-in">
+      ${(() => {
+        const n = new Date();
+        const readyBy = new Date(n.getFullYear(), n.getMonth() + 16, 1);
+        let ly = readyBy.getFullYear();
+        if (readyBy.getMonth() > 8) ly++;
+        const p1 = `SY${String(ly).slice(-2)}\u2013${String(ly + 1).slice(-2)}`;
+        const p2 = `SY${String(ly + 1).slice(-2)}\u2013${String(ly + 2).slice(-2)}`;
+        return `
       <div class="rollout-phase">
         <div class="phase-label">Phase 0 — Foundation</div>
-        <h4>Year 1 – 2</h4>
-        <p>Launch Alpha Flagship Schools and first ${programName} communities. Establish ${lifeSkillsName}, deploy Incept eduLLM, begin Guide School training pipeline.</p>
+        <h4>Now \u2013 Summer ${ly}</h4>
+        <p>IP transfer, ${lifeSkillsName} design, and eduLLM model training.</p>
       </div>
       <div class="rollout-phase">
-        <div class="phase-label">Phase 1 — Expansion</div>
-        <h4>Year 3 – 4</h4>
-        <p>Scale to additional communities. Refine curriculum based on outcomes data. Expand Guide School capacity. Build parent demand through proven results.</p>
+        <div class="phase-label">Phase 1 — Launch</div>
+        <h4>${p1}</h4>
+        <p>Launch of Alpha Flagship school.</p>
       </div>
       <div class="rollout-phase">
         <div class="phase-label">Phase 2 — National Scale</div>
-        <h4>Year 5+</h4>
-        <p>Full national deployment across ${scale.y5Communities}+ communities with ${scale.y5Students} students. "Educated in ${ctx.country}" becomes a globally recognized credential.</p>
-      </div>
+        <h4>${p2}</h4>
+        <p>National rollout of the ${programName} school network.</p>
+      </div>`;
+      })()}
     </div>
   </div>
 </section>
