@@ -1062,16 +1062,24 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
-<!-- ═══════ PROGRAM (Fix #4: Icons on Cards + Dynamic Scale) ═══════ -->
-<section class="section section-dark" id="program">
+<!-- Curved divider: cream → white program -->
+<div class="section-divider" style="background: var(--cream);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C480,80 960,80 1440,0 L1440,80 L0,80 Z" fill="var(--white)"/>
+  </svg>
+</div>
+
+<!-- ═══════ PROGRAM ═══════ -->
+<section class="section section-white" id="program">
   <div class="container">
     <div class="fade-in">
-      <span class="section-eyebrow">The ${lifeSkillsName} Engine</span>
-      <h2 class="section-title" style="color: var(--cream);">Purpose-built for ${ctx.country}</h2>
+      <span class="section-eyebrow">${lifeSkillsName}</span>
+      <h2 class="section-title">Purpose-built for ${ctx.country}</h2>
+      <p class="section-subtitle">The complete education engine — life skills, localized AI, and national-scale deployment — designed specifically for ${ctx.country}.</p>
     </div>
 
     <div class="card-grid card-grid-3 fade-in" style="margin-top: 2rem;">
-      <div class="card card-dark">
+      <div class="card">
         <div class="card-icon icon-gold">
           <svg viewBox="0 0 24 24" fill="none" stroke="#0000E5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
@@ -1081,7 +1089,7 @@ a { color: inherit; text-decoration: none; }
         <h4>${lifeSkillsName}</h4>
         <p>${ctx.localLifeSkillsFocus || ctx.country + "'s equivalent to AlphaCore — the life-skills engine tailored for local culture and values."}</p>
       </div>
-      <div class="card card-dark">
+      <div class="card">
         <div class="card-icon icon-blue">
           <svg viewBox="0 0 24 24" fill="none" stroke="#59BBF9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/>
@@ -1093,7 +1101,7 @@ a { color: inherit; text-decoration: none; }
         <h4>Language &amp; Culture</h4>
         <p>${ctx.languageApps || 'Localized AI-powered educational apps built specifically for ' + ctx.country + "'s linguistic and cultural context."}</p>
       </div>
-      <div class="card card-dark">
+      <div class="card">
         <div class="card-icon icon-gold">
           <svg viewBox="0 0 24 24" fill="none" stroke="#0000E5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
@@ -1107,15 +1115,25 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
+<!-- Curved divider: white → navy CTA -->
+<div class="section-divider" style="background: var(--white);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C480,80 960,80 1440,0 L1440,80 L0,80 Z" fill="var(--navy)"/>
+  </svg>
+</div>
+
 <!-- ═══════ CTA ═══════ -->
-<section class="cta-section">
+<section class="section section-navy" id="cta" style="text-align: center;">
   <div class="container">
-    <h2>Start the Conversation</h2>
-    <p>${programName} represents a generational opportunity to build ${ctx.country}'s education legacy. We welcome the opportunity to discuss this partnership.</p>
-    <a href="mailto:joe.liemandt@alpha.school" class="cta-btn" target="_blank" rel="noopener noreferrer">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-      joe.liemandt@alpha.school
-    </a>
+    <div class="fade-in">
+      <span class="section-eyebrow">Next Steps</span>
+      <h2 class="section-title" style="color: var(--cream);">Start the Conversation</h2>
+      <p class="section-subtitle" style="color: var(--text-light); max-width: 50ch; margin: 0 auto 2rem;">${programName} represents a generational opportunity to build ${ctx.country}'s education legacy. We welcome the opportunity to discuss this partnership.</p>
+      <a href="mailto:joe.liemandt@alpha.school" class="cta-btn" target="_blank" rel="noopener noreferrer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+        joe.liemandt@alpha.school
+      </a>
+    </div>
   </div>
 </section>
 
