@@ -1090,6 +1090,76 @@ a { color: inherit; text-decoration: none; }
         </div>
       </div>
     </div>
+
+    <!-- Investment detail text -->
+    <div class="fade-in" style="margin-top: 3rem; font-size: 0.9375rem; line-height: 1.7; color: var(--text-body);">
+      <p>We are flexible on structure and will work to adapt the commercial framework to align with ${ctx.country}\u2019s preferred ownership, governance, and funding model.</p>
+
+      <p style="margin-top: 1.25rem;">${programName} will require $1,000 million of upfront development capital across four areas, plus prepaid fees. Ownership of all resulting ${ctx.country}-specific IP will reside with ${programName}. The breakdown is as follows:</p>
+
+      <ul style="list-style: none; padding: 0; margin: 1rem 0 1.25rem;">
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>$250 million \u2013 Alpha Core License for use in ${ctx.country}.</span>
+        </li>
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>$250 million \u2013 Country-specific Incept EdLLM, trained on ${ctx.country} language, laws, customs, culture, and values.</span>
+        </li>
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>$250 million \u2013 Country-specific Programs and Life Skills (${lifeSkillsName}).</span>
+        </li>
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>$250 million \u2013 Country-specific EdTech Apps on Timeback (${ctx.languageApps || ctx.country + '-specific language, cultural studies, and educational apps'}).</span>
+        </li>
+      </ul>
+
+      <p>There is a simple, scalable commercial structure between Alpha Holdings and ${programName}.</p>
+
+      <ul style="list-style: none; padding: 0; margin: 1rem 0 1.25rem;">
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>Operating Fee: 10% of funding/tuition, with a $2,500 per-student annual minimum.</span>
+        </li>
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>Timeback Fee: 20% of funding/tuition, with a $5,000 per-student annual minimum (same pricing as for existing Alpha schools globally).</span>
+        </li>
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>Alpha Holdings will receive upfront prepaid fees: $500M Timeback + $250M Operating Fee (total $750M).</span>
+        </li>
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>Parent Education / Launch / Guide Training: $50M per year, ongoing each year.</span>
+        </li>
+      </ul>
+
+      <p>Initial capitalization and fee prepayments amount to roughly $1,750M in upfront capital requirements for ${programName}.</p>
+
+      <p style="margin-top: 1.25rem;">To ensure schools open at quality and scale rather than as small pilots, the framework includes launch funding, scholarships, and guarantees. This scholarship and guarantee structure de-risks enrollment for the initial years.</p>
+
+      <ul style="list-style: none; padding: 0; margin: 1rem 0 0;">
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>${programName} provides school launch activities, including parent education, marketing, and enrollment and guide recruiting infrastructure, expected to be on the order of $50 million per year during the initial launch phase.</span>
+        </li>
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>Student funding will be supported by the ${ctx.country} government, ensuring access to high-quality education for all citizens as part of the national education strategy.</span>
+        </li>
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>School funding will be allocated across schools as they open, creating a stable demand base from day one and enabling each campus to open at full quality.</span>
+        </li>
+        <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.5rem;">
+          <span style="flex-shrink:0; margin-top:2px;">\u2013</span>
+          <span>Schools will be designed to complement existing educational facilities, ensuring seamless integration with current infrastructure.</span>
+        </li>
+      </ul>
+    </div>
   </div>
 </section>
 
