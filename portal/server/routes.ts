@@ -1008,16 +1008,31 @@ a { color: inherit; text-decoration: none; }
   </svg>
 </div>
 
-<!-- ═══════ PHASED ROLLOUT ═══════ -->
+<!-- ═══════ SCHOOL NETWORK & PHASED ROLLOUT ═══════ -->
 <section class="section section-cream" id="rollout">
   <div class="container">
     <div class="fade-in">
-      <span class="section-eyebrow">Phased Deployment</span>
-      <h2 class="section-title">${programName} School Network Rollout</h2>
-      <p class="section-subtitle">${ctx.country}-owned platform with Alpha as exclusive operating partner. Staged scaling plan designed for sustainable, high-quality growth.</p>
+      <span class="section-eyebrow">${programName} School Network</span>
+      <h2 class="section-title">${programName} School Network</h2>
     </div>
 
-    <div class="rollout-timeline fade-in">
+    <div class="fade-in" style="margin-top: 1.5rem; font-size: 0.9375rem; line-height: 1.7; color: var(--text-body);">
+      <p>${programName} is a ${ctx.country}-owned national education platform, with Alpha Holdings, Inc. as the exclusive operating partner under a long-term management and IP license agreement. ${programName} licenses the global technology stack (Timeback, AlphaCore, Guide School, eduLLM) and adapts it with the ${ctx.country} cultural layer.</p>
+
+      <p style="margin-top: 1rem;">We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.</p>
+
+      <p style="margin-top: 1rem;">${programName} and Alpha will jointly design and open a family of ${programName} school formats across the country designed to be accessible to all ${ctx.country} students. Every ${programName} school runs on Alpha\u2019s Timeback with ${lifeSkillsName}, delivering the three student commitments.</p>
+
+      <p style="margin-top: 1rem;">${programName} will invest in school development and launch activities, including national consumer marketing and enrollment infrastructure, so that each new school type opens with strong parent demand. Schools will be designed to complement existing educational facilities, ensuring seamless integration with current infrastructure.</p>
+
+      <p style="margin-top: 1rem;">${programName} schools target a $25,000 per student annual budget, with an indicative annual budget of $2.5B+ at scale.</p>
+
+      <p style="margin-top: 1rem;">${programName} is designed to launch immediately once the framework is agreed. Superior outcomes create parent demand and a strong political tailwind for adoption.</p>
+
+      <p style="margin-top: 1rem;">A staged scaling plan targets 100,000 ${ctx.country} students by Year 5, with a broader market opportunity of 150,000+ students:</p>
+    </div>
+
+    <div class="rollout-timeline fade-in" style="margin-top: 1.5rem;">
       ${(() => {
         const n = new Date();
         const readyBy = new Date(n.getFullYear(), n.getMonth() + 16, 1);
