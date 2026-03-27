@@ -91,6 +91,29 @@ function generateTermSheetHtml(ctx: CountryContext): string {
   const year = new Date().getFullYear();
   const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
+  // ── Fix #1: Dynamic scale targets based on addressable population ──
+  function computeScaleTargets(addressable: string): { y1Students: string; y1Communities: string; y5Students: string; y5Communities: string } {
+    const match = addressable?.match(/([\d,]+)/);
+    const pop = match ? parseInt(match[1].replace(/,/g, '')) : 50000;
+    const y1Num = Math.max(1000, Math.round(pop * 0.01 / 500) * 500);
+    const y1Comm = Math.max(1, Math.round(y1Num / 800));
+    const y5Num = Math.round(pop * 0.5 / 1000) * 1000;
+    const y5Comm = Math.max(10, Math.round(y5Num / 4000));
+    const fmtK = (n: number) => n >= 1000 ? `${Math.round(n / 1000)}K` : n.toLocaleString();
+    return {
+      y1Students: y1Num.toLocaleString(),
+      y1Communities: String(y1Comm),
+      y5Students: fmtK(y5Num),
+      y5Communities: String(y5Comm),
+    };
+  }
+  const scale = computeScaleTargets(ctx.addressableStudentPopulation);
+
+  // ── Fix #2: Parse ed spend to separate dollar amount from parenthetical ──
+  const edSpendMatch = ctx.currentEdSpendPerStudent?.match(/^(\$[\d,.]+)(.*)$/);
+  const edSpendValue = edSpendMatch ? edSpendMatch[1] : ctx.currentEdSpendPerStudent;
+  const edSpendNote = edSpendMatch ? edSpendMatch[2].trim().replace(/^per student\s*/i, '') : '';
+
   const upfrontRows = FIXED_ECONOMICS.upfront
     .map(r => {
       const item = r.item
@@ -238,6 +261,16 @@ a { color: inherit; text-decoration: none; }
 }
 .hero-meta strong { color: var(--text-light); }
 
+/* ─── SECTION DIVIDERS (Fix #3) ─── */
+.section-divider { position: relative; height: 80px; margin-top: -1px; overflow: hidden; }
+.section-divider svg { position: absolute; width: 100%; height: 100%; left: 0; top: 0; display: block; }
+.section-divider.cream-to-white svg { fill: var(--white); }
+.section-divider.white-to-navy svg { fill: var(--navy); }
+.section-divider.navy-to-cream svg { fill: var(--cream); }
+.section-divider.cream-to-navy svg { fill: var(--navy); }
+.section-divider.white-to-cream svg { fill: var(--cream); }
+.section-divider.navy-to-white svg { fill: var(--white); }
+
 /* ─── SECTIONS ─── */
 .section { padding: 5rem 0; }
 .section-lg { padding: 6rem 0; }
@@ -267,6 +300,25 @@ a { color: inherit; text-decoration: none; }
 }
 .section-navy .section-subtitle { color: var(--text-light); }
 
+/* ─── PULL QUOTE (Fix #5) ─── */
+.pull-quote {
+  background: var(--cream); padding: 4rem 0;
+}
+.pull-quote-inner {
+  max-width: 900px; margin: 0 auto; padding: 0 2rem;
+  border-left: 4px solid var(--gold); padding-left: 2.5rem;
+}
+.pull-quote-inner blockquote {
+  font-family: var(--font-display); font-weight: 400; font-style: italic;
+  font-size: clamp(1.25rem, 2.5vw, 1.625rem); line-height: 1.6;
+  color: var(--navy); max-width: none;
+}
+.pull-quote-inner cite {
+  display: block; margin-top: 1rem; font-family: var(--font-body);
+  font-size: 0.8125rem; font-style: normal; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold);
+}
+
 /* ─── METRICS GRID ─── */
 .metrics-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -285,7 +337,7 @@ a { color: inherit; text-decoration: none; }
 .metric-label { font-size: 0.8125rem; color: var(--text-body); line-height: 1.4; }
 
 /* ─── STATS STRIP ─── */
-.stats-strip { background: var(--navy); padding: 2.5rem 0; }
+.stats-strip { background: var(--navy); padding: 3.5rem 0; }
 .stats-grid {
   display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem; text-align: center;
@@ -293,9 +345,10 @@ a { color: inherit; text-decoration: none; }
 .stat-item { color: var(--cream); }
 .stat-number {
   font-family: var(--font-display); font-weight: 800;
-  font-size: clamp(1.25rem, 2.5vw, 1.75rem); color: var(--gold); margin-bottom: 0.25rem; line-height: 1.2;
+  font-size: clamp(1.5rem, 3vw, 2.25rem); color: var(--gold); margin-bottom: 0.35rem; line-height: 1.15;
 }
 .stat-label { font-size: 0.8125rem; color: var(--text-light); line-height: 1.4; }
+.stat-sub { font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.15rem; }
 
 @media (max-width: 768px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 2rem; }
@@ -317,6 +370,7 @@ a { color: inherit; text-decoration: none; }
 .card-dark {
   background: var(--navy-light); border-color: var(--border-light);
 }
+.card-dark:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.25); border-color: var(--gold); }
 .card-dark h4, .card-dark h3 { color: var(--cream); }
 .card-dark p { color: var(--text-light); }
 .card-blue { border-left: 3px solid var(--blue); }
@@ -326,6 +380,15 @@ a { color: inherit; text-decoration: none; }
   font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
   text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem;
 }
+.card-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1.25rem;
+}
+.card-icon.icon-gold { background: rgba(191, 154, 74, 0.12); }
+.card-icon.icon-blue { background: rgba(0, 0, 229, 0.08); }
+.card-icon svg { width: 24px; height: 24px; }
+
 .card h3, .card h4 {
   font-family: var(--font-display); font-weight: 700;
   font-size: 1.125rem; margin-bottom: 0.75rem; line-height: 1.3;
@@ -420,7 +483,7 @@ a { color: inherit; text-decoration: none; }
 }
 .cta-btn:hover { background: var(--gold-light); transform: translateY(-1px); }
 
-/* ─── FOOTER ─── */
+/* ─── FOOTER (Fix #6) ─── */
 .site-footer {
   background: #070e19; color: var(--text-light); padding: 2rem 0;
   border-top: 1px solid var(--border-light);
@@ -429,12 +492,17 @@ a { color: inherit; text-decoration: none; }
   display: flex; align-items: center; justify-content: space-between;
   flex-wrap: wrap; gap: 1rem;
 }
-.footer-brand { display: flex; flex-direction: column; gap: 2px; }
-.footer-brand strong {
+.footer-brand { display: flex; align-items: center; gap: 10px; }
+.footer-bird { width: 28px; height: 28px; flex-shrink: 0; opacity: 0.7; }
+.footer-brand-text { display: flex; flex-direction: column; gap: 2px; }
+.footer-brand-text strong {
   font-family: var(--font-display); font-size: 0.875rem;
   color: var(--cream); letter-spacing: 0.04em;
 }
-.footer-brand span { font-size: 0.75rem; color: var(--text-muted); }
+.footer-brand-text span { font-size: 0.75rem; color: var(--text-muted); }
+.footer-center { font-size: 0.75rem; color: var(--text-muted); }
+.footer-center a { color: var(--text-light); transition: color 180ms var(--ease); }
+.footer-center a:hover { color: var(--cream); }
 .footer-links { display: flex; gap: 2rem; font-size: 0.75rem; }
 .footer-links a { color: var(--text-muted); transition: color 180ms var(--ease); }
 .footer-links a:hover { color: var(--cream); }
@@ -454,6 +522,7 @@ a { color: inherit; text-decoration: none; }
   .hero { padding: 2rem 0; }
   .section, .section-lg { padding: 2rem 0; }
   .fade-in { opacity: 1; transform: none; }
+  .section-divider { display: none; }
 }
 
 /* ─── RESPONSIVE UTILS ─── */
@@ -462,6 +531,8 @@ a { color: inherit; text-decoration: none; }
   .section-lg { padding: 4rem 0; }
   .container { padding: 0 1rem; }
   .card { padding: 1.5rem; }
+  .section-divider { height: 50px; }
+  .pull-quote-inner { padding-left: 1.5rem; }
 }
 </style>
 </head>
@@ -487,6 +558,7 @@ a { color: inherit; text-decoration: none; }
     <nav class="main-nav">
       <a onclick="document.getElementById('profile').scrollIntoView({behavior:'smooth'})">Profile</a>
       <a onclick="document.getElementById('vision').scrollIntoView({behavior:'smooth'})">Vision</a>
+      <a onclick="document.getElementById('scale').scrollIntoView({behavior:'smooth'})">Scale</a>
       <a onclick="document.getElementById('commercial').scrollIntoView({behavior:'smooth'})">Commercial</a>
       <a onclick="document.getElementById('costs').scrollIntoView({behavior:'smooth'})">Cost Structure</a>
       <a onclick="document.getElementById('program').scrollIntoView({behavior:'smooth'})">Program</a>
@@ -507,6 +579,13 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
+<!-- Curved divider: navy hero → cream profile -->
+<div class="section-divider" style="background: var(--navy);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill="var(--cream)"/>
+  </svg>
+</div>
+
 <!-- ═══════ COUNTRY PROFILE ═══════ -->
 <section class="section section-cream" id="profile">
   <div class="container">
@@ -516,6 +595,7 @@ a { color: inherit; text-decoration: none; }
       <p class="section-subtitle">${ctx.headOfStateTitle}: ${ctx.headOfState}</p>
     </div>
 
+    <!-- Fix #2: Ed spend metric separated into value + note -->
     <div class="metrics-grid fade-in" style="margin-top: 2.5rem;">
       <div class="metric">
         <div class="metric-value">${ctx.population}</div>
@@ -530,8 +610,8 @@ a { color: inherit; text-decoration: none; }
         <div class="metric-label">School-Age Population</div>
       </div>
       <div class="metric">
-        <div class="metric-value">${ctx.currentEdSpendPerStudent}</div>
-        <div class="metric-label">Current Ed. Spend / Student</div>
+        <div class="metric-value">${edSpendValue}</div>
+        <div class="metric-label">Ed. Spend / Student${edSpendNote ? `<br><span style="font-size:0.7rem;opacity:0.7">${edSpendNote}</span>` : ''}</div>
       </div>
       ${ctx.addressableStudentPopulation ? `<div class="metric">
         <div class="metric-value">${ctx.addressableStudentPopulation}</div>
@@ -557,6 +637,21 @@ a { color: inherit; text-decoration: none; }
     </div>` : ''}
   </div>
 </section>
+
+<!-- ═══════ FIX #5: PULL QUOTE — Why This Country ═══════ -->
+<section class="pull-quote fade-in">
+  <div class="pull-quote-inner">
+    <blockquote>${ctx.culturalNarrative}</blockquote>
+    <cite>The Case for ${ctx.country}</cite>
+  </div>
+</section>
+
+<!-- Curved divider: cream → white vision -->
+<div class="section-divider" style="background: var(--cream);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C480,80 960,80 1440,0 L1440,80 L0,80 Z" fill="var(--white)"/>
+  </svg>
+</div>
 
 <!-- ═══════ VISION ═══════ -->
 <section class="section section-white" id="vision">
@@ -595,29 +690,51 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
-<!-- ═══════ SCALE TARGETS ═══════ -->
-<section class="stats-strip fade-in">
+<!-- Curved divider: white → navy stats -->
+<div class="section-divider" style="background: var(--white);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill="var(--navy)"/>
+  </svg>
+</div>
+
+<!-- ═══════ SCALE TARGETS (Fix #1: Dynamic) ═══════ -->
+<section class="stats-strip fade-in" id="scale">
   <div class="container">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <span class="section-eyebrow" style="color: var(--gold);">Scale Targets</span>
+      <h2 class="section-title" style="color: var(--cream); margin-bottom: 0;">Tailored for ${ctx.country}</h2>
+    </div>
     <div class="stats-grid">
       <div class="stat-item">
-        <div class="stat-number">${FIXED_ECONOMICS.scaleTargets.yearOne}</div>
-        <div class="stat-label">Year One Target</div>
+        <div class="stat-number">${scale.y1Students}</div>
+        <div class="stat-label">Students — Year 1</div>
+        <div class="stat-sub">${scale.y1Communities} communit${scale.y1Communities === '1' ? 'y' : 'ies'}</div>
       </div>
       <div class="stat-item">
-        <div class="stat-number">${FIXED_ECONOMICS.scaleTargets.fiveYear}</div>
-        <div class="stat-label">5-Year Plan</div>
+        <div class="stat-number">${scale.y5Students}</div>
+        <div class="stat-label">Students — 5-Year</div>
+        <div class="stat-sub">${scale.y5Communities}+ communities</div>
       </div>
       <div class="stat-item">
         <div class="stat-number">$25,000</div>
         <div class="stat-label">Per-Student Annual Budget</div>
+        <div class="stat-sub">${programName} network</div>
       </div>
       <div class="stat-item">
         <div class="stat-number">${FIXED_ECONOMICS.upfrontTotal}</div>
         <div class="stat-label">Up-Front Investment</div>
+        <div class="stat-sub">Total program launch</div>
       </div>
     </div>
   </div>
 </section>
+
+<!-- Curved divider: navy → cream commercial -->
+<div class="section-divider" style="background: var(--navy);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C480,80 960,80 1440,0 L1440,80 L0,80 Z" fill="var(--cream)"/>
+  </svg>
+</div>
 
 <!-- ═══════ COMMERCIAL STRUCTURE ═══════ -->
 <section class="section-lg section-cream" id="commercial">
@@ -659,6 +776,13 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
+<!-- Curved divider: cream → white costs -->
+<div class="section-divider" style="background: var(--cream);">
+  <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C360,80 1080,80 1440,0 L1440,80 L0,80 Z" fill="var(--white)"/>
+  </svg>
+</div>
+
 <!-- ═══════ COST STRUCTURE ═══════ -->
 <section class="section section-white" id="costs">
   <div class="container">
@@ -690,7 +814,7 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
-<!-- ═══════ PROGRAM ═══════ -->
+<!-- ═══════ PROGRAM (Fix #4: Icons on Cards + Dynamic Scale) ═══════ -->
 <section class="section section-dark" id="program">
   <div class="container">
     <div class="fade-in">
@@ -700,19 +824,36 @@ a { color: inherit; text-decoration: none; }
 
     <div class="card-grid card-grid-3 fade-in" style="margin-top: 2rem;">
       <div class="card card-dark">
+        <div class="card-icon icon-gold">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#BF9A4A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+          </svg>
+        </div>
         <span class="card-label">Life Skills</span>
         <h4>${lifeSkillsName}</h4>
         <p>${ctx.localLifeSkillsFocus || ctx.country + "'s equivalent to AlphaCore — the life-skills engine tailored for local culture and values."}</p>
       </div>
       <div class="card card-dark">
+        <div class="card-icon icon-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#59BBF9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        </div>
         <span class="card-label">Localized AI</span>
         <h4>Language &amp; Culture</h4>
         <p>${ctx.languageApps || 'Localized AI-powered educational apps built specifically for ' + ctx.country + "'s linguistic and cultural context."}</p>
       </div>
       <div class="card card-dark">
+        <div class="card-icon icon-gold">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#BF9A4A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+          </svg>
+        </div>
         <span class="card-label">National Scale</span>
-        <h4>From 2 to 50+ Communities</h4>
-        <p>Beginning with ${FIXED_ECONOMICS.scaleTargets.yearOne} in Year 1, scaling to ${FIXED_ECONOMICS.scaleTargets.fiveYear} — building a credential recognized worldwide.</p>
+        <h4>From ${scale.y1Communities} to ${scale.y5Communities}+ Communities</h4>
+        <p>Beginning with ${scale.y1Students} students in Year 1, scaling to ${scale.y5Students} within five years — building a credential recognized worldwide.</p>
       </div>
     </div>
   </div>
@@ -730,16 +871,26 @@ a { color: inherit; text-decoration: none; }
   </div>
 </section>
 
-<!-- ═══════ FOOTER ═══════ -->
+<!-- ═══════ FOOTER (Fix #6: Logo + 3-column) ═══════ -->
 <footer class="site-footer">
   <div class="container">
     <div class="footer-inner">
       <div class="footer-brand">
-        <strong>Alpha Holdings, Inc.</strong>
-        <span>&copy; ${year}. Confidential &amp; Proprietary.</span>
+        <svg class="footer-bird" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="24,4 16,16 8,28 24,22 40,28 32,16" fill="#c4cdd9" opacity="0.7"/>
+          <polygon points="8,28 24,22 18,36" fill="#c4cdd9" opacity="0.4"/>
+          <polygon points="40,28 24,22 30,36" fill="#c4cdd9" opacity="0.4"/>
+          <polygon points="18,36 24,22 30,36 24,44" fill="#c4cdd9" opacity="0.25"/>
+        </svg>
+        <div class="footer-brand-text">
+          <strong>Alpha Holdings, Inc.</strong>
+          <span>&copy; ${year}. Confidential &amp; Proprietary.</span>
+        </div>
+      </div>
+      <div class="footer-center">
+        <a href="mailto:joe.liemandt@alpha.school" target="_blank" rel="noopener noreferrer">joe.liemandt@alpha.school</a>
       </div>
       <div class="footer-links">
-        <a href="mailto:joe.liemandt@alpha.school" target="_blank" rel="noopener noreferrer">joe.liemandt@alpha.school</a>
         <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer">Created with Perplexity Computer</a>
       </div>
     </div>
@@ -800,6 +951,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): string {
   const programName = ctx.localizedProgramName || ctx.country;
+  const lifeSkillsName = ctx.localizedLifeSkillsName || `${ctx.country}Core`;
   const year = new Date().getFullYear();
   const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long" });
 
@@ -832,6 +984,15 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
     ? `<div class="callout-box" style="margin-top:16px;"><p><strong>Scholarship Gap:</strong> ${model.scholarshipGap.note}</p></div>`
     : '';
 
+  // ── Cost structure rows from FIXED_ECONOMICS ──
+  const costRows = FIXED_ECONOMICS.costStructure
+    .map(r => `<tr><td>${r.item}</td><td class="amt">${r.alpha}</td><td class="amt highlight">${r.national}</td><td class="notes">${r.notes}</td></tr>`)
+    .join("\n");
+
+  // ── Slide numbering helper ──
+  let slideNum = 0;
+  const nextSlide = () => String(++slideNum);
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -839,9 +1000,21 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${programName} — Proposal Deck</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --blue: #0000E5;
+    --blue-light: #59BBF9;
+    --navy: #0a1628;
+    --navy-mid: #111d30;
+    --gold: #BF9A4A;
+    --cream: #fdf8f0;
+    --white: #ffffff;
+    --font-display: 'Montserrat', -apple-system, sans-serif;
+    --font-body: 'Inter', -apple-system, sans-serif;
+  }
 
   @page { size: 16in 9in; margin: 0; }
   @media print {
@@ -851,9 +1024,10 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   }
 
   body {
-    font-family: 'Inter', -apple-system, sans-serif;
+    font-family: var(--font-body);
     color: #1a1a2e;
     background: #f0f2f8;
+    -webkit-font-smoothing: antialiased;
   }
 
   /* ── Slide chrome ── */
@@ -870,31 +1044,89 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
     display: flex; justify-content: space-between; align-items: center;
     padding: 12px 48px; font-size: 10px; color: #a0aec0;
   }
-  .slide-footer .brand { font-weight: 700; color: #1a56db; font-size: 12px; }
-  .slide-num { font-variant-numeric: tabular-nums; }
+  .slide-footer .brand {
+    font-family: var(--font-display); font-weight: 700;
+    color: var(--blue); font-size: 11px; letter-spacing: 0.08em;
+  }
+  .slide-footer .copy { font-size: 9px; color: #a0aec0; }
+  .slide-num { font-variant-numeric: tabular-nums; font-size: 10px; }
 
-  /* ── Cover ── */
+  /* ── Cover slide ── */
   .slide-cover {
-    background: linear-gradient(135deg, #0a1628 0%, #1a2744 40%, #1a56db 100%);
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 40%, var(--blue) 100%);
     color: #fff; justify-content: center; align-items: center; text-align: center; padding: 60px;
   }
   .slide-cover .flag { font-size: 64px; margin-bottom: 24px; }
-  .slide-cover h1 { font-size: 48px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 12px; }
-  .slide-cover h1 span { color: #60a5fa; }
+  .slide-cover h1 {
+    font-family: var(--font-display); font-size: 48px; font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 12px;
+  }
+  .slide-cover h1 span { color: var(--blue-light); }
   .slide-cover .tagline { font-size: 20px; font-weight: 300; color: #94b8ff; max-width: 700px; }
   .slide-cover .meta { position: absolute; bottom: 48px; font-size: 12px; color: #6b8cc7; }
+  .slide-cover .cover-stats {
+    display: flex; justify-content: center; gap: 48px;
+    margin-top: 32px; padding-top: 24px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+  .cover-stat { text-align: center; }
+  .cover-stat .cv { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--gold); }
+  .cover-stat .cl { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px; }
 
   /* ── Content slides ── */
   .slide-content { padding: 48px; }
   .slide-content .label {
+    font-family: var(--font-display);
     font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
-    text-transform: uppercase; color: #1a56db; margin-bottom: 8px;
+    text-transform: uppercase; color: var(--blue); margin-bottom: 8px;
   }
   .slide-content h2 {
-    font-size: 32px; font-weight: 800; color: #0a1628;
-    letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 28px;
+    font-family: var(--font-display);
+    font-size: 32px; font-weight: 800; color: var(--navy);
+    letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 24px;
   }
-  .slide-content h2 span { color: #1a56db; }
+  .slide-content h2 span { color: var(--blue); }
+
+  /* ── Proof points slide (blue bg) ── */
+  .slide-proof {
+    background: var(--blue); color: var(--white);
+    padding: 48px; display: flex; flex-direction: column;
+  }
+  .slide-proof .label {
+    font-family: var(--font-display);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 8px;
+  }
+  .slide-proof h2 {
+    font-family: var(--font-display);
+    font-size: 30px; font-weight: 800; color: var(--white);
+    letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 32px;
+  }
+  .slide-proof h2 span { color: var(--blue-light); }
+  .proof-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+    margin-bottom: 24px;
+  }
+  .proof-card {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px; padding: 24px; text-align: center;
+  }
+  .proof-card .pv {
+    font-family: var(--font-display); font-size: 42px; font-weight: 800;
+    color: var(--white); line-height: 1; margin-bottom: 6px;
+  }
+  .proof-card .pl { font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.4; }
+  .proof-divider {
+    border: none; border-top: 1px solid rgba(255,255,255,0.2);
+    margin: 8px 0 16px;
+  }
+  .proof-note {
+    font-size: 14px; color: rgba(255,255,255,0.8); line-height: 1.6;
+    text-align: center; font-style: italic;
+  }
+
+  /* ── Opportunity slide (cream) ── */
+  .slide-cream { background: var(--cream); }
 
   /* ── Two-column grid ── */
   .two-pane { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; }
@@ -904,15 +1136,19 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
     width: 44px; height: 44px; border-radius: 50%; background: #e8eeff;
     display: flex; align-items: center; justify-content: center; font-size: 20px;
   }
-  .pane-title { font-size: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #0a1628; }
+  .pane-title {
+    font-family: var(--font-display);
+    font-size: 16px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--navy);
+  }
   .stack-item { font-size: 13px; padding: 8px 0; border-bottom: 1px solid #e8ecf4; color: #2d3748; line-height: 1.5; }
-  .stack-item strong { color: #0a1628; }
+  .stack-item strong { color: var(--navy); }
 
   .scale-row { display: flex; justify-content: space-between; margin-top: 16px; gap: 12px; }
   .scale-box { flex: 1; text-align: center; }
   .scale-box .period { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #718096; margin-bottom: 4px; }
-  .scale-box .figure { font-size: 14px; font-weight: 700; color: #0a1628; }
-  .scale-arrow { display: flex; align-items: center; color: #1a56db; font-size: 12px; }
+  .scale-box .figure { font-size: 14px; font-weight: 700; color: var(--navy); }
+  .scale-arrow { display: flex; align-items: center; color: var(--blue); font-size: 12px; }
 
   /* ── Bullet lists ── */
   .bullet-list { list-style: none; padding: 0; }
@@ -922,24 +1158,33 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   }
   .bullet-list li::before {
     content: ""; position: absolute; left: 0; top: 14px;
-    width: 8px; height: 8px; border-radius: 50%; background: #1a56db;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--blue);
   }
 
   /* ── Key facts row ── */
   .facts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
   .fact-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; text-align: center; }
-  .fact-card .fact-value { font-size: 22px; font-weight: 800; color: #0a1628; margin-bottom: 4px; }
-  .fact-card .fact-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #718096; }
+  .fact-card .fact-value {
+    font-family: var(--font-display); font-size: 20px; font-weight: 800;
+    color: var(--navy); margin-bottom: 4px; line-height: 1.2;
+  }
+  .fact-card .fact-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #718096;
+  }
 
   /* ── Results badges ── */
   .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 16px; }
   .result-badge { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; text-align: center; }
-  .result-badge .result-value { font-size: 32px; font-weight: 800; color: #1a56db; line-height: 1; margin-bottom: 6px; }
+  .result-badge .result-value {
+    font-family: var(--font-display); font-size: 32px; font-weight: 800;
+    color: var(--blue); line-height: 1; margin-bottom: 6px;
+  }
   .result-badge .result-label { font-size: 11px; color: #4a5568; line-height: 1.4; }
 
   /* ── Callout boxes ── */
   .callout-box {
-    background: #f0f4ff; border-left: 4px solid #1a56db;
+    background: #f0f4ff; border-left: 4px solid var(--blue);
     padding: 16px 20px; border-radius: 0 8px 8px 0; margin-top: 16px;
   }
   .callout-box p { font-size: 13px; line-height: 1.6; color: #2d3748; }
@@ -947,194 +1192,283 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
   /* ── Tables ── */
   .deck-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   .deck-table th {
-    text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    text-align: left; font-family: var(--font-display);
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.06em; color: #4a5568; padding: 8px 12px;
     border-bottom: 2px solid #e2e8f0; background: #f7fafc;
   }
-  .deck-table th.primary-col { background: #1a56db; color: #fff; }
+  .deck-table th.primary-col { background: var(--blue); color: var(--white); }
   .deck-table td { padding: 7px 12px; border-bottom: 1px solid #edf2f7; vertical-align: top; }
   .deck-table td.amt { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .deck-table td.highlight { background: linear-gradient(135deg, #1a56db08, #1a56db12); color: #1a56db; font-weight: 700; }
+  .deck-table td.highlight { background: linear-gradient(135deg, rgba(0,0,229,0.04), rgba(0,0,229,0.08)); color: var(--blue); font-weight: 700; }
   .deck-table td.notes { font-size: 10px; color: #718096; }
-  .deck-table .section-header td { font-weight: 700; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #718096; padding-top: 14px; border-bottom: none; }
-  .deck-table .total-row td { font-weight: 700; border-top: 2px solid #0a1628; border-bottom: 2px solid #0a1628; background: #f7fafc; }
+  .deck-table .section-header td {
+    font-family: var(--font-display); font-weight: 700; font-size: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: #718096;
+    padding-top: 14px; border-bottom: none;
+  }
+  .deck-table .total-row td { font-weight: 700; border-top: 2px solid var(--navy); border-bottom: 2px solid var(--navy); background: #f7fafc; }
 
   /* ── Day comparison ── */
   .day-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }
   .day-col { border-radius: 10px; padding: 20px; }
   .day-col.traditional { background: #fef2f2; border: 1px solid #fecaca; }
   .day-col.alpha { background: #f0f4ff; border: 1px solid #c7d2fe; }
-  .day-col h4 { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+  .day-col h4 { font-family: var(--font-display); font-size: 14px; font-weight: 700; margin-bottom: 10px; }
   .day-col .day-item { font-size: 12px; padding: 4px 0; color: #4a5568; }
-  .day-col .day-item strong { color: #0a1628; }
+  .day-col .day-item strong { color: var(--navy); }
 
   /* ── Partnership cards ── */
   .partner-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
   .partner-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; }
-  .partner-card .partner-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #1a56db; margin-bottom: 8px; }
-  .partner-card .partner-value { font-size: 14px; font-weight: 600; color: #0a1628; line-height: 1.4; }
+  .partner-card .partner-label {
+    font-family: var(--font-display); font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 8px;
+  }
+  .partner-card .partner-value { font-size: 14px; font-weight: 600; color: var(--navy); line-height: 1.4; }
   .partner-card .partner-detail { font-size: 11px; color: #718096; margin-top: 4px; line-height: 1.4; }
 
   /* ── Commercial Structure slide (Ed71-style) ── */
-  .comm-panel {
-    border: 2px solid #1a56db; border-radius: 4px; overflow: hidden;
-  }
-  .comm-header {
-    background: #1a56db; color: #fff; text-align: center;
-    font-size: 16px; font-weight: 700; padding: 8px 16px;
-  }
-  .comm-sub-header {
-    background: #4a5568; color: #fff; text-align: center;
-    font-size: 13px; font-weight: 700; padding: 5px 16px;
-  }
+  .comm-panel { border: 2px solid var(--blue); border-radius: 4px; overflow: hidden; }
+  .comm-header { background: var(--blue); color: #fff; text-align: center; font-family: var(--font-display); font-size: 16px; font-weight: 700; padding: 8px 16px; }
+  .comm-sub-header { background: #4a5568; color: #fff; text-align: center; font-size: 13px; font-weight: 700; padding: 5px 16px; }
   .comm-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .comm-table th {
-    text-align: left; font-size: 10px; font-weight: 700;
-    padding: 5px 10px; border-bottom: 1px solid #e2e8f0; color: #4a5568;
-  }
+  .comm-table th { text-align: left; font-size: 10px; font-weight: 700; padding: 5px 10px; border-bottom: 1px solid #e2e8f0; color: #4a5568; }
   .comm-table td { padding: 5px 10px; border-bottom: 1px solid #edf2f7; }
   .comm-table td.amt { font-weight: 700; text-align: center; white-space: nowrap; }
-  .comm-table .total-row td {
-    font-weight: 700; border-top: 2px solid #0a1628; background: #f7fafc;
-  }
+  .comm-table .total-row td { font-weight: 700; border-top: 2px solid var(--navy); background: #f7fafc; }
   .comm-footnote { font-size: 9px; color: #718096; padding: 4px 10px; font-style: italic; }
 
   /* ── Investment Structure panel ── */
-  .invest-panel {
-    border: 2px solid #1a56db; border-radius: 4px; overflow: hidden;
-  }
+  .invest-panel { border: 2px solid var(--blue); border-radius: 4px; overflow: hidden; }
   .invest-row {
     display: grid; grid-template-columns: 1fr auto;
     padding: 5px 12px; border-bottom: 1px solid #edf2f7; font-size: 11px;
   }
   .invest-item { color: #2d3748; font-weight: 500; }
-  .invest-amt { font-weight: 700; color: #0a1628; text-align: right; }
+  .invest-amt { font-weight: 700; color: var(--navy); text-align: right; }
   .invest-detail { grid-column: 1 / -1; font-size: 10px; color: #718096; margin-top: 1px; }
   .invest-total {
     display: flex; justify-content: space-between;
     padding: 6px 12px; font-weight: 700; font-size: 13px;
-    background: #f7fafc; border-top: 2px solid #0a1628;
+    background: #f7fafc; border-top: 2px solid var(--navy);
   }
+
+  /* ── Opportunity slide metrics ── */
+  .opp-metrics {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .opp-metric {
+    background: var(--white); border: 1px solid rgba(10,22,40,0.08);
+    border-radius: 8px; padding: 14px 16px; text-align: center;
+  }
+  .opp-metric .om-value {
+    font-family: var(--font-display); font-size: 18px; font-weight: 800;
+    color: var(--blue); margin-bottom: 2px; line-height: 1.2;
+  }
+  .opp-metric .om-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #718096; }
+
+  /* ── Opportunity bullet list ── */
+  .opp-bullet {
+    display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px;
+  }
+  .opp-bullet .ob-dot {
+    flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--blue); margin-top: 5px;
+  }
+  .opp-bullet .ob-text { font-size: 14px; color: #2d3748; line-height: 1.55; }
+  .opp-bullet .ob-text strong { color: var(--navy); }
 </style>
 </head>
 <body>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 1 — COVER
+     SLIDE 1 — COVER (Fix #3: country stats at bottom)
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-cover">
   <div class="flag">${ctx.flagEmoji}</div>
   <h1>${programName}<br><span>The World's First AI-Native<br>National Education System</span></h1>
   <div class="tagline">${ctx.formalName}</div>
+  <div class="cover-stats">
+    <div class="cover-stat">
+      <div class="cv">${ctx.population}</div>
+      <div class="cl">Population</div>
+    </div>
+    <div class="cover-stat">
+      <div class="cv">${ctx.schoolAgePopulation}</div>
+      <div class="cl">School-Age Children</div>
+    </div>
+    ${ctx.addressableStudentPopulation ? `<div class="cover-stat">
+      <div class="cv">${ctx.addressableStudentPopulation}</div>
+      <div class="cl">Addressable Market</div>
+    </div>` : ''}
+  </div>
   <div class="meta">Confidential &amp; Proprietary · ${dateStr} · Alpha Holdings, Inc.</div>
   <div class="slide-footer" style="color: rgba(255,255,255,0.3);">
     <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA HOLDINGS, INC.</span>
-    <span class="slide-num">1</span>
+    <span class="copy" style="color: rgba(255,255,255,0.3);">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num" style="color: rgba(255,255,255,0.3);">${nextSlide()}</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 2 — VISION
+     SLIDE 2 — THE [COUNTRY] OPPORTUNITY (NEW — Fix #2)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="slide slide-content slide-cream">
+  <div class="label">The Opportunity</div>
+  <h2>Why ${ctx.country} — <span>Why Now</span></h2>
+
+  <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:40px; margin-top:8px; align-items:start;">
+    <div>
+      <p style="font-size:14px; color:#2d3748; line-height:1.65; margin-bottom:20px;">${ctx.culturalNarrative}</p>
+
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--blue); margin-bottom:14px;">Key Strengths for Partnership</div>
+      ${(ctx.keyStrengths || []).map(s => `
+      <div class="opp-bullet">
+        <div class="ob-dot"></div>
+        <div class="ob-text">${s}</div>
+      </div>`).join('')}
+
+      <div style="margin-top:16px; background:rgba(0,0,229,0.04); border-left:4px solid var(--blue); padding:12px 16px; border-radius:0 8px 8px 0;">
+        <p style="font-size:13px; color:var(--navy); line-height:1.6; margin:0;"><strong>National Education Vision:</strong> ${ctx.nationalEdVision}</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="opp-metrics">
+        <div class="opp-metric">
+          <div class="om-value">${ctx.population}</div>
+          <div class="om-label">Population</div>
+        </div>
+        <div class="opp-metric">
+          <div class="om-value">${ctx.schoolAgePopulation}</div>
+          <div class="om-label">School-Age</div>
+        </div>
+        <div class="opp-metric">
+          <div class="om-value">${ctx.gdpPerCapita}</div>
+          <div class="om-label">GDP per Capita</div>
+        </div>
+        ${ctx.addressableStudentPopulation ? `<div class="opp-metric">
+          <div class="om-value">${ctx.addressableStudentPopulation}</div>
+          <div class="om-label">Addressable Market</div>
+        </div>` : ''}
+      </div>
+      <div style="margin-top:16px; text-align:center; padding:14px; background:var(--white); border:1px solid rgba(10,22,40,0.08); border-radius:8px;">
+        <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--gold); margin-bottom:4px;">${ctx.headOfStateTitle}</div>
+        <div style="font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--navy);">${ctx.headOfState}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">${nextSlide()}</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 3 — VISION (Fix #1: richer, less whitespace)
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">Vision</div>
   <h2>'Educated in ${ctx.country}' <span>as a Global Credential</span></h2>
 
-  <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:40px; margin-top:32px; align-items:start;">
-    <div style="text-align:center; padding-top:16px;">
-      <div style="font-size:48px; margin-bottom:12px;">${ctx.flagEmoji}</div>
-      <div style="font-size:28px; font-weight:800; color:#1a56db; letter-spacing:0.02em;">ALPHA HOLDINGS, INC.</div>
-      <div style="font-size:13px; font-weight:600; color:#4a5568; margin-top:8px;">The "Stanford of K-12 Education"</div>
+  <div style="display:grid; grid-template-columns:1fr 1.2fr; gap:36px; align-items:start;">
+    <div>
+      <div style="text-align:center; padding:12px 0 16px;">
+        <div style="font-size:48px; margin-bottom:8px;">${ctx.flagEmoji}</div>
+        <div style="font-family:var(--font-display); font-size:22px; font-weight:800; color:var(--blue); letter-spacing:0.02em;">ALPHA HOLDINGS, INC.</div>
+        <div style="font-size:12px; font-weight:600; color:#4a5568; margin-top:6px;">The "Stanford of K-12 Education"</div>
+      </div>
+      <div style="background:var(--cream); border-radius:8px; padding:14px 16px; margin-top:12px;">
+        <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--gold); margin-bottom:6px;">National Education Vision</div>
+        <p style="font-size:12px; color:#2d3748; line-height:1.55; margin:0;">${ctx.nationalEdVision}</p>
+      </div>
     </div>
     <div>
       <ul style="list-style:none; padding:0; margin:0;">
-        <li style="display:flex; align-items:flex-start; gap:12px; margin-bottom:20px;">
-          <span style="flex-shrink:0; width:28px; height:28px; background:#f0f4ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; color:#1a56db; font-weight:700;">1</span>
-          <span style="font-size:14px; color:#2d3748; line-height:1.6;">Only AI-native education system, purposefully designed for national scale</span>
+        <li style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px;">
+          <span style="flex-shrink:0; width:28px; height:28px; background:#f0f4ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:14px; color:var(--blue); font-weight:700;">1</span>
+          <span style="font-size:14px; color:#2d3748; line-height:1.6;">Only <strong style="color:var(--blue);">AI-native education system</strong>, purposefully designed for national scale — merging cutting-edge technology with proven learning science.</span>
         </li>
-        <li style="display:flex; align-items:flex-start; gap:12px; margin-bottom:20px;">
-          <span style="flex-shrink:0; width:28px; height:28px; background:#f0f4ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; color:#1a56db; font-weight:700;">2</span>
-          <span style="font-size:14px; color:#2d3748; line-height:1.6;">Commitments to students: love school, learn 2× faster, life skills for the AI age</span>
+        <li style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px;">
+          <span style="flex-shrink:0; width:28px; height:28px; background:#f0f4ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:14px; color:var(--blue); font-weight:700;">2</span>
+          <span style="font-size:14px; color:#2d3748; line-height:1.6;">Students <strong style="color:var(--blue);">master academics in 2 hours/day</strong>, freeing the remaining time for life skills, creativity, and real-world application — learning 2× faster.</span>
         </li>
-        <li style="display:flex; align-items:flex-start; gap:12px; margin-bottom:20px;">
-          <span style="flex-shrink:0; width:28px; height:28px; background:#f0f4ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; color:#1a56db; font-weight:700;">3</span>
-          <span style="font-size:14px; color:#2d3748; line-height:1.6;">Creating the next generation of global leaders through life skills and academic mastery</span>
+        <li style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px;">
+          <span style="flex-shrink:0; width:28px; height:28px; background:#f0f4ff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:14px; color:var(--blue); font-weight:700;">3</span>
+          <span style="font-size:14px; color:#2d3748; line-height:1.6;">Creating the next generation of <strong style="color:var(--blue);">global leaders</strong> through ${lifeSkillsName} — the life-skills engine for the AI age.</span>
         </li>
       </ul>
-    </div>
-  </div>
 
-  <div style="background:#f0f4ff; border-radius:8px; padding:16px 24px; margin-top:28px;">
-    <p style="font-size:14px; color:#0a1628; line-height:1.6; margin:0;">
-      <strong>Our mission:</strong> <strong>${programName}</strong> is a ${ctx.country}-owned national education platform, with Alpha as exclusive operating partner. Together we will design <strong>${ctx.localizedLifeSkillsName || ctx.country + 'Core'}</strong>, the ${ctx.country} life-skills engine — ${ctx.country}'s equivalent to AlphaCore.
-    </p>
+      <div style="background:#f0f4ff; border-radius:8px; padding:14px 18px; margin-top:8px;">
+        <p style="font-size:13px; color:var(--navy); line-height:1.6; margin:0;">
+          <strong>Our mission:</strong> <strong>${programName}</strong> is a ${ctx.country}-owned national education platform, with Alpha as exclusive operating partner. Together we design <strong style="color:var(--blue);">${lifeSkillsName}</strong> — ${ctx.country}'s life-skills engine.
+        </p>
+      </div>
+    </div>
   </div>
 
   <div class="slide-footer">
     <span class="brand">ALPHA HOLDINGS, INC.</span>
-    <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">2</span>
+    <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">${nextSlide()}</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 3 — THE KEY TO SUCCESS
+     SLIDE 4 — THE KEY TO SUCCESS
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">The Key to Success</div>
   <h2>We have reinvented <span>the school day</span></h2>
 
-  <div style="display:grid; grid-template-columns:1fr 1.5fr; gap:36px; margin-top:24px; align-items:start;">
-
-    <!-- Left: Core truths -->
+  <div style="display:grid; grid-template-columns:1fr 1.5fr; gap:36px; margin-top:16px; align-items:start;">
     <div>
-      <div style="display:inline-block; background:#1a56db; color:#fff; font-size:12px; font-weight:700; padding:6px 14px; border-radius:20px; margin-bottom:20px;">Core truths of transformation</div>
-
+      <div style="display:inline-block; background:var(--blue); color:#fff; font-family:var(--font-display); font-size:11px; font-weight:700; padding:6px 14px; border-radius:20px; margin-bottom:20px;">Core truths of transformation</div>
       <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:18px;">
-        <span style="flex-shrink:0; color:#1a56db; font-size:18px; margin-top:1px;">✓</span>
-        <span style="font-size:14px; color:#2d3748; line-height:1.5;">Children should <strong style="color:#1a56db;">love school</strong> more than vacation</span>
+        <span style="flex-shrink:0; color:var(--blue); font-size:18px; margin-top:1px;">✓</span>
+        <span style="font-size:14px; color:#2d3748; line-height:1.5;">Children should <strong style="color:var(--blue);">love school</strong> more than vacation</span>
       </div>
       <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:18px;">
-        <span style="flex-shrink:0; color:#1a56db; font-size:18px; margin-top:1px;">✓</span>
-        <span style="font-size:14px; color:#2d3748; line-height:1.5;">Children can <strong style="color:#1a56db;">master academics</strong> in 2 hours per day</span>
+        <span style="flex-shrink:0; color:var(--blue); font-size:18px; margin-top:1px;">✓</span>
+        <span style="font-size:14px; color:#2d3748; line-height:1.5;">Children can <strong style="color:var(--blue);">master academics</strong> in 2 hours per day</span>
       </div>
       <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:18px;">
-        <span style="flex-shrink:0; color:#1a56db; font-size:18px; margin-top:1px;">✓</span>
-        <span style="font-size:14px; color:#2d3748; line-height:1.5;">The key to your children's happiness is <strong style="color:#1a56db;">high standards</strong></span>
+        <span style="flex-shrink:0; color:var(--blue); font-size:18px; margin-top:1px;">✓</span>
+        <span style="font-size:14px; color:#2d3748; line-height:1.5;">The key to your children's happiness is <strong style="color:var(--blue);">high standards</strong></span>
       </div>
     </div>
-
-    <!-- Right: Traditional vs Alpha comparison -->
     <div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
         <div style="text-align:center;">
-          <div style="font-size:14px; font-weight:700; color:#4a5568; margin-bottom:12px;">Traditional</div>
+          <div style="font-family:var(--font-display); font-size:14px; font-weight:700; color:#4a5568; margin-bottom:12px;">Traditional</div>
           <div style="width:100px; height:100px; border-radius:50%; border:4px solid #a0aec0; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; background:#f7fafc;">
-            <span style="font-size:22px; font-weight:800; color:#4a5568;">6 hrs</span>
+            <span style="font-family:var(--font-display); font-size:22px; font-weight:800; color:#4a5568;">6 hrs</span>
           </div>
           <div style="font-size:12px; color:#4a5568; line-height:1.4;">6 hours of<br><strong>classroom instruction</strong></div>
         </div>
         <div style="text-align:center;">
-          <div style="font-size:14px; font-weight:700; color:#1a56db; margin-bottom:12px;">Alpha Model</div>
+          <div style="font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--blue); margin-bottom:12px;">Alpha Model</div>
           <div style="display:flex; gap:8px; justify-content:center; margin-bottom:10px;">
-            <div style="width:60px; height:60px; border-radius:50%; border:4px solid #1a56db; display:flex; align-items:center; justify-content:center; background:#f0f4ff;">
-              <span style="font-size:14px; font-weight:800; color:#1a56db;">2 hrs</span>
+            <div style="width:60px; height:60px; border-radius:50%; border:4px solid var(--blue); display:flex; align-items:center; justify-content:center; background:#f0f4ff;">
+              <span style="font-family:var(--font-display); font-size:14px; font-weight:800; color:var(--blue);">2 hrs</span>
             </div>
-            <div style="font-size:18px; font-weight:700; color:#1a56db; align-self:center;">+</div>
-            <div style="width:60px; height:60px; border-radius:50%; border:4px solid #1a56db; display:flex; align-items:center; justify-content:center; background:#f0f4ff;">
-              <span style="font-size:14px; font-weight:800; color:#1a56db;">4 hrs</span>
+            <div style="font-family:var(--font-display); font-size:18px; font-weight:700; color:var(--blue); align-self:center;">+</div>
+            <div style="width:60px; height:60px; border-radius:50%; border:4px solid var(--blue); display:flex; align-items:center; justify-content:center; background:#f0f4ff;">
+              <span style="font-family:var(--font-display); font-size:14px; font-weight:800; color:var(--blue);">4 hrs</span>
             </div>
           </div>
-          <div style="font-size:12px; color:#2d3748; line-height:1.4;"><strong style="color:#1a56db;">2 hours</strong> academic mastery<br><strong style="color:#1a56db;">4 hours</strong> life-skills development</div>
+          <div style="font-size:12px; color:#2d3748; line-height:1.4;"><strong style="color:var(--blue);">2 hours</strong> academic mastery<br><strong style="color:var(--blue);">4 hours</strong> life-skills development</div>
         </div>
       </div>
-
       <div style="border-top:1px solid #e2e8f0; padding-top:14px;">
         <p style="font-size:12px; color:#2d3748; line-height:1.5; margin:0 0 8px;">
-          <strong style="color:#0a1628;">Timeback:</strong> the AI and learning science platform delivering academic mastery 10× faster than traditional schooling
+          <strong style="color:var(--navy);">Timeback:</strong> the AI and learning science platform delivering academic mastery 10× faster than traditional schooling
         </p>
         <p style="font-size:12px; color:#2d3748; line-height:1.5; margin:0;">
-          <strong style="color:#0a1628;">AlphaCore:</strong> an AI-age life-skills curriculum developing student leadership, teamwork, communication, resilience, and other non-academic capabilities
+          <strong style="color:var(--navy);">AlphaCore:</strong> an AI-age life-skills curriculum developing student leadership, teamwork, communication, resilience, and other non-academic capabilities
         </p>
       </div>
     </div>
@@ -1142,44 +1476,8 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 
   <div class="slide-footer">
     <span class="brand">ALPHA HOLDINGS, INC.</span>
-    <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">3</span>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 4 — ALPHA'S PROVEN RESULTS
-     ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="slide slide-content">
-  <div class="label">Proven Results</div>
-  <h2>Alpha's students achieve <span>world-class outcomes</span></h2>
-
-  <div class="results-grid">
-    <div class="result-badge">
-      <div class="result-value">2.2–4.9×</div>
-      <div class="result-label">Academic growth vs.<br>conventional schools</div>
-    </div>
-    <div class="result-badge">
-      <div class="result-value">1530</div>
-      <div class="result-label">Average SAT score<br>(99th percentile)</div>
-    </div>
-    <div class="result-badge">
-      <div class="result-value">97%</div>
-      <div class="result-label">of students say they<br>"love school"</div>
-    </div>
-  </div>
-
-  <div style="margin-top: 24px;">
-    <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:12px;">Why ${ctx.country}</div>
-    <ul class="bullet-list">
-      ${strengths}
-    </ul>
-  </div>
-
-  <div class="slide-footer">
-    <span class="brand">ALPHA HOLDINGS, INC.</span>
-    <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">4</span>
+    <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">${nextSlide()}</span>
   </div>
 </div>
 
@@ -1206,7 +1504,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="day-item">Results: stagnant outcomes nationwide</div>
     </div>
     <div class="day-col alpha">
-      <h4 style="color: #1a56db;">Alpha School Day</h4>
+      <h4 style="color: var(--blue);">Alpha School Day</h4>
       <div class="day-item"><strong>2 hours</strong> AI-powered academic mastery</div>
       <div class="day-item"><strong>4 hours</strong> life skills, STEM, sports, arts</div>
       <div class="day-item">Personalized AI tutor for every student</div>
@@ -1216,149 +1514,137 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 
   <div class="slide-footer">
     <span class="brand">ALPHA HOLDINGS, INC.</span>
-    <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">5</span>
+    <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">${nextSlide()}</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 6 — OUR RESULTS
+     SLIDE 6 — PROOF POINTS (NEW — Fix #2: Blue slide with big metrics)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="slide slide-proof">
+  <div class="label">Proof Points</div>
+  <h2>We have proven that we have the <span>best K-12 product</span> on the planet.</h2>
+
+  <div class="proof-grid">
+    <div class="proof-card">
+      <div class="pv">1470</div>
+      <div class="pl">Average SAT Score<br><span style="opacity:0.5;">(vs. 1028 national avg.)</span></div>
+    </div>
+    <div class="proof-card">
+      <div class="pv">Top 1%</div>
+      <div class="pl">Performance on NWEA<br>MAP standardized tests</div>
+    </div>
+    <div class="proof-card">
+      <div class="pv">90%</div>
+      <div class="pl">Of HS students score<br>4 or 5 on AP exams</div>
+    </div>
+    <div class="proof-card">
+      <div class="pv">6.5×</div>
+      <div class="pl">Growth among the<br>top 20% of students</div>
+    </div>
+  </div>
+
+  <hr class="proof-divider">
+  <p class="proof-note">The learning science has been proven for 40 years. Alpha has made it work at scale.</p>
+
+  <div class="slide-footer" style="color: rgba(255,255,255,0.3);">
+    <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA HOLDINGS, INC.</span>
+    <span class="copy" style="color: rgba(255,255,255,0.3);">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num" style="color: rgba(255,255,255,0.3);">${nextSlide()}</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 7 — OUR RESULTS (detailed)
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">Our Results</div>
   <h2>The learning science has been known for 40 years… <span>we have made it work</span></h2>
 
-  <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:32px; margin-top:20px;">
-
-    <!-- Left column -->
+  <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:32px; margin-top:12px;">
     <div>
-      <!-- Bloom's 2-Sigma -->
-      <div style="margin-bottom:20px;">
-        <div style="font-size:12px; font-weight:700; color:#4a5568; margin-bottom:8px;">Bloom's 2-Sigma Problem (1984)</div>
+      <div style="margin-bottom:16px;">
+        <div style="font-family:var(--font-display); font-size:12px; font-weight:700; color:#4a5568; margin-bottom:8px;">Bloom's 2-Sigma Problem (1984)</div>
         <div style="background:#f7fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px;">
-          <p style="font-size:11px; color:#4a5568; line-height:1.5; margin:0;">1:1 tutoring produces <strong style="color:#1a56db;">2 standard deviations</strong> of improvement — moving an average student to the 98th percentile. AI makes this possible at national scale for the first time.</p>
+          <p style="font-size:11px; color:#4a5568; line-height:1.5; margin:0;">1:1 tutoring produces <strong style="color:var(--blue);">2 standard deviations</strong> of improvement — moving an average student to the 98th percentile. AI makes this possible at national scale for the first time.</p>
         </div>
       </div>
-
-      <!-- Exceptional Growth -->
-      <div style="margin-bottom:20px;">
-        <div style="font-size:12px; font-weight:700; color:#4a5568; margin-bottom:8px;">Exceptional Growth (vs. 1× "expected")</div>
+      <div style="margin-bottom:16px;">
+        <div style="font-family:var(--font-display); font-size:12px; font-weight:700; color:#4a5568; margin-bottom:8px;">Exceptional Growth (vs. 1× "expected")</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
           <div style="background:#f0f4ff; border-radius:6px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:11px; color:#4a5568;">Avg all students growth</span>
-            <span style="font-size:16px; font-weight:800; color:#1a56db;">2.2×</span>
+            <span style="font-family:var(--font-display); font-size:16px; font-weight:800; color:var(--blue);">2.2×</span>
           </div>
           <div style="background:#f0f4ff; border-radius:6px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:11px; color:#4a5568;">Top 20% growth</span>
-            <span style="font-size:16px; font-weight:800; color:#1a56db;">3.9×</span>
+            <span style="font-family:var(--font-display); font-size:16px; font-weight:800; color:var(--blue);">3.9×</span>
           </div>
           <div style="background:#f0f4ff; border-radius:6px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:11px; color:#4a5568;">Top ⅓ growth</span>
-            <span style="font-size:16px; font-weight:800; color:#1a56db;">2.6×</span>
+            <span style="font-family:var(--font-display); font-size:16px; font-weight:800; color:var(--blue);">2.6×</span>
           </div>
           <div style="background:#f0f4ff; border-radius:6px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:11px; color:#4a5568;">2 years behind growth</span>
-            <span style="font-size:16px; font-weight:800; color:#1a56db;">4.9×</span>
+            <span style="font-family:var(--font-display); font-size:16px; font-weight:800; color:var(--blue);">4.9×</span>
           </div>
         </div>
       </div>
-
-      <!-- World-Class College Admissions -->
       <div>
-        <div style="font-size:12px; font-weight:700; color:#4a5568; margin-bottom:8px;">World-Class College Admissions</div>
+        <div style="font-family:var(--font-display); font-size:12px; font-weight:700; color:#4a5568; margin-bottom:8px;">World-Class College Admissions</div>
         <div style="display:flex; gap:16px;">
           <div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; flex:1; text-align:center;">
             <div style="font-size:11px; color:#718096;">Avg. SAT</div>
-            <div style="font-size:20px; font-weight:800; color:#0a1628;">1530</div>
+            <div style="font-family:var(--font-display); font-size:20px; font-weight:800; color:var(--navy);">1530</div>
             <div style="font-size:9px; color:#a0aec0;">vs. 1063 national</div>
           </div>
           <div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; flex:1; text-align:center;">
             <div style="font-size:11px; color:#718096;">AP Scores</div>
-            <div style="font-size:20px; font-weight:800; color:#0a1628;">94%</div>
+            <div style="font-family:var(--font-display); font-size:20px; font-weight:800; color:var(--navy);">94%</div>
             <div style="font-size:9px; color:#a0aec0;">students with 4 or 5</div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Right column -->
     <div>
-      <!-- 97% love school -->
-      <div style="margin-bottom:20px;">
-        <div style="font-size:28px; font-weight:800; color:#1a56db; margin-bottom:6px;">97% <span style="font-size:18px; color:#0a1628;">love school</span></div>
+      <div style="margin-bottom:16px;">
+        <div style="font-family:var(--font-display); font-size:28px; font-weight:800; color:var(--blue); margin-bottom:6px;">97% <span style="font-size:18px; color:var(--navy);">love school</span></div>
         <ul style="list-style:none; padding:0; margin:0;">
-          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-            <span style="font-size:11px; color:#4a5568; line-height:1.4;">High School students voted to keep school open over summer</span>
-          </li>
-          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-            <span style="font-size:11px; color:#4a5568; line-height:1.4;">Over 60% of students would rather go to school than go on vacation</span>
-          </li>
-          <li style="display:flex; align-items:flex-start; gap:8px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-            <span style="font-size:11px; color:#4a5568; line-height:1.4;">80% of older students say their Guide is one of the most influential people in their life</span>
-          </li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#4a5568; line-height:1.4;">High School students voted to keep school open over summer</span></li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#4a5568; line-height:1.4;">Over 60% of students would rather go to school than go on vacation</span></li>
+          <li style="display:flex; align-items:flex-start; gap:8px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#4a5568; line-height:1.4;">80% of older students say their Guide is one of the most influential people in their life</span></li>
         </ul>
       </div>
-
-      <!-- 100+ life skills projects -->
       <div>
-        <div style="font-size:28px; font-weight:800; color:#1a56db; margin-bottom:6px;">100+ <span style="font-size:18px; color:#0a1628;">life skills projects</span></div>
+        <div style="font-family:var(--font-display); font-size:28px; font-weight:800; color:var(--blue); margin-bottom:6px;">100+ <span style="font-size:18px; color:var(--navy);">life skills projects</span></div>
         <ul style="list-style:none; padding:0; margin:0;">
-          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-            <span style="font-size:11px; color:#4a5568; line-height:1.4;">All <strong>Third Graders</strong> can solve the Rubik's cube</span>
-          </li>
-          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Fifth Graders</strong> presented TED-style talks at NYC open mic nights</span>
-          </li>
-          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Middle Schoolers</strong> placed 2nd in the world and 1st in the U.S. in the Global AI Debates</span>
-          </li>
-          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>High Schoolers</strong> traveled to Ukraine on a humanitarian mission to help kids whose schools were destroyed</span>
-          </li>
-          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Maddie</strong> created the first teen-produced Broadway musical with 67,000 TikTok followers</span>
-          </li>
-          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Alex</strong> created "Berry," an AI-powered plush toy for teens' mental health</span>
-          </li>
-          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Sloane</strong> built "InnerWorld" app with 2.5M+ social media following, solving teen girl mental health crisis</span>
-          </li>
-          <li style="display:flex; align-items:flex-start; gap:8px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-            <span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Grace</strong> produced a documentary on cancer with 5 million views, testifying at the U.S. Senate</span>
-          </li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#4a5568; line-height:1.4;">All <strong>Third Graders</strong> can solve the Rubik's cube</span></li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Fifth Graders</strong> presented TED-style talks at NYC open mic nights</span></li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Middle Schoolers</strong> placed 2nd in the world and 1st in the U.S. in the Global AI Debates</span></li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>High Schoolers</strong> traveled to Ukraine on a humanitarian mission</span></li>
+          <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:5px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Maddie</strong> created the first teen-produced Broadway musical</span></li>
+          <li style="display:flex; align-items:flex-start; gap:8px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#4a5568; line-height:1.4;"><strong>Grace</strong> produced a documentary on cancer with 5M views, testified at U.S. Senate</span></li>
         </ul>
       </div>
     </div>
-
   </div>
 
   <div class="slide-footer">
     <span class="brand">ALPHA HOLDINGS, INC.</span>
-    <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">6</span>
+    <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">${nextSlide()}</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 7 — THE COMPLETE PLATFORM
+     SLIDE 8 — THE COMPLETE PLATFORM
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">The Complete Platform</div>
   <h2>Launching <span>${programName}</span> on Alpha's full education stack</h2>
 
-  <p style="font-size:13px; color:#2d3748; line-height:1.6; margin:0 0 20px 0;"><strong>${programName}</strong> licenses Alpha's complete infrastructure and adapts it with <strong>${ctx.localizedLifeSkillsName || ctx.country + 'Core'}</strong>, the ${ctx.country}-specific life-skills program — ${ctx.country}'s equivalent to AlphaCore.</p>
+  <p style="font-size:13px; color:#2d3748; line-height:1.6; margin:0 0 16px 0;"><strong>${programName}</strong> licenses Alpha's complete infrastructure and adapts it with <strong style="color:var(--blue);">${lifeSkillsName}</strong>, the ${ctx.country}-specific life-skills program — ${ctx.country}'s equivalent to AlphaCore.</p>
 
   <div class="two-pane">
     <div class="pane">
@@ -1387,7 +1673,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="stack-item"><strong>Education Sovereignty:</strong> ${ctx.country} owns 100% of the local entity</div>
       <div class="stack-item"><strong>Infrastructure:</strong> Built to scale across 100+ schools</div>
       <div class="stack-item"><strong>Localized AI Apps:</strong> ${ctx.languageApps}</div>
-      <div class="stack-item"><strong>${ctx.localizedLifeSkillsName || 'Local Life-Skills'}:</strong> ${ctx.localLifeSkillsFocus}</div>
+      <div class="stack-item"><strong>${lifeSkillsName}:</strong> ${ctx.localLifeSkillsFocus}</div>
       <div class="stack-item"><strong>Talent Academy:</strong> Recruit and train ${programName} Guides</div>
       <div class="stack-item"><strong>National eduLLM:</strong> Embedded local laws, values, and culture</div>
       <div class="scale-row">
@@ -1400,19 +1686,19 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 
   <div class="slide-footer">
     <span class="brand">ALPHA HOLDINGS, INC.</span>
-    <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">7</span>
+    <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">${nextSlide()}</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 8 — DEPLOYMENT & INVESTMENT OVERVIEW
+     SLIDE 9 — DEPLOYMENT & INVESTMENT OVERVIEW
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
-  <div class="label">The Complete Platform</div>
+  <div class="label">Deployment Plan</div>
   <h2>Launching ${ctx.country}'s ${programName} on <span>Alpha's full education stack</span></h2>
 
-  <div class="two-pane" style="margin-top:16px;">
+  <div class="two-pane" style="margin-top:12px;">
     <div class="pane">
       <div class="pane-header">
         <div class="pane-icon">📚</div>
@@ -1439,7 +1725,7 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
       <div class="stack-item"><strong>Education Sovereignty:</strong> ${ctx.country} owns the critical pieces</div>
       <div class="stack-item"><strong>Infrastructure:</strong> Built to scale across 100+ schools</div>
       <div class="stack-item"><strong>Localized AI Apps:</strong> ${ctx.languageApps}</div>
-      <div class="stack-item"><strong>${ctx.localizedLifeSkillsName || 'Local Life-Skills'}:</strong> ${ctx.localLifeSkillsFocus}</div>
+      <div class="stack-item"><strong>${lifeSkillsName}:</strong> ${ctx.localLifeSkillsFocus}</div>
       <div class="stack-item"><strong>Talent Academy:</strong> Recruit and train ${programName} Guides</div>
       <div class="stack-item"><strong>National eduLLM:</strong> Embedded local laws, values, and culture</div>
       <div class="scale-row">
@@ -1462,13 +1748,13 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
 
   <div class="slide-footer">
     <span class="brand">ALPHA HOLDINGS, INC.</span>
-    <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">8</span>
+    <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">${nextSlide()}</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 9 — PARTNERSHIP MODEL
+     SLIDE 10 — PARTNERSHIP MODEL
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">Partnership Model</div>
@@ -1488,78 +1774,55 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
     <div class="partner-card">
       <div class="partner-label">${programName} Schools</div>
       <div class="partner-value">${fmtNum(model.counterparty.minStudentsPerYear)} Student-Years Min</div>
-      <div class="partner-detail">Fixed $${model.counterparty.perStudentBudget.toLocaleString("en-US")} per-student annual budget. Powered by <strong>${ctx.localizedLifeSkillsName || ctx.country + 'Core'}</strong> life-skills program. ${ctx.country} funds 100% of local entity operations.</div>
+      <div class="partner-detail">Fixed $${model.counterparty.perStudentBudget.toLocaleString("en-US")} per-student annual budget. Powered by <strong>${lifeSkillsName}</strong> life-skills program. ${ctx.country} funds 100% of local entity operations.</div>
     </div>
   </div>
 
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:20px;">
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:16px;">
     <div>
-      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">Why Alpha Flagship Schools Are Essential</div>
+      <div style="font-family:var(--font-display); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--blue); margin-bottom:10px;">Why Alpha Flagship Schools Are Essential</div>
       <ul style="list-style:none; padding:0; margin:0;">
-        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Marketing &amp; Validation Engine:</strong> Establishes an unassailable benchmark for excellence that legitimizes the brand's entire presence in ${ctx.country}.</span>
-        </li>
-        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Premium Positioning:</strong> Creates a brand halo that justifies premium pricing across the entire portfolio, including ${programName} schools.</span>
-        </li>
-        <li style="display:flex; align-items:flex-start; gap:8px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Strategic Anchor:</strong> Provides the proof of concept required for national-scale education transformation — the "gold standard" that drives demand and trust.</span>
-        </li>
+        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Marketing &amp; Validation Engine:</strong> Establishes an unassailable benchmark for excellence that legitimizes the brand's entire presence in ${ctx.country}.</span></li>
+        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Premium Positioning:</strong> Creates a brand halo that justifies premium pricing across the entire portfolio, including ${programName} schools.</span></li>
+        <li style="display:flex; align-items:flex-start; gap:8px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Strategic Anchor:</strong> Provides the proof of concept required for national-scale education transformation.</span></li>
       </ul>
     </div>
     <div>
-      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#718096; margin-bottom:10px;">What Alpha Holdings, Inc. Retains (IP)</div>
+      <div style="font-family:var(--font-display); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--blue); margin-bottom:10px;">What Alpha Holdings, Inc. Retains (IP)</div>
       <ul style="list-style:none; padding:0; margin:0;">
-        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Timeback®</strong> — AI learning platform (licensed)</span>
-        </li>
-        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>AlphaCore™</strong> — Life-skills curriculum (licensed)</span>
-        </li>
-        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Guide School</strong> — Teacher training IP (licensed)</span>
-        </li>
-        <li style="display:flex; align-items:flex-start; gap:8px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:6px;"></span>
-          <span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Incept eduLLM</strong> — Content engine (licensed)</span>
-        </li>
+        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Timeback®</strong> — AI learning platform (licensed)</span></li>
+        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>AlphaCore™</strong> — Life-skills curriculum (licensed)</span></li>
+        <li style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Guide School</strong> — Teacher training IP (licensed)</span></li>
+        <li style="display:flex; align-items:flex-start; gap:8px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:6px;"></span><span style="font-size:11px; color:#2d3748; line-height:1.4;"><strong>Incept eduLLM</strong> — Content engine (licensed)</span></li>
       </ul>
     </div>
   </div>
 
-  <div class="callout-box" style="margin-top: 14px;">
+  <div class="callout-box" style="margin-top: 10px;">
     <p><strong>Education Sovereignty:</strong> ${ctx.country} owns 100% of the national identity, cultural values, local curriculum, and all locally developed content. Alpha provides the engine; ${ctx.country} owns the car.</p>
   </div>
 
   <div class="slide-footer">
     <span class="brand">ALPHA HOLDINGS, INC.</span>
-    <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">9</span>
+    <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">${nextSlide()}</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 10 — FUTURE OPPORTUNITIES & SEQUENCING
+     SLIDE 11 — FUTURE OPPORTUNITIES & SEQUENCING
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
   <div class="label">Roadmap</div>
   <h2>Future Regional Opportunities &amp; <span>Sequencing Plan</span></h2>
 
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px; margin-top:24px;">
-
     <div>
-      <div style="font-size:15px; font-weight:700; color:#0a1628; margin-bottom:12px;">Future Regional Opportunities</div>
+      <div style="font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--navy); margin-bottom:12px;">Future Regional Opportunities</div>
       <p style="font-size:13px; color:#2d3748; line-height:1.6;">Regional expansion to neighboring countries and territories represents a significant follow-on opportunity. These can be structured as separate arrangements and are not required for <strong>${programName}</strong> to succeed.</p>
     </div>
-
     <div>
-      <div style="font-size:15px; font-weight:700; color:#0a1628; margin-bottom:12px;">High-level Sequencing Plan</div>
+      <div style="font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--navy); margin-bottom:12px;">High-level Sequencing Plan</div>
       <ul style="list-style:none; padding:0; margin:0;">
         ${(() => {
           const n = new Date();
@@ -1569,69 +1832,46 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
           const p1 = `SY${String(ly).slice(-2)}-${String(ly + 1).slice(-2)}`;
           const p2 = `SY${String(ly + 1).slice(-2)}-${String(ly + 2).slice(-2)}`;
           return [
-            { bold: `Phase 0 (Now – Summer ${ly})`, rest: `IP Transfer, ${ctx.localizedLifeSkillsName || ctx.country + 'Core'} design, and eduLLM model training.` },
+            { bold: `Phase 0 (Now – Summer ${ly})`, rest: `IP Transfer, ${lifeSkillsName} design, and eduLLM model training.` },
             { bold: `Phase 1 (${p1})`, rest: `Launch of Alpha Flagship school.` },
             { bold: `Phase 2 (${p2})`, rest: `National rollout of the ${programName} school network.` },
           ].map(p => `<li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
-            <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
+            <span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span>
             <span style="font-size:13px; color:#2d3748; line-height:1.5;"><strong>${p.bold}:</strong> ${p.rest}</span>
           </li>`).join('\n        ');
         })()}
       </ul>
     </div>
-
   </div>
 
   <div class="slide-footer">
     <span class="brand">ALPHA HOLDINGS, INC.</span>
-    <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">10</span>
+    <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">${nextSlide()}</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 11 — COUNTRY-OWNED SCHOOLS & INVESTMENT
+     SLIDE 12 — COUNTRY-OWNED SCHOOLS & INVESTMENT (Fix #3: program name in labels)
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="slide slide-content">
-  <div class="label">Country-Owned Schools</div>
-  <h2>${programName} Schools: <span>${ctx.country} Owned, Alpha Operated</span></h2>
-  <p style="font-size:12px; font-style:italic; color:#4a5568; margin:8px 0 0 0;">We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.</p>
+  <div class="label">${programName} Schools</div>
+  <h2>${programName}: <span>${ctx.country} Owned, Alpha Operated</span></h2>
+  <p style="font-size:12px; font-style:italic; color:#4a5568; margin:4px 0 0 0;">We are proposing to implement through a national network of privately-operated, government-funded schools, but are equally open to other structures.</p>
 
-  <div style="display:grid; grid-template-columns:1fr 1.6fr; gap:28px; margin-top:16px;">
-
-    <!-- Left: Key terms -->
+  <div style="display:grid; grid-template-columns:1fr 1.6fr; gap:28px; margin-top:12px;">
     <div>
       <ul style="list-style:none; padding:0; margin:0;">
-        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
-          <span style="font-size:13px; color:#2d3748; line-height:1.5;">100% ${ctx.country} owned, 0% Alpha owned. Alpha operates on behalf of the Country/State.</span>
-        </li>
-        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
-          <span style="font-size:13px; color:#2d3748; line-height:1.5;">Per student funding/tuition: <strong>${fmtUsd(model.counterparty.perStudentBudget)}/year.</strong></span>
-        </li>
-        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
-          <span style="font-size:13px; color:#2d3748; line-height:1.5;">Minimum <strong>${fmtNum(model.counterparty.minStudentsPerYear)}</strong> student-years commitment.</span>
-        </li>
-        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
-          <span style="font-size:13px; color:#2d3748; line-height:1.5;">Every ${programName} school runs on Alpha's Timeback with <strong>${ctx.localizedLifeSkillsName || ctx.country + 'Core'}</strong>.</span>
-        </li>
-        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
-          <span style="font-size:13px; color:#2d3748; line-height:1.5;">Schools can be operated as either public or private schools.</span>
-        </li>
-        <li style="display:flex; align-items:flex-start; gap:10px;">
-          <span style="flex-shrink:0; width:6px; height:6px; background:#1a56db; border-radius:50%; margin-top:7px;"></span>
-          <span style="font-size:13px; color:#2d3748; line-height:1.5;">${ctx.country} is responsible for sourcing real estate; schools pay rent.</span>
-        </li>
+        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span><span style="font-size:13px; color:#2d3748; line-height:1.5;">100% ${ctx.country} owned, 0% Alpha owned. Alpha operates on behalf of the Country/State.</span></li>
+        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span><span style="font-size:13px; color:#2d3748; line-height:1.5;">Per student funding/tuition: <strong>${fmtUsd(model.counterparty.perStudentBudget)}/year.</strong></span></li>
+        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span><span style="font-size:13px; color:#2d3748; line-height:1.5;">Minimum <strong>${fmtNum(model.counterparty.minStudentsPerYear)}</strong> student-years commitment.</span></li>
+        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span><span style="font-size:13px; color:#2d3748; line-height:1.5;">Every ${programName} school runs on Alpha's Timeback with <strong>${lifeSkillsName}</strong>.</span></li>
+        <li style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span><span style="font-size:13px; color:#2d3748; line-height:1.5;">Schools can be operated as either public or private schools.</span></li>
+        <li style="display:flex; align-items:flex-start; gap:10px;"><span style="flex-shrink:0; width:6px; height:6px; background:var(--blue); border-radius:50%; margin-top:7px;"></span><span style="font-size:13px; color:#2d3748; line-height:1.5;">${ctx.country} is responsible for sourcing real estate; schools pay rent.</span></li>
       </ul>
     </div>
-
-    <!-- Right: Investment table -->
     <div>
-      <div style="font-size:15px; font-weight:700; color:#0a1628; margin-bottom:10px;">Investment Required</div>
+      <div style="font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--navy); margin-bottom:10px;">Investment Required</div>
       <table class="deck-table" style="font-size:11px;">
         <thead>
           <tr>
@@ -1657,28 +1897,63 @@ function generatePitchDeckHtml(ctx: CountryContext, model: FinancialModel): stri
         </tbody>
       </table>
     </div>
-
   </div>
 
   <div class="slide-footer">
     <span class="brand">ALPHA HOLDINGS, INC.</span>
-    <span>© ${year}. Confidential &amp; Proprietary.</span>
-    <span class="slide-num">11</span>
+    <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">${nextSlide()}</span>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     SLIDE 12 — THANK YOU / CLOSING
+     SLIDE 13 — COST STRUCTURE (Fix #3: programName in column header)
      ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="slide slide-cover" style="display:flex; align-items:center; justify-content:center; text-align:center;">
+<div class="slide slide-content">
+  <div class="label">${programName} Cost Structure</div>
+  <h2>Per-Student Economics at <span>$25K Budget</span></h2>
+
+  <div style="margin-top:8px;">
+    <table class="deck-table">
+      <thead>
+        <tr>
+          <th>Item (Per Student P&amp;L)</th>
+          <th>Alpha @ $50K Tuition</th>
+          <th class="primary-col">${programName} @ $25K Budget</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="section-header"><td colspan="4">FUNDING</td></tr>
+        ${costRows}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout-box" style="margin-top:12px;">
+    <p>We propose implementation through a national network of privately-operated, government-funded schools — and are equally open to other structures.</p>
+  </div>
+
+  <div class="slide-footer">
+    <span class="brand">ALPHA HOLDINGS, INC.</span>
+    <span class="copy">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num">${nextSlide()}</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SLIDE 14 — THANK YOU / CLOSING
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="slide slide-cover" style="background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 40%, var(--blue) 100%);">
   <div>
-    <div style="font-size:24px; font-weight:600; color:#1a56db; margin-bottom:16px; font-style:italic;">Thank You</div>
-    <h1 style="font-size:48px; font-weight:800; color:#0a1628; line-height:1.2; margin:0 0 32px;">Alpha Holdings, Inc.<br>Transforming Education<br>Globally</h1>
-    <div style="display:inline-block; border:2px solid #1a56db; border-radius:4px; padding:8px 24px; font-size:13px; font-weight:600; color:#1a56db; letter-spacing:0.08em;">CONFIDENTIAL</div>
+    <div style="font-family:var(--font-display); font-size:24px; font-weight:600; color:var(--blue-light); margin-bottom:16px; font-style:italic;">Thank You</div>
+    <h1 style="font-family:var(--font-display); font-size:44px; font-weight:800; color:var(--white); line-height:1.2; margin:0 0 32px;">${programName}<br><span style="color:var(--blue-light);">Transforming Education<br>in ${ctx.country}</span></h1>
+    <div style="display:inline-block; border:2px solid var(--blue-light); border-radius:4px; padding:8px 24px; font-family:var(--font-display); font-size:12px; font-weight:700; color:var(--blue-light); letter-spacing:0.1em;">CONFIDENTIAL</div>
   </div>
   <div class="slide-footer" style="color: rgba(255,255,255,0.3);">
     <span class="brand" style="color: rgba(255,255,255,0.5);">ALPHA HOLDINGS, INC.</span>
-    <span class="slide-num">12</span>
+    <span class="copy" style="color: rgba(255,255,255,0.3);">&copy; ${year}. Confidential &amp; Proprietary.</span>
+    <span class="slide-num" style="color: rgba(255,255,255,0.3);">${nextSlide()}</span>
   </div>
 </div>
 
@@ -1844,7 +2119,7 @@ export function registerRoutes(server: Server, app: Express) {
   });
 
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", version: "2.4.0-term-sheet-fixes", slides: 12 });
+    res.json({ status: "ok", version: "2.5.0-world-class", slides: 14 });
   });
 
 
